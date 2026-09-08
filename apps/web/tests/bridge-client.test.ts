@@ -44,4 +44,68 @@ describe('BridgeClient', () => {
 
     await expect(new BridgeClient().health()).rejects.toThrow('Resposta inválida do Bridge');
   });
+
+  it('lists certificates using only the local versioned endpoint', async () => {
+    const payload = {
+      certificates: [{
+        subject: 'CN=Empresa Teste',
+        issuer: 'CN=Autoridade Teste',
+        notBefore: '2026-09-01T00:00:00Z',
+        notAfter: '2027-09-01T00:00:00Z',
+        thumbprint: 'ABC123',
+      }],
+      selectedThumbprint: 'ABC123',
+    };
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(payload), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const result = await new BridgeClient().listCertificates();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${BRIDGE_BASE_URL}/certificates`,
+      expect.objectContaining({ method: 'GET', cache: 'no-store' }),
+    );
+    expect(result).toEqual(payload);
+  });
+
+  it('rejects certificate payloads with unexpected secret-bearing fields', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({
+        certificates: [{
+          subject: 'CN=Empresa Teste',
+          issuer: 'CN=Autoridade Teste',
+          notBefore: '2026-09-01T00:00:00Z',
+          notAfter: '2027-09-01T00:00:00Z',
+          thumbprint: 'ABC123',
+          privateKey: 'never',
+        }],
+        selectedThumbprint: null,
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    await expect(new BridgeClient().listCertificates()).rejects.toThrow('Resposta inválida de certificados');
+  });
+
+  it('selects a certificate by thumbprint only', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }));
+
+    await new BridgeClient().selectCertificate('ABC123');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${BRIDGE_BASE_URL}/certificate/select`,
+      expect.objectContaining({
+        method: 'POST',
+        cache: 'no-store',
+        headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ thumbprint: 'ABC123' }),
+      }),
+    );
+  });
 });
