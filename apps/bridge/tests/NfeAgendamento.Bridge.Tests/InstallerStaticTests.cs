@@ -66,23 +66,19 @@ public sealed class InstallerStaticTests
     }
 
     [Fact]
-    public void Installer_captures_exact_https_origin_and_applies_it_to_every_launch_path()
+    public void V004_uses_fixed_production_origin_without_installer_prompt()
     {
         var root = RepositoryRoot();
-        var installerPath = Path.Combine(root, "apps", "bridge", "installer", "NfeAgendamentoBridge.iss");
-        var iss = File.ReadAllText(installerPath);
+        var appsettings = File.ReadAllText(Path.Combine(root,
+            "apps", "bridge", "src", "NfeAgendamento.Bridge", "appsettings.json"));
+        var iss = File.ReadAllText(Path.Combine(root,
+            "apps", "bridge", "installer", "NfeAgendamentoBridge.iss"));
 
-        Assert.Contains("CreateInputQueryPage", iss);
-        Assert.Contains("IsValidHttpsOrigin", iss);
-        Assert.Contains("https://", iss, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Bridge:AllowedOrigins:0", iss);
-        Assert.Contains("Pos('/', Rest) = 0", iss);
-        Assert.Contains("Pos('?', Rest) = 0", iss);
-        Assert.Contains("Pos('#', Rest) = 0", iss);
-        Assert.Contains("Pos('\"', Rest) = 0", iss);
-        Assert.Contains("Parameters: \"{code:GetBridgeArguments}\"", iss);
-        Assert.Contains("ValueData: \"\"\"{app}\\NfeAgendamento.Bridge.exe\"\" {code:GetBridgeArguments}\"", iss);
-        Assert.DoesNotContain("Bridge:AllowedOrigins:0=*", iss, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("https://nfeagendamento.joaolds.xyz.br", appsettings);
+        Assert.DoesNotContain("CreateInputQueryPage", iss);
+        Assert.DoesNotContain("SITEORIGIN", iss, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Bridge:AllowedOrigins", iss, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Parameters:", iss, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
