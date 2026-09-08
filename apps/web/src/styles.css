@@ -18,7 +18,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -33,11 +34,17 @@ button {
   cursor: pointer;
 }
 
-button:hover {
+button:hover:not(:disabled) {
   filter: brightness(0.96);
 }
 
-input {
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+input,
+select {
   width: 100%;
   min-height: 46px;
   border: 1px solid #cbd5e1;
@@ -47,10 +54,16 @@ input {
   color: #111827;
 }
 
-input:focus {
+input:focus,
+select:focus {
   outline: 2px solid #94b8ae;
   outline-offset: 1px;
   border-color: #1f4f46;
+}
+
+select:disabled {
+  background: #f8fafc;
+  color: #64748b;
 }
 
 .app-shell {
@@ -124,6 +137,16 @@ h2 {
   background: #f59e0b;
 }
 
+.bridge-pill[data-state='connected'] .bridge-dot {
+  background: #16a34a;
+}
+
+.bridge-pill[data-state='missing'] .bridge-dot,
+.bridge-pill[data-state='permission'] .bridge-dot {
+  background: #dc2626;
+}
+
+.certificate-card,
 .lookup-card,
 .result-card {
   border: 1px solid #dde4e9;
@@ -132,8 +155,13 @@ h2 {
   box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
 }
 
+.certificate-card,
 .lookup-card {
   padding: 24px;
+}
+
+.certificate-card {
+  margin-bottom: 18px;
 }
 
 .result-card {
@@ -150,7 +178,8 @@ h2 {
   margin-bottom: 18px;
 }
 
-.key-hint {
+.key-hint,
+.certificate-state {
   color: #64748b;
   font-size: 12px;
   font-weight: 700;
@@ -163,7 +192,8 @@ label {
   font-weight: 700;
 }
 
-.lookup-row {
+.lookup-row,
+.certificate-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
@@ -201,7 +231,8 @@ label {
     flex-direction: column;
   }
 
-  .lookup-row {
+  .lookup-row,
+  .certificate-row {
     grid-template-columns: 1fr;
   }
 
