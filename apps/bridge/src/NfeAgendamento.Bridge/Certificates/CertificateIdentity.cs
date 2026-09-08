@@ -5,6 +5,14 @@ namespace NfeAgendamento.Bridge.Certificates;
 
 public sealed record CertificateIdentity(string Cnpj, string UfAutor);
 
+public sealed class CertificateIdentityException : InvalidOperationException
+{
+    public CertificateIdentityException(string message)
+        : base(message)
+    {
+    }
+}
+
 public static class CertificateIdentityReader
 {
     private static readonly Regex CnpjRegex = new(@"(?<!\d)\d{14}(?!\d)", RegexOptions.Compiled);
@@ -39,7 +47,7 @@ public static class CertificateIdentityReader
             return matches[0];
         }
 
-        throw new InvalidOperationException(
+        throw new CertificateIdentityException(
             "Não foi possível identificar com segurança o CNPJ no certificado selecionado.");
     }
 
@@ -54,7 +62,7 @@ public static class CertificateIdentityReader
 
         if (state.Length != 2 || state.Any(character => character is < '0' or > '9'))
         {
-            throw new InvalidOperationException("Informe a UF autora em formato numérico (ex.: 42 para SC).");
+            throw new CertificateIdentityException("Informe a UF autora em formato numérico (ex.: 42 para SC).");
         }
 
         return new CertificateIdentity(cnpj, state);
