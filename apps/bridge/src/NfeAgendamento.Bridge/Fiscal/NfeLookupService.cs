@@ -111,10 +111,10 @@ public sealed class NfeLookupService
             if (string.IsNullOrWhiteSpace(response.Xml))
             {
                 return new LookupResult(
-                    LookupCategories.TechnicalError,
+                    LookupCategories.FiscalStatus,
                     null,
                     response.CStat,
-                    "A SEFAZ informou documento localizado, mas não retornou XML válido.");
+                    response.Message);
             }
 
             return new LookupResult(
