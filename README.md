@@ -24,11 +24,20 @@ Concluído e validado no CI:
 - `POST /api/v1/certificate/select`;
 - filtro A1 por chave privada, validade e Client Authentication quando EKU estiver presente;
 - seleção do certificado diretamente no site;
-- estados `Bridge conectado`, `Bridge não encontrado` e `Permissão de acesso local necessária`.
+- estados `Bridge conectado`, `Bridge não encontrado` e `Permissão de acesso local necessária`;
+- `POST /api/v1/nfe/lookup` com validação completa da chave de 44 dígitos;
+- transporte para `NFeDistribuicaoDFe` autenticado pelo certificado A1 selecionado;
+- SOAP `consChNFe` com CNPJ extraído com segurança do certificado e `cUFAutor` omitido quando não for conhecido com confiança;
+- parsing defensivo da resposta SEFAZ, DTD desabilitado e limite de 10 MiB para XML/resposta;
+- validação de que o `docZip` retornado pertence exatamente à chave solicitada;
+- categorias normalizadas `success`, `fiscal_status`, `consumption_limit`, `certificate_error`, `transport_unavailable` e `technical_error`;
+- tratamento de `137`, `138`, `656`, HTTP 429, timeout e falhas ambíguas sem retry automático;
+- XML fiscal bruto preservado e devolvido ao site somente quando um `procNFe` válido da chave solicitada é encontrado;
+- material do A1 clonado com ownership independente para cada consulta e descartado ao término do lookup;
+- cliente TypeScript `lookupNfe()` restrito ao Bridge local e com validação estrita do contrato JSON.
 
 Em implementação:
 
-- `POST /api/v1/nfe/lookup` e transporte SEFAZ autenticado pelo A1;
 - pipeline XML no navegador;
 - regra Fernando Klein;
 - DANFE;
@@ -50,3 +59,4 @@ dotnet build apps/bridge/src/NfeAgendamento.Bridge/NfeAgendamento.Bridge.csproj 
 ```
 
 O plano técnico canônico está em `docs/superpowers/plans/2026-09-08-nfe-agendamento-2-implementation.md`.
+O fechamento da Task 4 está registrado em `docs/superpowers/plans/2026-09-08-task-4-completion.md`.
