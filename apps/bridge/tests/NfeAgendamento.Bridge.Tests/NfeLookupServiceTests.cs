@@ -99,6 +99,20 @@ public sealed class NfeLookupServiceTests
     }
 
     [Fact]
+    public async Task Certificate_without_safe_cnpj_returns_certificate_error_before_http()
+    {
+        using var certificate = CreateCertificate("CN=EMPRESA SEM CNPJ, O=Empresa Teste, C=BR");
+        var transport = new SefazDistributionTransport(_ =>
+            throw new InvalidOperationException("HTTP não deve ser aberto quando a identidade do A1 é inválida."));
+        var service = new NfeLookupService(transport, () => certificate);
+
+        var result = await service.LookupAsync(ValidKey, TestContext.Current.CancellationToken);
+
+        Assert.Equal(LookupCategories.CertificateError, result.Category);
+        Assert.Null(result.Xml);
+    }
+
+    [Fact]
     public async Task Invalid_transport_payload_returns_technical_error_without_retry()
     {
         using var certificate = CreateCertificate();
@@ -111,11 +125,12 @@ public sealed class NfeLookupServiceTests
         Assert.Equal(1, transport.CallCount);
     }
 
-    private static X509Certificate2 CreateCertificate()
+    private static X509Certificate2 CreateCertificate(
+        string subject = "CN=EMPRESA TESTE:12345678000195, O=Empresa Teste, C=BR")
     {
         using var rsa = RSA.Create(2048);
         var request = new CertificateRequest(
-            "CN=EMPRESA TESTE:12345678000195, O=Empresa Teste, C=BR",
+            subject,
             rsa,
             HashAlgorithmName.SHA256,
             RSASignaturePadding.Pkcs1);
