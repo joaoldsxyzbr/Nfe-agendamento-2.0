@@ -18,26 +18,35 @@ public static class CertificateIdentityReader
         ["MS"] = "50", ["MT"] = "51", ["GO"] = "52", ["DF"] = "53"
     };
 
-    public static CertificateIdentity Read(X509Certificate2 certificate, string? ufAutor = null)
+    public static string ReadCnpj(X509Certificate2 certificate)
     {
         ArgumentNullException.ThrowIfNull(certificate);
 
         var subject = certificate.Subject ?? string.Empty;
         var commonNameCnpj = CommonNameCnpjRegex.Match(subject).Groups[1].Value;
-        var cnpjMatches = CnpjRegex.Matches(subject)
+        if (commonNameCnpj.Length == 14)
+        {
+            return commonNameCnpj;
+        }
+
+        var matches = CnpjRegex.Matches(subject)
             .Select(match => match.Value)
             .Distinct(StringComparer.Ordinal)
             .ToArray();
 
-        var cnpj = commonNameCnpj.Length == 14
-            ? commonNameCnpj
-            : cnpjMatches.Length == 1 ? cnpjMatches[0] : string.Empty;
-
-        if (cnpj.Length != 14)
+        if (matches.Length == 1)
         {
-            throw new InvalidOperationException("Não foi possível identificar com segurança o CNPJ no certificado selecionado.");
+            return matches[0];
         }
 
+        throw new InvalidOperationException(
+            "Não foi possível identificar com segurança o CNPJ no certificado selecionado.");
+    }
+
+    public static CertificateIdentity Read(X509Certificate2 certificate, string? ufAutor = null)
+    {
+        var cnpj = ReadCnpj(certificate);
+        var subject = certificate.Subject ?? string.Empty;
         var subjectState = StateRegex.Match(subject).Groups[1].Value;
         var state = string.IsNullOrWhiteSpace(ufAutor)
             ? StateCodes.GetValueOrDefault(subjectState, string.Empty)
