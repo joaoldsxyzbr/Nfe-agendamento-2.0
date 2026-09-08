@@ -63,6 +63,17 @@ public sealed class InstallerStaticTests
     }
 
     [Fact]
+    public void Ci_publishes_bridge_and_portal_self_contained_for_windows()
+    {
+        var root = RepositoryRoot();
+        var ci = File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"));
+
+        Assert.Contains("dotnet publish apps/bridge/src/NfeAgendamento.Bridge/NfeAgendamento.Bridge.csproj -c Release -r win-x64 --self-contained true", ci);
+        Assert.Contains("dotnet publish apps/bridge/windows/NfeAgendamento.Portal/NfeAgendamento.Portal.csproj -c Release -r win-x64 --self-contained true", ci);
+        Assert.DoesNotContain("--self-contained false", ci);
+    }
+
+    [Fact]
     public void Ci_builds_and_uploads_setup_and_zip_fallback()
     {
         var root = RepositoryRoot();
