@@ -1,4 +1,5 @@
 using NfeAgendamento.Bridge.Security;
+using Xunit;
 
 namespace NfeAgendamento.Bridge.Tests;
 
