@@ -34,3 +34,20 @@ export type NfeLookupResult = {
   cStat: string | null;
   message: string | null;
 };
+
+export type PortalOperationState =
+  | 'waiting_for_user'
+  | 'completed'
+  | 'failed'
+  | 'cancelled';
+
+export type PortalStartResult = {
+  operationId: string;
+};
+
+export type PortalOperationStatus = {
+  operationId: string;
+  state: PortalOperationState;
+  message: string | null;
+  xml: string | null;
+};
