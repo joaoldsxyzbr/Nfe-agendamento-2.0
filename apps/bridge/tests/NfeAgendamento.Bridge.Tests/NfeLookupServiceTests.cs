@@ -115,6 +115,18 @@ public sealed class NfeLookupServiceTests
     }
 
     [Fact]
+    public async Task Selected_certificate_material_is_disposed_after_lookup()
+    {
+        var certificate = CreateCertificate();
+        var transport = new FakeTransport(new TransportResult("137", "Nenhum documento localizado", null));
+        var service = new NfeLookupService(transport, () => certificate);
+
+        await service.LookupAsync(ValidKey, TestContext.Current.CancellationToken);
+
+        Assert.Equal(IntPtr.Zero, certificate.Handle);
+    }
+
+    [Fact]
     public async Task Certificate_without_safe_cnpj_returns_certificate_error_before_http()
     {
         using var certificate = CreateCertificate("CN=EMPRESA SEM CNPJ, O=Empresa Teste, C=BR");
