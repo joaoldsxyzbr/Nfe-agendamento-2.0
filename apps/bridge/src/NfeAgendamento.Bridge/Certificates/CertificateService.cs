@@ -65,12 +65,17 @@ public sealed class CertificateService
             return null;
         }
 
-        return WithCertificates(certificates => FilterUsable(certificates, DateTimeOffset.UtcNow)
-            .FirstOrDefault(certificate =>
-                string.Equals(
-                    NormalizeThumbprint(certificate.Thumbprint),
-                    thumbprint,
-                    StringComparison.OrdinalIgnoreCase)));
+        return WithCertificates(certificates =>
+        {
+            var selected = FilterUsable(certificates, DateTimeOffset.UtcNow)
+                .FirstOrDefault(certificate =>
+                    string.Equals(
+                        NormalizeThumbprint(certificate.Thumbprint),
+                        thumbprint,
+                        StringComparison.OrdinalIgnoreCase));
+
+            return selected is null ? null : CloneWithPrivateKey(selected);
+        });
     }
 
     public async Task SelectAsync(string thumbprint, CancellationToken cancellationToken = default)
@@ -184,6 +189,31 @@ public sealed class CertificateService
             or ArgumentException)
         {
             return null;
+        }
+    }
+
+    private static X509Certificate2 CloneWithPrivateKey(X509Certificate2 certificate)
+    {
+        var publicOnly = X509CertificateLoader.LoadCertificate(certificate.RawData);
+        try
+        {
+            using var rsa = certificate.GetRSAPrivateKey();
+            if (rsa is not null)
+            {
+                return publicOnly.CopyWithPrivateKey(rsa);
+            }
+
+            using var ecdsa = certificate.GetECDsaPrivateKey();
+            if (ecdsa is not null)
+            {
+                return publicOnly.CopyWithPrivateKey(ecdsa);
+            }
+
+            throw new InvalidOperationException("O certificado selecionado usa um tipo de chave privada não suportado pelo Bridge.");
+        }
+        finally
+        {
+            publicOnly.Dispose();
         }
     }
 
