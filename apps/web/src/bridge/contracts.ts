@@ -19,3 +19,18 @@ export type CertificateCatalog = {
   certificates: CertificateSummary[];
   selectedThumbprint: string | null;
 };
+
+export type NfeLookupCategory =
+  | 'success'
+  | 'fiscal_status'
+  | 'consumption_limit'
+  | 'certificate_error'
+  | 'transport_unavailable'
+  | 'technical_error';
+
+export type NfeLookupResult = {
+  category: NfeLookupCategory;
+  xml: string | null;
+  cStat: string | null;
+  message: string | null;
+};
