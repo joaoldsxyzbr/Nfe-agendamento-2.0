@@ -1,0 +1,11 @@
+{
+  "name": "nfe-agendamento-2",
+  "private": true,
+  "workspaces": [
+    "apps/web"
+  ],
+  "scripts": {
+    "test:web": "npm --workspace @nfe-agendamento/web test",
+    "build:web": "npm --workspace @nfe-agendamento/web run build"
+  }
+}
