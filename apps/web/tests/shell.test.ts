@@ -61,4 +61,21 @@ describe('application shell', () => {
     expect(parseIndex).toBeGreaterThan(lookupIndex);
     expect(downloadIndex).toBeGreaterThan(parseIndex);
   });
+
+  it('wires the DANFE preview, local zoom, close and browser print actions', () => {
+    const main = readFileSync(fromWeb('src/main.ts'), 'utf8');
+    const css = readFileSync(fromWeb('src/styles.css'), 'utf8');
+
+    expect(main).toContain("import { attachDanfeZoom, renderDanfe } from './danfe/render';");
+    expect(main).toContain("import './danfe/styles.css';");
+    expect(main).toContain('id="danfe-viewer"');
+    expect(main).toContain('Visualizar DANFE');
+    expect(main).toContain('Baixar XML');
+    expect(main).toContain('Ctrl + scroll para zoom');
+    expect(main).toContain('renderDanfe(parsed)');
+    expect(main).toContain('attachDanfeZoom(');
+    expect(main).toContain('window.print()');
+    expect(css).toContain('.danfe-modal');
+    expect(css).toContain('.danfe-scroll');
+  });
 });
