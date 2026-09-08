@@ -3,6 +3,7 @@ import type { CertificateCatalog, CertificateSummary, NfeLookupResult } from './
 import { attachDanfeZoom, renderDanfe } from './danfe/render';
 import { validateAccessKey } from './nfe/access-key';
 import { parseNfeXml, type ParsedNfe } from './nfe/xml';
+import { PortalFallbackController } from './portal/fallback';
 import './styles.css';
 import './danfe/styles.css';
 
@@ -98,6 +99,7 @@ app.innerHTML = `
 `;
 
 const bridgeClient = new BridgeClient();
+const portalFallback = new PortalFallbackController();
 const bridgeStatus = requireElement<HTMLElement>('#bridge-status');
 const bridgeStatusText = requireElement<HTMLElement>('#bridge-status-text');
 const certificateSelect = requireElement<HTMLSelectElement>('#certificate-select');
@@ -189,6 +191,11 @@ async function submitLookup(): Promise<void> {
       return;
     }
 
+    if (lookup.category === 'consumption_limit') {
+      await runPortalFallback(validation.value, lookup);
+      return;
+    }
+
     renderLookupFailure(lookup);
   } catch (error) {
     renderLookupState(
@@ -198,6 +205,47 @@ async function submitLookup(): Promise<void> {
   } finally {
     setLookupBusy(false);
   }
+}
+
+async function runPortalFallback(accessKey: string, lookup: NfeLookupResult): Promise<void> {
+  const sefazMessage = lookup.message ?? 'A SEFAZ informou limite de consumo para esta consulta.';
+  const sefazStatus = lookup.cStat ? `Status SEFAZ ${lookup.cStat}. ${sefazMessage}` : sefazMessage;
+
+  renderLookupState(
+    'Abrindo consulta alternativa',
+    `${sefazStatus} Abrindo o Portal Nacional da NF-e neste computador. Resolva o hCaptcha manualmente e solicite o XML.`,
+  );
+
+  const operationId = await portalFallback.start(accessKey);
+  renderLookupState(
+    'Portal Nacional aberto',
+    'Resolva o hCaptcha manualmente na janela do Portal e conclua a consulta. Esta página receberá o XML automaticamente.',
+  );
+
+  const portalStatus = await portalFallback.waitForResult(operationId);
+  if (portalStatus.state === 'completed' && portalStatus.xml) {
+    const parsed = parseNfeXml(portalStatus.xml, accessKey);
+    renderLookupSuccess(parsed);
+    return;
+  }
+
+  if (portalStatus.state === 'cancelled') {
+    renderLookupState(
+      'Consulta pelo Portal cancelada',
+      portalStatus.message ?? 'A janela do Portal foi fechada antes de concluir o download do XML.',
+    );
+    return;
+  }
+
+  if (portalStatus.state === 'failed') {
+    renderLookupState(
+      'Portal da NF-e indisponível',
+      portalStatus.message ?? 'Não foi possível concluir a consulta pelo Portal Nacional da NF-e.',
+    );
+    return;
+  }
+
+  renderLookupState('Consulta pelo Portal não concluída', portalStatus.message ?? 'O Portal não retornou XML.');
 }
 
 function renderLookupFailure(lookup: NfeLookupResult): void {
