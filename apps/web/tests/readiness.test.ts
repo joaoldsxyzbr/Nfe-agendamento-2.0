@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 const repoRoot = new URL('../../../', import.meta.url);
 const main = readFileSync(new URL('../src/main.ts', import.meta.url), 'utf8');
+const ci = readFileSync(new URL('.github/workflows/ci.yml', repoRoot), 'utf8');
 
 function readActiveSources(relativePath: string): string {
   const root = new URL(relativePath, repoRoot);
@@ -61,5 +62,15 @@ describe('final readiness', () => {
     ]) {
       expect(active, `legacy concept found: ${forbidden}`).not.toContain(forbidden);
     }
+  });
+
+  it('builds one Windows acceptance artifact with Bridge and Portal helper together', () => {
+    expect(ci).toContain('windows-package:');
+    expect(ci).toContain('runs-on: windows-latest');
+    expect(ci).toContain('NfeAgendamento.Bridge.csproj');
+    expect(ci).toContain('NfeAgendamento.Portal.csproj');
+    expect(ci).toContain('artifacts/NfeAgendamentoBridge');
+    expect(ci).toContain('actions/upload-artifact@v4');
+    expect(ci).toContain('name: NfeAgendamentoBridge-win-x64');
   });
 });
