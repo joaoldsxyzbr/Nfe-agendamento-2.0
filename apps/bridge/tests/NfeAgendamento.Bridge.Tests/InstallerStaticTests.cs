@@ -61,4 +61,17 @@ public sealed class InstallerStaticTests
         Assert.DoesNotContain("http://", iss, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("https://", iss, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public void Ci_builds_and_uploads_setup_and_zip_fallback()
+    {
+        var root = RepositoryRoot();
+        var ci = File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"));
+
+        Assert.Contains("Inno Setup 6\\ISCC.exe", ci);
+        Assert.Contains("NFeAgendamentoBridge-Setup-v0.0.2.exe", ci);
+        Assert.Contains("name: NFeAgendamentoBridge-Setup-v0.0.2", ci);
+        Assert.Contains("name: NfeAgendamentoBridge-win-x64", ci);
+        Assert.Contains("if (!(Test-Path $setup))", ci);
+    }
 }
