@@ -40,7 +40,8 @@ Concluído e validado no CI:
 - tratamento Fernando Klein portado com catálogo oficial de 17 produtos, aliases/normalização, isolamento por emitente e preservação do `cProd` fiscal;
 - DANFE aprovado portado para o site com layout A4 compacto, primeira coluna `Item`, código interno Fernando Klein apenas como apresentação, transporte somente quando útil, paginação por espaço vertical e código de barras da chave;
 - preview DANFE em modal, `Ctrl + scroll` restrito ao documento, fechamento por botão/Esc/backdrop e impressão/PDF pelo navegador;
-- formulário de consulta integrado ao Bridge com estados fiscais/técnicos renderizados sem injetar conteúdo retornado como HTML.
+- formulário de consulta integrado ao Bridge com estados fiscais/técnicos renderizados sem injetar conteúdo retornado como HTML;
+- deploy Cloudflare pela raiz do monorepo usando `wrangler.jsonc`, com build automático do site e publicação de `apps/web/dist`.
 
 Em implementação:
 
@@ -61,6 +62,16 @@ npm run build:web
 dotnet run --project apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeAgendamento.Bridge.Tests.csproj -c Release
 dotnet build apps/bridge/src/NfeAgendamento.Bridge/NfeAgendamento.Bridge.csproj -c Release
 ```
+
+## Deploy Cloudflare
+
+O Cloudflare Workers Builds pode continuar usando o comando padrão na raiz do repositório:
+
+```bash
+npx wrangler deploy
+```
+
+O `wrangler.jsonc` da raiz executa `npm run build:web` e publica `./apps/web/dist`, evitando que o Wrangler tente fazer autodetecção no root do workspace. O CI executa também `npx wrangler deploy --dry-run` para validar essa configuração sem publicar.
 
 O plano técnico canônico está em `docs/superpowers/plans/2026-09-08-nfe-agendamento-2-implementation.md`.
 O fechamento da Task 4 está registrado em `docs/superpowers/plans/2026-09-08-task-4-completion.md`.
