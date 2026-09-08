@@ -17,11 +17,9 @@ Concluído e validado no CI:
 
 - bootstrap Vite/TypeScript e .NET 10;
 - build e testes web + Bridge;
-- `GET /api/v1/health`;
-- detecção do Bridge pelo site;
+- `GET /api/v1/health` e detecção do Bridge pelo site;
 - proteção de `Origin`/`Host` com testes de integração;
-- `GET /api/v1/certificates`;
-- `POST /api/v1/certificate/select`;
+- `GET /api/v1/certificates` e `POST /api/v1/certificate/select`;
 - filtro A1 por chave privada, validade e Client Authentication quando EKU estiver presente;
 - seleção do certificado diretamente no site;
 - estados `Bridge conectado`, `Bridge não encontrado` e `Permissão de acesso local necessária`;
@@ -37,15 +35,17 @@ Concluído e validado no CI:
 - cliente TypeScript `lookupNfe()` restrito ao Bridge local e com validação estrita do contrato JSON;
 - validação da chave NF-e também no navegador antes de qualquer chamada ao Bridge;
 - pipeline XML integralmente no site com parser DOM, validação de `infNFe/@Id` contra a chave consultada e rejeição de XML malformado/mismatched;
-- extração tipada de emitente, destinatário, itens, totais, datas e protocolo para uso do DANFE;
+- modelo fiscal tipado para DANFE: emitente, destinatário, itens, tributos, totais, fatura/duplicata, pagamento, transporte, adicionais, datas e protocolo;
 - XML original preservado sem mutação e download liberado somente depois da validação local;
+- tratamento Fernando Klein portado com catálogo oficial de 17 produtos, aliases/normalização, isolamento por emitente e preservação do `cProd` fiscal;
+- DANFE aprovado portado para o site com layout A4 compacto, primeira coluna `Item`, código interno Fernando Klein apenas como apresentação, transporte somente quando útil, paginação por espaço vertical e código de barras da chave;
+- preview DANFE em modal, `Ctrl + scroll` restrito ao documento, fechamento por botão/Esc/backdrop e impressão/PDF pelo navegador;
 - formulário de consulta integrado ao Bridge com estados fiscais/técnicos renderizados sem injetar conteúdo retornado como HTML.
 
 Em implementação:
 
-- regra Fernando Klein;
-- DANFE;
-- fallback Portal/WebView2.
+- fallback Portal/WebView2 para limite de consumo/656;
+- acabamento final, documentação de segurança e teste físico Windows.
 
 ## Fora de escopo desta versão
 
