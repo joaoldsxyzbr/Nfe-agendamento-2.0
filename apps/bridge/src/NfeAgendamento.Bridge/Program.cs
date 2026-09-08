@@ -1,12 +1,20 @@
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using NfeAgendamento.Bridge;
 using NfeAgendamento.Bridge.Certificates;
+using NfeAgendamento.Bridge.Fiscal;
 using NfeAgendamento.Bridge.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseUrls(BridgeConstants.ListenUrl);
 
 builder.Services.AddSingleton<CertificateService>();
+builder.Services.AddSingleton<INfeDistributionTransport, SefazDistributionTransport>();
+builder.Services.AddScoped<NfeLookupService>(services =>
+{
+    var transport = services.GetRequiredService<INfeDistributionTransport>();
+    var certificates = services.GetRequiredService<CertificateService>();
+    return new NfeLookupService(transport, certificates.GetSelectedCertificate);
+});
 builder.Services.AddSingleton<LocalRequestGuard>(services =>
 {
     var configuration = services.GetRequiredService<IConfiguration>();
@@ -109,8 +117,27 @@ api.MapPost("/certificate/select", async (
     }
 });
 
+api.MapPost("/nfe/lookup", async (
+    NfeLookupRequest request,
+    NfeLookupService lookup,
+    CancellationToken cancellationToken) =>
+{
+    if (!AccessKey.TryParse(request.AccessKey, out _))
+    {
+        return Results.BadRequest(new
+        {
+            error = "invalid_access_key",
+            message = "Informe uma chave NF-e válida com 44 dígitos e dígito verificador correto.",
+        });
+    }
+
+    var result = await lookup.LookupAsync(request.AccessKey, cancellationToken);
+    return Results.Ok(result);
+});
+
 app.Run();
 
 public sealed record CertificateSelectRequest(string Thumbprint);
+public sealed record NfeLookupRequest(string AccessKey);
 
 public partial class Program;
