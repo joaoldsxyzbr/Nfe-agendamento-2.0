@@ -8,6 +8,9 @@
     "build": "tsc --noEmit && vite build",
     "dev": "vite"
   },
+  "dependencies": {
+    "@xmldom/xmldom": "0.9.12"
+  },
   "devDependencies": {
     "@types/node": "^24.0.0",
     "typescript": "7.0.2",
