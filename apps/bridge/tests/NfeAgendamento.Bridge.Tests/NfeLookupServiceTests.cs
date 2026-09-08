@@ -27,6 +27,22 @@ public sealed class NfeLookupServiceTests
     }
 
     [Fact]
+    public async Task CStat_138_without_full_xml_returns_fiscal_status()
+    {
+        using var certificate = CreateCertificate();
+        var transport = new FakeTransport(new TransportResult("138", "Documento localizado", null));
+        var service = new NfeLookupService(transport, () => certificate);
+
+        var result = await service.LookupAsync(ValidKey, TestContext.Current.CancellationToken);
+
+        Assert.Equal(LookupCategories.FiscalStatus, result.Category);
+        Assert.Equal("138", result.CStat);
+        Assert.Null(result.Xml);
+        Assert.Equal("Documento localizado", result.Message);
+        Assert.Equal(1, transport.CallCount);
+    }
+
+    [Fact]
     public async Task CStat_137_returns_fiscal_status_without_xml()
     {
         using var certificate = CreateCertificate();
