@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Cors.Infrastructure;
 using NfeAgendamento.Bridge;
 using NfeAgendamento.Bridge.Certificates;
 using NfeAgendamento.Bridge.Fiscal;
+using NfeAgendamento.Bridge.Portal;
 using NfeAgendamento.Bridge.Security;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,6 +15,13 @@ builder.Services.AddScoped<NfeLookupService>(services =>
     var transport = services.GetRequiredService<INfeDistributionTransport>();
     var certificates = services.GetRequiredService<CertificateService>();
     return new NfeLookupService(transport, certificates.GetSelectedCertificate);
+});
+builder.Services.AddSingleton<IPortalWindowLauncher, ProcessPortalWindowLauncher>();
+builder.Services.AddSingleton<PortalFallbackService>(services =>
+{
+    var launcher = services.GetRequiredService<IPortalWindowLauncher>();
+    var certificates = services.GetRequiredService<CertificateService>();
+    return new PortalFallbackService(launcher, () => certificates.GetSelected()?.Thumbprint);
 });
 builder.Services.AddSingleton<LocalRequestGuard>(services =>
 {
@@ -78,11 +86,13 @@ app.Use(async (context, next) =>
 
 var api = app.MapGroup(BridgeConstants.ApiPrefix);
 
-api.MapGet("/health", (CertificateService certificates) => Results.Ok(new
+api.MapGet("/health", (
+    CertificateService certificates,
+    IPortalWindowLauncher portalLauncher) => Results.Ok(new
 {
     version = typeof(Program).Assembly.GetName().Version?.ToString() ?? "0.0.0",
     status = "ok",
-    webView2Available = false,
+    webView2Available = portalLauncher.IsAvailable,
     certificateSelected = certificates.GetSelected() is not null,
 }));
 
@@ -135,9 +145,49 @@ api.MapPost("/nfe/lookup", async (
     return Results.Ok(result);
 });
 
+api.MapPost("/portal/start", async (
+    PortalStartRequest request,
+    PortalFallbackService portal,
+    CancellationToken cancellationToken) =>
+{
+    if (!AccessKey.TryParse(request.AccessKey, out _))
+    {
+        return Results.BadRequest(new
+        {
+            error = "invalid_access_key",
+            message = "Informe uma chave NF-e válida com 44 dígitos e dígito verificador correto.",
+        });
+    }
+
+    try
+    {
+        var operationId = await portal.StartAsync(request.AccessKey, cancellationToken);
+        return Results.Accepted(
+            $"{BridgeConstants.ApiPrefix}/portal/status/{operationId}",
+            new { operationId });
+    }
+    catch (InvalidOperationException exception)
+    {
+        return Results.Conflict(new
+        {
+            error = "portal_unavailable",
+            message = exception.Message,
+        });
+    }
+});
+
+api.MapGet("/portal/status/{operationId}", (
+    string operationId,
+    PortalFallbackService portal) =>
+{
+    var status = portal.GetStatus(operationId);
+    return status is null ? Results.NotFound() : Results.Ok(status);
+});
+
 app.Run();
 
 public sealed record CertificateSelectRequest(string Thumbprint);
 public sealed record NfeLookupRequest(string AccessKey);
+public sealed record PortalStartRequest(string AccessKey);
 
 public partial class Program;
