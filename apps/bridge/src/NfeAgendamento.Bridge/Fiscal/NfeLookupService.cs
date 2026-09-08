@@ -1,5 +1,6 @@
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
+using NfeAgendamento.Bridge.Certificates;
 
 namespace NfeAgendamento.Bridge.Fiscal;
 
@@ -46,6 +47,14 @@ public sealed class NfeLookupService
                 parsed.Value,
                 certificate,
                 cancellationToken);
+        }
+        catch (CertificateIdentityException exception)
+        {
+            return new LookupResult(
+                LookupCategories.CertificateError,
+                null,
+                null,
+                exception.Message);
         }
         catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.TooManyRequests)
         {
