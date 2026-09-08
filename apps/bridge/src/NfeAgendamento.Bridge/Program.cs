@@ -1,29 +1,42 @@
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using NfeAgendamento.Bridge;
 using NfeAgendamento.Bridge.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseUrls(BridgeConstants.ListenUrl);
 
-var allowedOrigins = builder.Configuration
-    .GetSection("Bridge:AllowedOrigins")
-    .Get<string[]>() ?? [];
-
-builder.Services.AddSingleton(new LocalRequestGuard(allowedOrigins));
-builder.Services.AddCors(options =>
+builder.Services.AddSingleton<LocalRequestGuard>(services =>
 {
-    options.AddPolicy("BridgeWeb", policy =>
-    {
-        if (allowedOrigins.Length > 0)
-        {
-            policy.WithOrigins(allowedOrigins);
-        }
+    var configuration = services.GetRequiredService<IConfiguration>();
+    var allowedOrigins = configuration
+        .GetSection("Bridge:AllowedOrigins")
+        .Get<string[]>() ?? [];
 
-        policy
-            .WithMethods("GET", "POST", "OPTIONS")
-            .WithHeaders("Accept", "Content-Type", "X-Nfe-Bridge")
-            .SetPreflightMaxAge(TimeSpan.FromMinutes(10));
-    });
+    return new LocalRequestGuard(allowedOrigins);
 });
+
+builder.Services.AddCors();
+builder.Services
+    .AddOptions<CorsOptions>()
+    .Configure<IConfiguration>((options, configuration) =>
+    {
+        var allowedOrigins = configuration
+            .GetSection("Bridge:AllowedOrigins")
+            .Get<string[]>() ?? [];
+
+        options.AddPolicy("BridgeWeb", policy =>
+        {
+            if (allowedOrigins.Length > 0)
+            {
+                policy.WithOrigins(allowedOrigins);
+            }
+
+            policy
+                .WithMethods("GET", "POST", "OPTIONS")
+                .WithHeaders("Accept", "Content-Type", "X-Nfe-Bridge")
+                .SetPreflightMaxAge(TimeSpan.FromMinutes(10));
+        });
+    });
 
 var app = builder.Build();
 
