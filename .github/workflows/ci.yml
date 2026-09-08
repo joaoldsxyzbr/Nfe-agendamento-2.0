@@ -44,9 +44,9 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - name: Publish Bridge
-        run: dotnet publish apps/bridge/src/NfeAgendamento.Bridge/NfeAgendamento.Bridge.csproj -c Release -r win-x64 --self-contained false -o artifacts/NfeAgendamentoBridge
+        run: dotnet publish apps/bridge/src/NfeAgendamento.Bridge/NfeAgendamento.Bridge.csproj -c Release -r win-x64 --self-contained true -o artifacts/NfeAgendamentoBridge
       - name: Publish Portal helper
-        run: dotnet publish apps/bridge/windows/NfeAgendamento.Portal/NfeAgendamento.Portal.csproj -c Release -r win-x64 --self-contained false -o artifacts/NfeAgendamentoBridge
+        run: dotnet publish apps/bridge/windows/NfeAgendamento.Portal/NfeAgendamento.Portal.csproj -c Release -r win-x64 --self-contained true -o artifacts/NfeAgendamentoBridge
       - name: Ensure Inno Setup
         shell: pwsh
         run: |
