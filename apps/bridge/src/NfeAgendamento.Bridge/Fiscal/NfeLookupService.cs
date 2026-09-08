@@ -30,7 +30,7 @@ public sealed class NfeLookupService
                 "Chave NF-e inválida.");
         }
 
-        var certificate = _getSelectedCertificate();
+        using var certificate = _getSelectedCertificate();
         if (certificate is null)
         {
             return new LookupResult(
