@@ -78,7 +78,7 @@ function initializeSettingsPanel(): void {
     }
   });
 
-  settingsClose.addEventListener('click', closeSettings);
+  settingsClose.addEventListener('click', () => closeSettings());
 
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && !settingsPanel.hidden) closeSettings();
