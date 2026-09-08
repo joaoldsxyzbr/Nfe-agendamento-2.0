@@ -1,8 +1,10 @@
 import { BridgeClient } from './bridge/client';
 import type { CertificateCatalog, CertificateSummary, NfeLookupResult } from './bridge/contracts';
+import { attachDanfeZoom, renderDanfe } from './danfe/render';
 import { validateAccessKey } from './nfe/access-key';
-import { parseNfeXml } from './nfe/xml';
+import { parseNfeXml, type ParsedNfe } from './nfe/xml';
 import './styles.css';
+import './danfe/styles.css';
 
 const app = document.querySelector<HTMLElement>('#app');
 
@@ -77,6 +79,22 @@ app.innerHTML = `
       </div>
     </section>
   </div>
+
+  <section class="danfe" id="danfe-viewer" role="dialog" aria-modal="true" aria-labelledby="danfe-title" hidden>
+    <div class="danfe-modal">
+      <div class="danfe-toolbar">
+        <strong class="danfe-toolbar-title" id="danfe-title">Visualizar DANFE</strong>
+        <span class="danfe-zoom-hint">Ctrl + scroll para zoom</span>
+        <div class="danfe-toolbar-actions">
+          <button id="danfe-close" type="button">Fechar</button>
+          <button id="danfe-print" type="button">Imprimir / PDF</button>
+        </div>
+      </div>
+      <div class="danfe-scroll">
+        <div id="danfe-content"></div>
+      </div>
+    </div>
+  </section>
 `;
 
 const bridgeClient = new BridgeClient();
@@ -90,7 +108,12 @@ const lookupForm = requireElement<HTMLFormElement>('#lookup-form');
 const accessKeyInput = requireElement<HTMLInputElement>('#access-key');
 const lookupSubmit = requireElement<HTMLButtonElement>('#lookup-submit');
 const resultCard = requireElement<HTMLElement>('#result');
+const danfeViewer = requireElement<HTMLElement>('#danfe-viewer');
+const danfeContent = requireElement<HTMLElement>('#danfe-content');
+const danfeClose = requireElement<HTMLButtonElement>('#danfe-close');
+const danfePrint = requireElement<HTMLButtonElement>('#danfe-print');
 let currentDownloadUrl: string | null = null;
+let detachDanfeZoom: (() => void) | null = null;
 
 certificateApply.addEventListener('click', () => {
   void applyCertificateSelection();
@@ -99,6 +122,15 @@ certificateApply.addEventListener('click', () => {
 lookupForm.addEventListener('submit', (event) => {
   event.preventDefault();
   void submitLookup();
+});
+
+danfeClose.addEventListener('click', closeDanfe);
+danfePrint.addEventListener('click', () => window.print());
+danfeViewer.addEventListener('click', (event) => {
+  if (event.target === danfeViewer) closeDanfe();
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !danfeViewer.hidden) closeDanfe();
 });
 
 void refreshBridgeAndCertificates();
@@ -153,7 +185,7 @@ async function submitLookup(): Promise<void> {
     const lookup = await bridgeClient.lookupNfe(validation.value);
     if (lookup.category === 'success' && lookup.xml) {
       const parsed = parseNfeXml(lookup.xml, validation.value);
-      renderLookupSuccess(parsed.accessKey, parsed.number, parsed.series, parsed.issuer.name, parsed.originalXml);
+      renderLookupSuccess(parsed);
       return;
     }
 
@@ -190,32 +222,54 @@ function renderLookupFailure(lookup: NfeLookupResult): void {
   }
 }
 
-function renderLookupSuccess(
-  accessKey: string,
-  number: string,
-  series: string,
-  issuerName: string,
-  xml: string,
-): void {
+function renderLookupSuccess(parsed: ParsedNfe): void {
   resetResult();
 
   const title = document.createElement('h2');
-  title.textContent = `NF-e ${number || accessKey}`;
+  title.textContent = `NF-e ${parsed.number || parsed.accessKey}`;
 
   const issuer = document.createElement('p');
-  issuer.textContent = issuerName || 'Emitente não informado';
+  issuer.textContent = parsed.issuer.name || 'Emitente não informado';
 
   const metadata = document.createElement('p');
   metadata.className = 'help-text';
-  metadata.textContent = `Série ${series || '-'} · Chave ${accessKey}`;
+  metadata.textContent = `Série ${parsed.series || '-'} · Chave ${parsed.accessKey}`;
 
-  currentDownloadUrl = URL.createObjectURL(new Blob([xml], { type: 'application/xml;charset=utf-8' }));
+  const actions = document.createElement('div');
+  actions.className = 'result-actions';
+
+  const preview = document.createElement('button');
+  preview.type = 'button';
+  preview.textContent = 'Visualizar DANFE';
+  preview.addEventListener('click', () => openDanfe(parsed));
+
+  currentDownloadUrl = URL.createObjectURL(new Blob([parsed.originalXml], { type: 'application/xml;charset=utf-8' }));
   const download = document.createElement('a');
+  download.className = 'download-action';
   download.href = currentDownloadUrl;
-  download.download = `${accessKey}.xml`;
+  download.download = `${parsed.accessKey}.xml`;
   download.textContent = 'Baixar XML';
 
-  resultCard.append(title, issuer, metadata, download);
+  actions.append(preview, download);
+  resultCard.append(title, issuer, metadata, actions);
+}
+
+function openDanfe(parsed: ParsedNfe): void {
+  detachDanfeZoom?.();
+  danfeContent.replaceChildren(renderDanfe(parsed));
+  danfeViewer.hidden = false;
+  document.body.classList.add('danfe-open');
+  detachDanfeZoom = attachDanfeZoom(danfeViewer);
+  danfeClose.focus();
+}
+
+function closeDanfe(): void {
+  if (danfeViewer.hidden) return;
+  danfeViewer.hidden = true;
+  document.body.classList.remove('danfe-open');
+  detachDanfeZoom?.();
+  detachDanfeZoom = null;
+  danfeContent.replaceChildren();
 }
 
 function renderLookupState(titleText: string, messageText: string): void {
@@ -232,6 +286,7 @@ function renderLookupState(titleText: string, messageText: string): void {
 }
 
 function resetResult(): void {
+  closeDanfe();
   if (currentDownloadUrl) {
     URL.revokeObjectURL(currentDownloadUrl);
     currentDownloadUrl = null;
