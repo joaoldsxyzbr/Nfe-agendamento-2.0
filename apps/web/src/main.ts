@@ -1,5 +1,7 @@
 import { BridgeClient } from './bridge/client';
-import type { CertificateCatalog, CertificateSummary } from './bridge/contracts';
+import type { CertificateCatalog, CertificateSummary, NfeLookupResult } from './bridge/contracts';
+import { validateAccessKey } from './nfe/access-key';
+import { parseNfeXml } from './nfe/xml';
 import './styles.css';
 
 const app = document.querySelector<HTMLElement>('#app');
@@ -62,7 +64,7 @@ app.innerHTML = `
             placeholder="Digite ou cole a chave de acesso"
             aria-describedby="lookup-help"
           />
-          <button type="submit">Consultar</button>
+          <button id="lookup-submit" type="submit">Consultar</button>
         </div>
         <p id="lookup-help" class="help-text">O processamento visual acontece neste site. O Bridge local é usado apenas quando o navegador precisa acessar certificado, SEFAZ ou Portal.</p>
       </form>
@@ -84,9 +86,19 @@ const certificateSelect = requireElement<HTMLSelectElement>('#certificate-select
 const certificateApply = requireElement<HTMLButtonElement>('#certificate-apply');
 const certificateState = requireElement<HTMLElement>('#certificate-state');
 const certificateHelp = requireElement<HTMLElement>('#certificate-help');
+const lookupForm = requireElement<HTMLFormElement>('#lookup-form');
+const accessKeyInput = requireElement<HTMLInputElement>('#access-key');
+const lookupSubmit = requireElement<HTMLButtonElement>('#lookup-submit');
+const resultCard = requireElement<HTMLElement>('#result');
+let currentDownloadUrl: string | null = null;
 
 certificateApply.addEventListener('click', () => {
   void applyCertificateSelection();
+});
+
+lookupForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  void submitLookup();
 });
 
 void refreshBridgeAndCertificates();
@@ -124,6 +136,113 @@ async function applyCertificateSelection(): Promise<void> {
       : 'Não foi possível selecionar o certificado.';
     setCertificateControlsEnabled(certificateSelect.options.length > 1);
   }
+}
+
+async function submitLookup(): Promise<void> {
+  const validation = validateAccessKey(accessKeyInput.value);
+  if (!validation.valid) {
+    renderLookupState('Chave inválida', validation.error);
+    accessKeyInput.focus();
+    return;
+  }
+
+  setLookupBusy(true);
+  renderLookupState('Consultando NF-e', 'Aguardando resposta da SEFAZ pelo Bridge local…');
+
+  try {
+    const lookup = await bridgeClient.lookupNfe(validation.value);
+    if (lookup.category === 'success' && lookup.xml) {
+      const parsed = parseNfeXml(lookup.xml, validation.value);
+      renderLookupSuccess(parsed.accessKey, parsed.number, parsed.series, parsed.issuer.name, parsed.originalXml);
+      return;
+    }
+
+    renderLookupFailure(lookup);
+  } catch (error) {
+    renderLookupState(
+      'Consulta não concluída',
+      error instanceof Error ? error.message : 'Não foi possível concluir a consulta da NF-e.',
+    );
+  } finally {
+    setLookupBusy(false);
+  }
+}
+
+function renderLookupFailure(lookup: NfeLookupResult): void {
+  const message = lookup.message ?? 'A SEFAZ não retornou XML para esta consulta.';
+  const status = lookup.cStat ? `Status SEFAZ ${lookup.cStat}. ${message}` : message;
+
+  switch (lookup.category) {
+    case 'consumption_limit':
+      renderLookupState('Limite de consultas atingido', status);
+      break;
+    case 'certificate_error':
+      renderLookupState('Certificado A1 indisponível', status);
+      break;
+    case 'transport_unavailable':
+      renderLookupState('SEFAZ indisponível', status);
+      break;
+    case 'fiscal_status':
+      renderLookupState('Resultado fiscal', status);
+      break;
+    default:
+      renderLookupState('Consulta não concluída', status);
+  }
+}
+
+function renderLookupSuccess(
+  accessKey: string,
+  number: string,
+  series: string,
+  issuerName: string,
+  xml: string,
+): void {
+  resetResult();
+
+  const title = document.createElement('h2');
+  title.textContent = `NF-e ${number || accessKey}`;
+
+  const issuer = document.createElement('p');
+  issuer.textContent = issuerName || 'Emitente não informado';
+
+  const metadata = document.createElement('p');
+  metadata.className = 'help-text';
+  metadata.textContent = `Série ${series || '-'} · Chave ${accessKey}`;
+
+  currentDownloadUrl = URL.createObjectURL(new Blob([xml], { type: 'application/xml;charset=utf-8' }));
+  const download = document.createElement('a');
+  download.href = currentDownloadUrl;
+  download.download = `${accessKey}.xml`;
+  download.textContent = 'Baixar XML';
+
+  resultCard.append(title, issuer, metadata, download);
+}
+
+function renderLookupState(titleText: string, messageText: string): void {
+  resetResult();
+
+  const state = document.createElement('div');
+  state.className = 'empty-state';
+  const title = document.createElement('strong');
+  title.textContent = titleText;
+  const message = document.createElement('span');
+  message.textContent = messageText;
+  state.append(title, message);
+  resultCard.append(state);
+}
+
+function resetResult(): void {
+  if (currentDownloadUrl) {
+    URL.revokeObjectURL(currentDownloadUrl);
+    currentDownloadUrl = null;
+  }
+  resultCard.replaceChildren();
+}
+
+function setLookupBusy(busy: boolean): void {
+  lookupSubmit.disabled = busy;
+  accessKeyInput.disabled = busy;
+  lookupSubmit.textContent = busy ? 'Consultando…' : 'Consultar';
 }
 
 function renderCertificateCatalog(catalog: CertificateCatalog): void {
