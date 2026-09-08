@@ -7,12 +7,13 @@ Este checklist cobre o que o CI não consegue provar: instalação real no Windo
 ## Pré-requisitos
 
 - Windows 10/11 x64 atualizado;
-- `NFeAgendamentoBridge-Setup-v0.0.2.exe` do mesmo commit/release que será validado;
-- Microsoft Edge WebView2 Runtime instalado;
-- .NET 10 Desktop Runtime;
+- `NFeAgendamentoBridge-Setup-v0.0.3.exe` do mesmo commit/release que será validado;
+- Microsoft Edge WebView2 Runtime instalado para testar o fallback Portal;
 - certificado A1 válido instalado em `CurrentUser/My` com chave privada;
-- origem HTTPS exata do site configurada em `Bridge:AllowedOrigins`;
+- origem HTTPS exata do site disponível para informar durante o Setup;
 - acesso à Internet para SEFAZ e Portal Nacional da NF-e.
+
+> A `v0.0.3` é self-contained: não exige instalação prévia do .NET 10.
 
 Registre antes de começar:
 
@@ -25,19 +26,22 @@ Registre antes de começar:
 | Navegador + versão | |
 | PC | |
 
-## 0. Instalação, auto-start e desinstalação
+## 0. Instalação, origem, auto-start e desinstalação
 
-1. Execute `NFeAgendamentoBridge-Setup-v0.0.2.exe` em uma conta de usuário comum.
+1. Execute `NFeAgendamentoBridge-Setup-v0.0.3.exe` em uma conta de usuário comum.
 2. Confirme que a instalação **não solicita UAC/admin**.
-3. Confirme os arquivos em `%LOCALAPPDATA%\NFe Agendamento Bridge`.
-4. Confirme que `NfeAgendamento.Bridge.exe` e `NfeAgendamento.Portal.exe` estão lado a lado.
-5. Confirme o atalho `NFe Agendamento Bridge` no Menu Iniciar e o ícone próprio azul/amarelo.
-6. Conclua a instalação com a opção de iniciar o Bridge marcada e confirme o processo em execução.
-7. Confirme a entrada `NFe Agendamento Bridge` em `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` apontando para o executável instalado.
-8. Encerre a sessão/reinicie o PC, faça login novamente e confirme que o Bridge iniciou automaticamente uma única vez.
-9. Se já existir `%LOCALAPPDATA%\NfeAgendamentoBridge\settings.json`, anote o conteúdo/seleção antes de desinstalar.
-10. Desinstale pelo Windows e confirme a remoção do diretório do aplicativo, atalho e entrada de auto-start.
-11. Confirme que `%LOCALAPPDATA%\NfeAgendamentoBridge\settings.json` permanece quando já existia, permitindo preservar a seleção local em uma reinstalação.
+3. Na tela `Site do NFe Agendamento`, informe somente a origem HTTPS exata exibida no navegador, sem caminho, query string ou fragmento.
+4. Confirme que uma origem inválida, `http://`, com caminho ou com caracteres extras é rejeitada pelo Setup.
+5. Confirme os arquivos em `%LOCALAPPDATA%\NFe Agendamento Bridge`.
+6. Confirme que `NfeAgendamento.Bridge.exe` e `NfeAgendamento.Portal.exe` estão lado a lado.
+7. Confirme o atalho `NFe Agendamento Bridge` no Menu Iniciar e o ícone próprio azul/amarelo.
+8. Conclua a instalação com a opção de iniciar o Bridge marcada e confirme o processo em execução sem instalar runtime .NET adicional.
+9. Confirme a entrada `NFe Agendamento Bridge` em `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` apontando para o executável instalado e contendo a mesma `Bridge:AllowedOrigins:0` informada no Setup.
+10. Abra o atalho do Menu Iniciar e confirme que ele usa a mesma origem autorizada.
+11. Encerre a sessão/reinicie o PC, faça login novamente e confirme que o Bridge iniciou automaticamente uma única vez.
+12. Se já existir `%LOCALAPPDATA%\NfeAgendamentoBridge\settings.json`, anote o conteúdo/seleção antes de desinstalar.
+13. Desinstale pelo Windows e confirme a remoção do diretório do aplicativo, atalho e entrada de auto-start.
+14. Confirme que `%LOCALAPPDATA%\NfeAgendamentoBridge\settings.json` permanece quando já existia, permitindo preservar a seleção local em uma reinstalação.
 
 Resultado: ☐ aprovado
 
@@ -46,12 +50,12 @@ Resultado: ☐ aprovado
 Executar separadamente em **Chrome, Edge e Firefox** quando disponíveis.
 
 1. Confirme que o Bridge instalado está em execução.
-2. Abra o site HTTPS oficial.
+2. Abra o site HTTPS oficial exatamente na origem autorizada durante o Setup.
 3. Se o navegador pedir acesso à rede/local host, autorize.
 4. Confirme `Bridge conectado`.
 5. Negue/revogque a permissão uma vez e confirme o estado `Permissão de acesso local necessária` quando o navegador expuser essa distinção.
 6. Feche o Bridge e confirme `Bridge não encontrado`.
-7. Reinicie o Bridge pelo atalho do Menu Iniciar.
+7. Reinicie o Bridge pelo atalho do Menu Iniciar e confirme que volta a conectar sem reconfigurar a origem.
 
 Resultado:
 
@@ -150,7 +154,7 @@ Resultado: ☐ aprovado
 Em outro PC:
 
 1. instale o Bridge usando o mesmo Setup validado;
-2. configure a mesma origem HTTPS permitida;
+2. informe a mesma origem HTTPS no Setup;
 3. use o A1 instalado **nesse segundo PC**;
 4. abra o mesmo site;
 5. faça uma consulta normal.
