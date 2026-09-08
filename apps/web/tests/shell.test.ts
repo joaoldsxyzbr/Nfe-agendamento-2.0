@@ -29,4 +29,18 @@ describe('application shell', () => {
     expect(activeSource).not.toContain('standby');
     expect(activeSource).not.toContain('login');
   });
+
+  it('keeps certificate selection inside the site and exposes only bridge states', () => {
+    const main = readFileSync(fromWeb('src/main.ts'), 'utf8');
+
+    expect(main).toContain('id="certificate-select"');
+    expect(main).toContain('id="certificate-apply"');
+    expect(main).toContain('new BridgeClient()');
+    expect(main).toContain('.listCertificates()');
+    expect(main).toContain('.selectCertificate(');
+    expect(main).toContain('Bridge conectado');
+    expect(main).toContain('Bridge não encontrado');
+    expect(main).toContain('Permissão de acesso local necessária');
+    expect(main.toLowerCase()).not.toContain('janela de configuração');
+  });
 });
