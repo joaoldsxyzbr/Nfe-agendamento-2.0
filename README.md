@@ -10,10 +10,11 @@ Reescrita limpa do NFe Agendamento com **site estático + Bridge Windows mínimo
 - **Segurança:** Host estrito `127.0.0.1:17345`, allowlist de `Origin`, CORS sem wildcard e produção fail-closed sem origem configurada.
 - **Certificado A1:** descoberto em `CurrentUser/My`; a chave privada nunca sai do Windows/Bridge.
 - **Persistência:** somente o thumbprint selecionado em `%LOCALAPPDATA%/NfeAgendamentoBridge/settings.json`.
+- **Fallback Portal:** helper Windows separado com WebView2, Portal Nacional fixo e hCaptcha sempre manual.
 
 ## Estado funcional — 08/09/2026
 
-Concluído e validado no CI:
+Concluído e validado automaticamente no CI:
 
 - bootstrap Vite/TypeScript e .NET 10;
 - build e testes web + Bridge;
@@ -35,18 +36,37 @@ Concluído e validado no CI:
 - cliente TypeScript `lookupNfe()` restrito ao Bridge local e com validação estrita do contrato JSON;
 - validação da chave NF-e também no navegador antes de qualquer chamada ao Bridge;
 - pipeline XML integralmente no site com parser DOM, validação de `infNFe/@Id` contra a chave consultada e rejeição de XML malformado/mismatched;
+- estado explícito `XML inválido` tanto no fluxo SEFAZ quanto no fluxo Portal;
 - modelo fiscal tipado para DANFE: emitente, destinatário, itens, tributos, totais, fatura/duplicata, pagamento, transporte, adicionais, datas e protocolo;
 - XML original preservado sem mutação e download liberado somente depois da validação local;
 - tratamento Fernando Klein portado com catálogo oficial de 17 produtos, aliases/normalização, isolamento por emitente e preservação do `cProd` fiscal;
 - DANFE aprovado portado para o site com layout A4 compacto, primeira coluna `Item`, código interno Fernando Klein apenas como apresentação, transporte somente quando útil, paginação por espaço vertical e código de barras da chave;
 - preview DANFE em modal, `Ctrl + scroll` restrito ao documento, fechamento por botão/Esc/backdrop e impressão/PDF pelo navegador;
 - formulário de consulta integrado ao Bridge com estados fiscais/técnicos renderizados sem injetar conteúdo retornado como HTML;
-- deploy Cloudflare pela raiz do monorepo usando `wrangler.jsonc`, com build automático do site e publicação de `apps/web/dist`.
+- fallback automático `consumption_limit/656 → Portal Nacional → XML → mesmo parser/DANFE`, sem repetir a consulta SEFAZ;
+- `POST /api/v1/portal/start` e `GET /api/v1/portal/status/{operationId}` com operações locais e efêmeras;
+- helper `NfeAgendamento.Portal.exe` em WinForms/WebView2, bloqueando navegação externa, novas janelas externas e downloads fora do endpoint XML oficial;
+- seleção do certificado do Portal pelo mesmo thumbprint escolhido no site;
+- XML vindo do Portal limitado a 10 MiB, validado contra a chave e entregue ao site apenas após validação;
+- hCaptcha do Portal permanece obrigatoriamente manual e não existe automação/bypass;
+- regressão automática que impede reintroduzir Central, pareamento, leader/standby, fila compartilhada, lote ou bind LAN;
+- deploy Cloudflare pela raiz do monorepo usando `wrangler.jsonc`, com build automático do site e publicação de `apps/web/dist`;
+- `npx wrangler deploy --dry-run` no CI;
+- build real do helper `net10.0-windows` no CI;
+- pacote Windows de aceitação gerado no CI como artifact `NfeAgendamentoBridge-win-x64`, com Bridge e helper Portal lado a lado.
 
-Em implementação:
+## Pendência para uso real
 
-- fallback Portal/WebView2 para limite de consumo/656;
-- acabamento final, documentação de segurança e teste físico Windows.
+A implementação automatizável está fechada. Antes de declarar uma release validada em produção ainda é necessário executar o **teste físico Windows** descrito em `docs/testing/acceptance.md`, incluindo:
+
+- navegador real acessando o Bridge em loopback;
+- certificado A1 real;
+- consulta SEFAZ real;
+- DANFE/PDF;
+- ocorrência real ou controlada de limite/656 para validar WebView2 + Portal + hCaptcha manual + retorno do XML;
+- segundo PC independente com seu próprio Bridge.
+
+A origem HTTPS definitiva do site também precisa ser configurada no Bridge em `Bridge:AllowedOrigins`. O Bridge permanece fail-closed quando nenhuma origem é configurada. Consulte `docs/architecture/bridge-security.md`.
 
 ## Fora de escopo desta versão
 
@@ -61,6 +81,7 @@ npm run build:web
 
 dotnet run --project apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeAgendamento.Bridge.Tests.csproj -c Release
 dotnet build apps/bridge/src/NfeAgendamento.Bridge/NfeAgendamento.Bridge.csproj -c Release
+dotnet build apps/bridge/windows/NfeAgendamento.Portal/NfeAgendamento.Portal.csproj -c Release
 ```
 
 ## Deploy Cloudflare
@@ -73,6 +94,29 @@ npx wrangler deploy
 
 O `wrangler.jsonc` da raiz executa `npm run build:web` e publica `./apps/web/dist`, evitando que o Wrangler tente fazer autodetecção no root do workspace. O CI executa também `npx wrangler deploy --dry-run` para validar essa configuração sem publicar.
 
-O plano técnico canônico está em `docs/superpowers/plans/2026-09-08-nfe-agendamento-2-implementation.md`.
-O fechamento da Task 4 está registrado em `docs/superpowers/plans/2026-09-08-task-4-completion.md`.
-O fechamento da Task 5 está registrado em `docs/superpowers/plans/2026-09-08-task-5-completion.md`.
+## Pacote Windows para aceitação
+
+Depois de uma execução verde do CI, o job `windows-package` gera o artifact:
+
+```text
+NfeAgendamentoBridge-win-x64
+```
+
+O artifact reúne `NfeAgendamento.Bridge.exe` e `NfeAgendamento.Portal.exe` no mesmo diretório, como exigido pelo launcher do fallback. O pacote atual é framework-dependent e requer .NET 10 Desktop Runtime; o helper também requer Microsoft Edge WebView2 Runtime.
+
+Antes de iniciar o Bridge em produção, configure a origem exata do site, por exemplo:
+
+```powershell
+$env:Bridge__AllowedOrigins__0 = "https://SEU-DOMINIO-EXATO"
+.\NfeAgendamento.Bridge.exe
+```
+
+Não use wildcard na allowlist.
+
+## Documentação
+
+- arquitetura/segurança: `docs/architecture/bridge-security.md`;
+- aceitação física: `docs/testing/acceptance.md`;
+- plano técnico canônico: `docs/superpowers/plans/2026-09-08-nfe-agendamento-2-implementation.md`;
+- fechamento da Task 4: `docs/superpowers/plans/2026-09-08-task-4-completion.md`;
+- fechamento da Task 5: `docs/superpowers/plans/2026-09-08-task-5-completion.md`.
