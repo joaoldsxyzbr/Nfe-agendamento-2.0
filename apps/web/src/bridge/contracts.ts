@@ -6,3 +6,16 @@ export type BridgeHealth = {
   webView2Available: boolean;
   certificateSelected: boolean;
 };
+
+export type CertificateSummary = {
+  subject: string;
+  issuer: string;
+  notBefore: string;
+  notAfter: string;
+  thumbprint: string;
+};
+
+export type CertificateCatalog = {
+  certificates: CertificateSummary[];
+  selectedThumbprint: string | null;
+};
