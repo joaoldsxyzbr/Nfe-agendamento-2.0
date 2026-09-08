@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using NfeAgendamento.Bridge;
 using NfeAgendamento.Bridge.Certificates;
@@ -7,10 +8,14 @@ using NfeAgendamento.Bridge.Runtime;
 using NfeAgendamento.Bridge.Security;
 
 const string SingleInstanceName = "NfeAgendamento.Bridge";
-if (!BridgeSingleInstance.TryAcquire(SingleInstanceName, out var singleInstance))
+BridgeSingleInstance? singleInstance = null;
+if (Assembly.GetEntryAssembly() == typeof(Program).Assembly &&
+    !BridgeSingleInstance.TryAcquire(SingleInstanceName, out singleInstance))
+{
     return;
+}
 
-using var bridgeInstance = singleInstance!;
+using var bridgeInstance = singleInstance;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseUrls(BridgeConstants.ListenUrl);
