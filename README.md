@@ -18,6 +18,7 @@ Concluído e validado automaticamente no CI:
 
 - bootstrap Vite/TypeScript e .NET 10;
 - build e testes web + Bridge;
+- tema visual dark inspirado no site legado, com superfícies azul-escuras, azul como ação principal, amarelo como destaque e DANFE preservado branco/fiscal;
 - `GET /api/v1/health` e detecção do Bridge pelo site;
 - proteção de `Origin`/`Host` com testes de integração;
 - `GET /api/v1/certificates` e `POST /api/v1/certificate/select`;
