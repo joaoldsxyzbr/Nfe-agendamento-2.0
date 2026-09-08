@@ -4,6 +4,8 @@ import { BridgeClient } from '../src/bridge/client';
 
 describe('BridgeClient', () => {
   afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
@@ -154,5 +156,82 @@ describe('BridgeClient', () => {
     await expect(
       new BridgeClient().lookupNfe('35260812345678000195550010000000011000000018'),
     ).rejects.toThrow('Resposta inválida da consulta NF-e');
+  });
+
+  it('uses a short timeout for health', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn((_url: string | URL | Request, init?: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+      }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const client = new BridgeClient(BRIDGE_BASE_URL, {
+      healthMs: 20,
+      localMs: 100,
+      lookupMs: 500,
+      portalMs: 100,
+    });
+
+    const promise = client.health();
+    const rejected = expect(promise).rejects.toMatchObject({ name: 'AbortError' });
+    await vi.advanceTimersByTimeAsync(20);
+    await rejected;
+  });
+
+  it('keeps lookup alive past the health timeout and aborts only at lookup timeout', async () => {
+    vi.useFakeTimers();
+    let aborted = false;
+    const fetchMock = vi.fn((_url: string | URL | Request, init?: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => {
+          aborted = true;
+          reject(new DOMException('Aborted', 'AbortError'));
+        });
+      }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const client = new BridgeClient(BRIDGE_BASE_URL, {
+      healthMs: 20,
+      localMs: 100,
+      lookupMs: 500,
+      portalMs: 100,
+    });
+
+    const promise = client.lookupNfe('35260812345678000195550010000000011000000018');
+    const rejected = expect(promise).rejects.toMatchObject({ name: 'AbortError' });
+    await vi.advanceTimersByTimeAsync(20);
+    expect(aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(480);
+    await rejected;
+    expect(aborted).toBe(true);
+  });
+
+  it('portal calls do not inherit the short health timeout', async () => {
+    vi.useFakeTimers();
+    let aborted = false;
+    const fetchMock = vi.fn((_url: string | URL | Request, init?: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => {
+          aborted = true;
+          reject(new DOMException('Aborted', 'AbortError'));
+        });
+      }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const client = new BridgeClient(BRIDGE_BASE_URL, {
+      healthMs: 20,
+      localMs: 100,
+      lookupMs: 500,
+      portalMs: 100,
+    });
+
+    const promise = client.startPortal('35260812345678000195550010000000011000000018');
+    const rejected = expect(promise).rejects.toMatchObject({ name: 'AbortError' });
+    await vi.advanceTimersByTimeAsync(20);
+    expect(aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(80);
+    await rejected;
+    expect(aborted).toBe(true);
   });
 });
