@@ -4,8 +4,15 @@ namespace NfeAgendamento.Bridge.Tests;
 
 public sealed class PortalHelperStaticTests
 {
-    private static string RepositoryFile(params string[] parts) =>
-        File.ReadAllText(Path.Combine([Directory.GetCurrentDirectory(), .. parts]));
+    private static string RepositoryFile(params string[] parts)
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "package.json")))
+            directory = directory.Parent;
+
+        Assert.NotNull(directory);
+        return File.ReadAllText(Path.Combine([directory.FullName, .. parts]));
+    }
 
     [Fact]
     public void Windows_helper_is_locked_to_official_portal_and_manual_captcha()
