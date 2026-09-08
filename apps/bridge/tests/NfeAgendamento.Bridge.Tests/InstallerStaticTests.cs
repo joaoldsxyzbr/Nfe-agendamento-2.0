@@ -53,13 +53,31 @@ public sealed class InstallerStaticTests
         Assert.Contains("IconFilename: \"{app}\\NfeAgendamento.Bridge.exe\"", iss);
         Assert.Contains("SetupIconFile=..\\assets\\nfe-agendamento-bridge.ico", iss);
         Assert.Contains("UninstallDisplayIcon={app}\\NfeAgendamento.Bridge.exe", iss);
-        Assert.Contains("Filename: \"{app}\\NfeAgendamento.Bridge.exe\"; Description: \"Iniciar NFe Agendamento Bridge\"; WorkingDir: \"{app}\"; Flags: nowait postinstall skipifsilent", iss);
+        Assert.Contains("Filename: \"{app}\\NfeAgendamento.Bridge.exe\"; Description: \"Iniciar NFe Agendamento Bridge\"; WorkingDir: \"{app}\"", iss);
         Assert.DoesNotContain("PrivilegesRequired=admin", iss, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("netsh", iss, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("sc.exe", iss, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("schtasks", iss, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("http://", iss, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("https://", iss, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Installer_captures_exact_https_origin_and_applies_it_to_every_launch_path()
+    {
+        var root = RepositoryRoot();
+        var installerPath = Path.Combine(root, "apps", "bridge", "installer", "NfeAgendamentoBridge.iss");
+        var iss = File.ReadAllText(installerPath);
+
+        Assert.Contains("CreateInputQueryPage", iss);
+        Assert.Contains("IsValidHttpsOrigin", iss);
+        Assert.Contains("https://", iss, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Bridge:AllowedOrigins:0", iss);
+        Assert.Contains("Pos('/', Rest) = 0", iss);
+        Assert.Contains("Pos('?', Rest) = 0", iss);
+        Assert.Contains("Pos('#', Rest) = 0", iss);
+        Assert.Contains("Parameters: \"{code:GetBridgeArguments}\"", iss);
+        Assert.Contains("ValueData: \"\"\"{app}\\NfeAgendamento.Bridge.exe\"\" {code:GetBridgeArguments}\"", iss);
+        Assert.DoesNotContain("Bridge:AllowedOrigins:0=*", iss, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
