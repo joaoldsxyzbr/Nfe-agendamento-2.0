@@ -35,4 +35,30 @@ public sealed class InstallerStaticTests
         var project = File.ReadAllText(Path.Combine(root, "apps", "bridge", "windows", "NfeAgendamento.Portal", "NfeAgendamento.Portal.csproj"));
         Assert.Contains("<Version>0.0.2</Version>", project);
     }
+
+    [Fact]
+    public void Installer_is_per_user_autostart_and_has_no_privileged_components()
+    {
+        var root = RepositoryRoot();
+        var installerPath = Path.Combine(root, "apps", "bridge", "installer", "NfeAgendamentoBridge.iss");
+        Assert.True(File.Exists(installerPath), "O script Inno Setup ainda não existe.");
+        var iss = File.ReadAllText(installerPath);
+
+        Assert.Contains("PrivilegesRequired=lowest", iss);
+        Assert.Contains("DefaultDirName={localappdata}\\NFe Agendamento Bridge", iss);
+        Assert.Contains("Root: HKCU", iss);
+        Assert.Contains("Software\\Microsoft\\Windows\\CurrentVersion\\Run", iss);
+        Assert.Contains("uninsdeletevalue", iss);
+        Assert.Contains("{app}\\NfeAgendamento.Bridge.exe", iss);
+        Assert.Contains("IconFilename: \"{app}\\NfeAgendamento.Bridge.exe\"", iss);
+        Assert.Contains("SetupIconFile=..\\assets\\nfe-agendamento-bridge.ico", iss);
+        Assert.Contains("UninstallDisplayIcon={app}\\NfeAgendamento.Bridge.exe", iss);
+        Assert.Contains("Filename: \"{app}\\NfeAgendamento.Bridge.exe\"; Description: \"Iniciar NFe Agendamento Bridge\"; WorkingDir: \"{app}\"; Flags: nowait postinstall skipifsilent", iss);
+        Assert.DoesNotContain("PrivilegesRequired=admin", iss, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("netsh", iss, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("sc.exe", iss, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("schtasks", iss, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("http://", iss, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("https://", iss, StringComparison.OrdinalIgnoreCase);
+    }
 }
