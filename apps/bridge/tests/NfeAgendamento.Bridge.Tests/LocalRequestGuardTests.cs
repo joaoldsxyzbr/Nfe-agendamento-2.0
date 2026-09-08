@@ -6,12 +6,13 @@ namespace NfeAgendamento.Bridge.Tests;
 public sealed class LocalRequestGuardTests
 {
     [Theory]
-    [InlineData("https://nfeagendamento.example", true)]
+    [InlineData("https://nfeagendamento.joaolds.xyz.br", true)]
     [InlineData("https://evil.example", false)]
+    [InlineData("http://nfeagendamento.joaolds.xyz.br", false)]
     [InlineData(null, false)]
     public void Origin_is_allowlisted(string? origin, bool expected)
     {
-        var guard = new LocalRequestGuard(["https://nfeagendamento.example"]);
+        var guard = new LocalRequestGuard(["https://nfeagendamento.joaolds.xyz.br"]);
 
         Assert.Equal(expected, guard.IsAllowedOrigin(origin));
     }
@@ -22,7 +23,7 @@ public sealed class LocalRequestGuardTests
     [InlineData("192.168.0.10:17345", false)]
     public void Host_is_strictly_loopback(string host, bool expected)
     {
-        var guard = new LocalRequestGuard(["https://nfeagendamento.example"]);
+        var guard = new LocalRequestGuard(["https://nfeagendamento.joaolds.xyz.br"]);
 
         Assert.Equal(expected, guard.IsAllowedHost(host));
     }
