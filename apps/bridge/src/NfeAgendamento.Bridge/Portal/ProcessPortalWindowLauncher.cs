@@ -7,18 +7,25 @@ public sealed class ProcessPortalWindowLauncher : IPortalWindowLauncher
 {
     private const string HelperFileName = "NfeAgendamento.Portal.exe";
     private readonly string _helperPath;
+    private readonly Func<string, bool> _runtimeProbe;
 
     public ProcessPortalWindowLauncher()
-        : this(Path.Combine(AppContext.BaseDirectory, HelperFileName))
+        : this(Path.Combine(AppContext.BaseDirectory, HelperFileName), runtimeProbe: null)
     {
     }
 
-    internal ProcessPortalWindowLauncher(string helperPath)
+    internal ProcessPortalWindowLauncher(
+        string helperPath,
+        Func<string, bool>? runtimeProbe = null)
     {
         _helperPath = helperPath;
+        _runtimeProbe = runtimeProbe ?? ProbeRuntime;
     }
 
-    public bool IsAvailable => OperatingSystem.IsWindows() && File.Exists(_helperPath);
+    public bool IsAvailable =>
+        OperatingSystem.IsWindows() &&
+        File.Exists(_helperPath) &&
+        _runtimeProbe(_helperPath);
 
     public async Task<PortalLaunchResult> OpenAsync(
         PortalLaunchRequest request,
@@ -103,6 +110,48 @@ public sealed class ProcessPortalWindowLauncher : IPortalWindowLauncher
         startInfo.ArgumentList.Add("--error");
         startInfo.ArgumentList.Add(errorPath);
         return startInfo;
+    }
+
+    private static bool ProbeRuntime(string helperPath)
+    {
+        try
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = helperPath,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WorkingDirectory = Path.GetDirectoryName(helperPath) ?? AppContext.BaseDirectory,
+            };
+            startInfo.ArgumentList.Add("--probe-runtime");
+
+            using var process = Process.Start(startInfo);
+            if (process is null) return false;
+
+            if (!process.WaitForExit(milliseconds: 1_500))
+            {
+                try
+                {
+                    process.Kill(entireProcessTree: true);
+                }
+                catch (Exception exception) when (
+                    exception is InvalidOperationException or System.ComponentModel.Win32Exception)
+                {
+                }
+
+                return false;
+            }
+
+            return process.ExitCode == 0;
+        }
+        catch (Exception exception) when (
+            exception is IOException
+            or UnauthorizedAccessException
+            or InvalidOperationException
+            or System.ComponentModel.Win32Exception)
+        {
+            return false;
+        }
     }
 
     private static async Task<string?> ReadErrorAsync(string path, CancellationToken cancellationToken)
