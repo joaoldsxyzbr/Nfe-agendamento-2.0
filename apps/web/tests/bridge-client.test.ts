@@ -108,4 +108,51 @@ describe('BridgeClient', () => {
       }),
     );
   });
+
+  it('looks up NFe only through the fixed local bridge endpoint', async () => {
+    const payload = {
+      category: 'fiscal_status',
+      xml: null,
+      cStat: '137',
+      message: 'Nenhum documento localizado',
+    };
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(payload), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const result = await new BridgeClient().lookupNfe('35260812345678000195550010000000011000000018');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${BRIDGE_BASE_URL}/nfe/lookup`,
+      expect.objectContaining({
+        method: 'POST',
+        cache: 'no-store',
+        headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ accessKey: '35260812345678000195550010000000011000000018' }),
+      }),
+    );
+    expect(result).toEqual(payload);
+  });
+
+  it('rejects malformed lookup payloads', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({
+        category: 'success',
+        xml: '<nfeProc/>',
+        cStat: '138',
+        message: 'Documento localizado',
+        privateKey: 'never',
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    await expect(
+      new BridgeClient().lookupNfe('35260812345678000195550010000000011000000018'),
+    ).rejects.toThrow('Resposta inválida da consulta NF-e');
+  });
 });
