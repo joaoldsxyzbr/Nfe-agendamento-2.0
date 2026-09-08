@@ -10,7 +10,20 @@ import {
   type PortalStartResult,
 } from './contracts';
 
-const DEFAULT_TIMEOUT_MS = 2_000;
+export type BridgeTimeouts = {
+  healthMs: number;
+  localMs: number;
+  lookupMs: number;
+  portalMs: number;
+};
+
+const DEFAULT_TIMEOUTS: BridgeTimeouts = {
+  healthMs: 2_000,
+  localMs: 5_000,
+  lookupMs: 50_000,
+  portalMs: 8_000,
+};
+
 const CERTIFICATE_KEYS = ['issuer', 'notAfter', 'notBefore', 'subject', 'thumbprint'] as const;
 const LOOKUP_KEYS = ['cStat', 'category', 'message', 'xml'] as const;
 const PORTAL_STATUS_KEYS = ['message', 'operationId', 'state', 'xml'] as const;
@@ -32,18 +45,18 @@ const PORTAL_STATES = new Set<PortalOperationState>([
 export class BridgeClient {
   constructor(
     private readonly baseUrl = BRIDGE_BASE_URL,
-    private readonly timeoutMs = DEFAULT_TIMEOUT_MS,
+    private readonly timeouts: BridgeTimeouts = DEFAULT_TIMEOUTS,
   ) {}
 
   async health(signal?: AbortSignal): Promise<BridgeHealth> {
-    const response = await this.request('/health', { method: 'GET' }, signal);
+    const response = await this.request('/health', { method: 'GET' }, this.timeouts.healthMs, signal);
     const payload: unknown = await response.json();
     if (!isBridgeHealth(payload)) throw new Error('Resposta inválida do Bridge');
     return payload;
   }
 
   async listCertificates(signal?: AbortSignal): Promise<CertificateCatalog> {
-    const response = await this.request('/certificates', { method: 'GET' }, signal);
+    const response = await this.request('/certificates', { method: 'GET' }, this.timeouts.localMs, signal);
     const payload: unknown = await response.json();
     if (!isCertificateCatalog(payload)) throw new Error('Resposta inválida de certificados');
     return payload;
@@ -57,7 +70,7 @@ export class BridgeClient {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ thumbprint: normalized }),
-    }, signal);
+    }, this.timeouts.localMs, signal);
   }
 
   async lookupNfe(accessKey: string, signal?: AbortSignal): Promise<NfeLookupResult> {
@@ -68,7 +81,7 @@ export class BridgeClient {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ accessKey: normalized }),
-    }, signal);
+    }, this.timeouts.lookupMs, signal);
     const payload: unknown = await response.json();
     if (!isNfeLookupResult(payload)) throw new Error('Resposta inválida da consulta NF-e');
     return payload;
@@ -82,7 +95,7 @@ export class BridgeClient {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ accessKey: normalized }),
-    }, signal);
+    }, this.timeouts.portalMs, signal);
     const payload: unknown = await response.json();
     if (!isPortalStartResult(payload)) throw new Error('Resposta inválida ao iniciar o Portal');
     return payload;
@@ -92,15 +105,25 @@ export class BridgeClient {
     const normalized = operationId.trim();
     if (!normalized) throw new Error('Operação do Portal não informada');
 
-    const response = await this.request(`/portal/status/${encodeURIComponent(normalized)}`, { method: 'GET' }, signal);
+    const response = await this.request(
+      `/portal/status/${encodeURIComponent(normalized)}`,
+      { method: 'GET' },
+      this.timeouts.portalMs,
+      signal,
+    );
     const payload: unknown = await response.json();
     if (!isPortalOperationStatus(payload)) throw new Error('Resposta inválida do status do Portal');
     return payload;
   }
 
-  private async request(path: string, init: RequestInit, signal?: AbortSignal): Promise<Response> {
+  private async request(
+    path: string,
+    init: RequestInit,
+    timeoutMs: number,
+    signal?: AbortSignal,
+  ): Promise<Response> {
     const timeoutController = new AbortController();
-    const timeout = globalThis.setTimeout(() => timeoutController.abort(), this.timeoutMs);
+    const timeout = globalThis.setTimeout(() => timeoutController.abort(), timeoutMs);
     const requestSignal = signal ? AbortSignal.any([signal, timeoutController.signal]) : timeoutController.signal;
 
     try {
