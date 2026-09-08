@@ -15,12 +15,12 @@ Reescrita limpa do NFe Agendamento com **site estático + Bridge Windows mínimo
 
 ## Estado funcional — 08/09/2026
 
-Concluído e validado automaticamente no CI:
+Concluído e coberto pelo CI:
 
 - bootstrap Vite/TypeScript e .NET 10;
 - build e testes web + Bridge;
 - tema visual dark inspirado no site legado, com superfícies azul-escuras, azul como ação principal, amarelo como destaque e DANFE preservado branco/fiscal;
-- certificado A1 movido para um painel de configurações aberto pela engrenagem no canto superior direito, mantendo o status do Bridge ao lado e preservando o mesmo fluxo de seleção local;
+- certificado A1 movido para painel de configurações aberto pela engrenagem no canto superior direito;
 - `GET /api/v1/health` e detecção do Bridge pelo site;
 - proteção de `Origin`/`Host` com testes de integração;
 - `GET /api/v1/certificates` e `POST /api/v1/certificate/select`;
@@ -29,46 +29,31 @@ Concluído e validado automaticamente no CI:
 - estados `Bridge conectado`, `Bridge não encontrado` e `Permissão de acesso local necessária`;
 - `POST /api/v1/nfe/lookup` com validação completa da chave de 44 dígitos;
 - transporte para `NFeDistribuicaoDFe` autenticado pelo certificado A1 selecionado;
-- SOAP `consChNFe` com CNPJ extraído com segurança do certificado e `cUFAutor` omitido quando não for conhecido com confiança;
-- parsing defensivo da resposta SEFAZ, DTD desabilitado e limite de 10 MiB para XML/resposta;
-- validação de que o `docZip` retornado pertence exatamente à chave solicitada;
+- parsing defensivo da resposta SEFAZ, DTD desabilitado e limite de 10 MiB;
 - categorias normalizadas `success`, `fiscal_status`, `consumption_limit`, `certificate_error`, `transport_unavailable` e `technical_error`;
 - tratamento de `137`, `138`, `656`, HTTP 429, timeout e falhas ambíguas sem retry automático;
-- XML fiscal bruto preservado e devolvido ao site somente quando um `procNFe` válido da chave solicitada é encontrado;
-- material do A1 clonado com ownership independente para cada consulta e descartado ao término do lookup;
-- cliente TypeScript `lookupNfe()` restrito ao Bridge local e com validação estrita do contrato JSON;
-- validação da chave NF-e também no navegador antes de qualquer chamada ao Bridge;
-- pipeline XML integralmente no site com parser DOM, validação de `infNFe/@Id` contra a chave consultada e rejeição de XML malformado/mismatched;
-- estado explícito `XML inválido` tanto no fluxo SEFAZ quanto no fluxo Portal;
-- modelo fiscal tipado para DANFE: emitente, destinatário, itens, tributos, totais, fatura/duplicata, pagamento, transporte, adicionais, datas e protocolo;
-- XML original preservado sem mutação e download liberado somente depois da validação local;
-- tratamento Fernando Klein portado com catálogo oficial de 17 produtos, aliases/normalização, isolamento por emitente e preservação do `cProd` fiscal;
-- DANFE aprovado portado para o site com layout A4 compacto, primeira coluna `Item`, código interno Fernando Klein apenas como apresentação, transporte somente quando útil, paginação por espaço vertical e código de barras da chave;
-- preview DANFE em modal, `Ctrl + scroll` restrito ao documento, fechamento por botão/Esc/backdrop e impressão/PDF pelo navegador;
-- formulário de consulta integrado ao Bridge com estados fiscais/técnicos renderizados sem injetar conteúdo retornado como HTML;
-- fallback automático `consumption_limit/656 → Portal Nacional → XML → mesmo parser/DANFE`, sem repetir a consulta SEFAZ;
-- `POST /api/v1/portal/start` e `GET /api/v1/portal/status/{operationId}` com operações locais e efêmeras;
-- helper `NfeAgendamento.Portal.exe` em WinForms/WebView2, bloqueando navegação externa, novas janelas externas e downloads fora do endpoint XML oficial;
-- seleção do certificado do Portal pelo mesmo thumbprint escolhido no site;
-- XML vindo do Portal limitado a 10 MiB, validado contra a chave e entregue ao site apenas após validação;
-- hCaptcha do Portal permanece obrigatoriamente manual e não existe automação/bypass;
-- regressão automática que impede reintroduzir Central, pareamento, leader/standby, fila compartilhada, lote ou bind LAN;
-- deploy Cloudflare pela raiz do monorepo usando `wrangler.jsonc`, com build automático do site e publicação de `apps/web/dist`;
-- `npx wrangler deploy --dry-run` no CI;
-- build real do helper `net10.0-windows` no CI;
-- Bridge e helper versionados em `0.0.2`;
-- ícone próprio azul-escuro/amarelo incorporado ao `NfeAgendamento.Bridge.exe` e usado pelo instalador;
-- instalador Inno Setup compilado de verdade no runner Windows;
-- instalação projetada para `%LOCALAPPDATA%\NFe Agendamento Bridge`, com `PrivilegesRequired=lowest` e sem UAC/admin;
-- auto-start do Bridge por usuário em `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, reversível na desinstalação;
-- CI gera dois artifacts: `NFeAgendamentoBridge-Setup-v0.0.2` e `NfeAgendamentoBridge-win-x64`;
-- workflow da `v0.0.2` só publica depois do CI verde e baixa os artifacts do mesmo `workflow_run` validado.
+- pipeline XML no site com validação contra a chave consultada;
+- modelo fiscal tipado e DANFE A4 compacto;
+- tratamento Fernando Klein preservando o `cProd` fiscal;
+- preview DANFE em modal, `Ctrl + scroll`, impressão/PDF e download XML;
+- fallback automático `consumption_limit/656 → Portal Nacional → XML → mesmo parser/DANFE`;
+- helper `NfeAgendamento.Portal.exe` em WinForms/WebView2 com hCaptcha sempre manual;
+- deploy Cloudflare pela raiz usando `wrangler.jsonc` e `npx wrangler deploy --dry-run` no CI;
+- Bridge e helper versionados em `0.0.3`;
+- ícone próprio azul-escuro/amarelo no Bridge e instalador;
+- instalador Inno Setup por usuário em `%LOCALAPPDATA%\NFe Agendamento Bridge`, sem UAC/admin;
+- auto-start em `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`;
+- Bridge e helper Portal publicados como **self-contained win-x64**, sem exigir instalação externa do .NET 10;
+- instalador solicita a **origem HTTPS exata do site**, valida sem wildcard/caminho/query/fragmento e aplica `Bridge:AllowedOrigins:0` ao primeiro start, atalho e auto-start;
+- CI gera `NFeAgendamentoBridge-Setup-v0.0.3` e `NfeAgendamentoBridge-win-x64`;
+- workflow da `v0.0.3` só publica artifacts provenientes do mesmo CI verde.
 
 ## Pendência para uso real
 
-A implementação automatizável está fechada. Antes de declarar a versão validada em produção ainda é necessário executar o **teste físico Windows** descrito em `docs/testing/acceptance.md`, incluindo:
+Antes de declarar a versão validada em produção ainda é necessário executar o **teste físico Windows** em `docs/testing/acceptance.md`, incluindo:
 
 - instalar/desinstalar o Setup em Windows real e confirmar ausência de UAC;
+- informar a origem HTTPS real do site durante o Setup;
 - confirmar auto-start após novo login;
 - navegador real acessando o Bridge em loopback;
 - certificado A1 real;
@@ -77,9 +62,7 @@ A implementação automatizável está fechada. Antes de declarar a versão vali
 - ocorrência real ou controlada de limite/656 para validar WebView2 + Portal + hCaptcha manual + retorno do XML;
 - segundo PC independente com seu próprio Bridge.
 
-A origem HTTPS definitiva do site também precisa ser configurada no Bridge em `Bridge:AllowedOrigins`. O Bridge permanece fail-closed quando nenhuma origem é configurada. Consulte `docs/architecture/bridge-security.md`.
-
-## Fora de escopo desta versão
+## Fora de escopo
 
 Não existem Central, pareamento, líder/standby, servidor LAN, pasta compartilhada, login, banco, histórico, consulta em lote ou updater automático do Bridge.
 
@@ -97,20 +80,20 @@ dotnet build apps/bridge/windows/NfeAgendamento.Portal/NfeAgendamento.Portal.csp
 
 ## Deploy Cloudflare
 
-O Cloudflare Workers Builds pode continuar usando o comando padrão na raiz do repositório:
+O Cloudflare Workers Builds pode usar o comando padrão na raiz:
 
 ```bash
 npx wrangler deploy
 ```
 
-O `wrangler.jsonc` da raiz executa `npm run build:web` e publica `./apps/web/dist`, evitando que o Wrangler tente fazer autodetecção no root do workspace. O CI executa também `npx wrangler deploy --dry-run` para validar essa configuração sem publicar.
+O `wrangler.jsonc` executa `npm run build:web` e publica `./apps/web/dist`. O CI também executa `npx wrangler deploy --dry-run`.
 
-## Distribuição Windows v0.0.2
+## Distribuição Windows v0.0.3
 
-Para uso normal, a distribuição principal é:
+Para uso normal, use:
 
 ```text
-NFeAgendamentoBridge-Setup-v0.0.2.exe
+NFeAgendamentoBridge-Setup-v0.0.3.exe
 ```
 
 O instalador:
@@ -118,26 +101,26 @@ O instalador:
 - instala somente para o usuário atual em `%LOCALAPPDATA%\NFe Agendamento Bridge`;
 - não solicita administrador;
 - mantém Bridge + helper Portal lado a lado;
+- inclui o runtime .NET necessário no publish self-contained;
 - cria atalho no Menu Iniciar;
-- registra início automático do Bridge no login do usuário;
+- registra início automático no login do usuário;
 - inicia o Bridge ao finalizar quando a opção estiver marcada;
+- solicita uma vez a **origem HTTPS exata do site** e a reaplica nos caminhos de inicialização;
 - remove auto-start e arquivos instalados na desinstalação;
-- preserva por padrão `%LOCALAPPDATA%\NfeAgendamentoBridge`, onde fica a seleção local do certificado;
+- preserva `%LOCALAPPDATA%\NfeAgendamentoBridge`, onde fica a seleção local do certificado;
 - não possui updater automático.
 
-O artifact `NfeAgendamentoBridge-win-x64` e o asset `NfeAgendamentoBridge-win-x64.zip` continuam existindo como fallback técnico. A distribuição é framework-dependent e requer .NET 10 Desktop Runtime; o helper Portal requer Microsoft Edge WebView2 Runtime.
+A origem deve ser somente a autoridade HTTPS exibida no navegador, por exemplo `https://nfe.exemplo.com`, sem `/consulta`, query string ou fragmento. Não use wildcard.
 
-A release `v0.0.2` é preparada pelo GitHub Actions somente depois de um CI verde e recebe **Setup + ZIP** do mesmo run validado. As notas ficam em `docs/releases/v0.0.2.md`.
+O `NfeAgendamentoBridge-win-x64.zip` continua como fallback técnico. O .NET 10 não precisa estar previamente instalado para a distribuição `v0.0.3`. O **Microsoft Edge WebView2 Runtime** continua necessário apenas para o fallback pelo Portal Nacional.
 
-Antes de usar o Bridge com o site oficial, configure a origem HTTPS exata em `Bridge:AllowedOrigins`. Não use wildcard na allowlist.
+A `v0.0.2` foi substituída por esta release corretiva porque dependia de runtime .NET externo e não configurava a origem HTTPS no start de produção.
 
 ## Documentação
 
 - arquitetura/segurança: `docs/architecture/bridge-security.md`;
 - aceitação física: `docs/testing/acceptance.md`;
-- notas da release `v0.0.2`: `docs/releases/v0.0.2.md`;
+- notas da release `v0.0.3`: `docs/releases/v0.0.3.md`;
 - design do instalador: `docs/superpowers/specs/2026-09-08-windows-installer-design.md`;
 - plano do instalador: `docs/superpowers/plans/2026-09-08-windows-installer-implementation.md`;
-- plano técnico canônico: `docs/superpowers/plans/2026-09-08-nfe-agendamento-2-implementation.md`;
-- fechamento da Task 4: `docs/superpowers/plans/2026-09-08-task-4-completion.md`;
-- fechamento da Task 5: `docs/superpowers/plans/2026-09-08-task-5-completion.md`.
+- plano técnico canônico: `docs/superpowers/plans/2026-09-08-nfe-agendamento-2-implementation.md`.
