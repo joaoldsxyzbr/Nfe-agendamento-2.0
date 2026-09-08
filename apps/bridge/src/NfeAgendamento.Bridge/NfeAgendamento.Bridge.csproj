@@ -4,5 +4,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <InvariantGlobalization>false</InvariantGlobalization>
+    <Version>0.0.2</Version>
+    <FileVersion>0.0.2.0</FileVersion>
+    <AssemblyVersion>0.0.2.0</AssemblyVersion>
+    <ApplicationIcon>..\..\assets\nfe-agendamento-bridge.ico</ApplicationIcon>
   </PropertyGroup>
 </Project>
