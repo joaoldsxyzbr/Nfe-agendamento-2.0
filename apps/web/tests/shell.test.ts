@@ -43,4 +43,22 @@ describe('application shell', () => {
     expect(main).toContain('Permissão de acesso local necessária');
     expect(main.toLowerCase()).not.toContain('janela de configuração');
   });
+
+  it('validates the key locally and validates XML before exposing download', () => {
+    const main = readFileSync(fromWeb('src/main.ts'), 'utf8');
+
+    expect(main).toContain("import { validateAccessKey } from './nfe/access-key';");
+    expect(main).toContain("import { parseNfeXml } from './nfe/xml';");
+    expect(main).toContain("lookupForm.addEventListener('submit'");
+
+    const validateIndex = main.indexOf('validateAccessKey(');
+    const lookupIndex = main.indexOf('bridgeClient.lookupNfe(');
+    const parseIndex = main.indexOf('parseNfeXml(');
+    const downloadIndex = main.indexOf('download =');
+
+    expect(validateIndex).toBeGreaterThan(-1);
+    expect(lookupIndex).toBeGreaterThan(validateIndex);
+    expect(parseIndex).toBeGreaterThan(lookupIndex);
+    expect(downloadIndex).toBeGreaterThan(parseIndex);
+  });
 });
