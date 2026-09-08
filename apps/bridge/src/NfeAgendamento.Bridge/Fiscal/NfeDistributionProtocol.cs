@@ -9,7 +9,7 @@ public static class NfeDistributionProtocol
 {
     private const int MaxXmlBytes = 10 * 1024 * 1024;
 
-    public static string BuildSoap(string accessKey, string cnpj, string ufAutor)
+    public static string BuildSoap(string accessKey, string cnpj, string? ufAutor = null)
     {
         if (!AccessKey.TryParse(accessKey, out _))
         {
@@ -21,9 +21,20 @@ public static class NfeDistributionProtocol
             throw new ArgumentException("CNPJ inválido.", nameof(cnpj));
         }
 
-        if (ufAutor.Length != 2 || ufAutor.Any(c => c is < '0' or > '9'))
+        string ufElement;
+        if (string.IsNullOrWhiteSpace(ufAutor))
         {
-            throw new ArgumentException("UF autora inválida.", nameof(ufAutor));
+            ufElement = string.Empty;
+        }
+        else
+        {
+            var normalizedUf = ufAutor.Trim();
+            if (normalizedUf.Length != 2 || normalizedUf.Any(c => c is < '0' or > '9'))
+            {
+                throw new ArgumentException("UF autora inválida.", nameof(ufAutor));
+            }
+
+            ufElement = $"<cUFAutor>{normalizedUf}</cUFAutor>";
         }
 
         return $"""
@@ -34,7 +45,7 @@ public static class NfeDistributionProtocol
                   <nfeDadosMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeDistribuicaoDFe">
                     <distDFeInt xmlns="http://www.portalfiscal.inf.br/nfe" versao="1.01">
                       <tpAmb>1</tpAmb>
-                      <cUFAutor>{ufAutor}</cUFAutor>
+                      {ufElement}
                       <CNPJ>{cnpj}</CNPJ>
                       <consChNFe><chNFe>{accessKey}</chNFe></consChNFe>
                     </distDFeInt>
