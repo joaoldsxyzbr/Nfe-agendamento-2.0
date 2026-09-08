@@ -186,8 +186,12 @@ async function submitLookup(): Promise<void> {
   try {
     const lookup = await bridgeClient.lookupNfe(validation.value);
     if (lookup.category === 'success' && lookup.xml) {
-      const parsed = parseNfeXml(lookup.xml, validation.value);
-      renderLookupSuccess(parsed);
+      try {
+        const parsed = parseNfeXml(lookup.xml, validation.value);
+        renderLookupSuccess(parsed);
+      } catch (error) {
+        renderInvalidXml(error);
+      }
       return;
     }
 
@@ -224,8 +228,12 @@ async function runPortalFallback(accessKey: string, lookup: NfeLookupResult): Pr
 
   const portalStatus = await portalFallback.waitForResult(operationId);
   if (portalStatus.state === 'completed' && portalStatus.xml) {
-    const parsed = parseNfeXml(portalStatus.xml, accessKey);
-    renderLookupSuccess(parsed);
+    try {
+      const parsed = parseNfeXml(portalStatus.xml, accessKey);
+      renderLookupSuccess(parsed);
+    } catch (error) {
+      renderInvalidXml(error);
+    }
     return;
   }
 
@@ -246,6 +254,13 @@ async function runPortalFallback(accessKey: string, lookup: NfeLookupResult): Pr
   }
 
   renderLookupState('Consulta pelo Portal não concluída', portalStatus.message ?? 'O Portal não retornou XML.');
+}
+
+function renderInvalidXml(error: unknown): void {
+  renderLookupState(
+    'XML inválido',
+    error instanceof Error ? error.message : 'O XML retornado não pôde ser validado para a chave consultada.',
+  );
 }
 
 function renderLookupFailure(lookup: NfeLookupResult): void {
