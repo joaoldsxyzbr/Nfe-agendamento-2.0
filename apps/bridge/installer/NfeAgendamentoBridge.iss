@@ -1,5 +1,5 @@
 #define MyAppName "NFe Agendamento Bridge"
-#define MyAppVersion "0.0.2"
+#define MyAppVersion "0.0.3"
 #define MyAppExeName "NfeAgendamento.Bridge.exe"
 
 [Setup]
@@ -11,7 +11,7 @@ DefaultGroupName=NFe Agendamento Bridge
 PrivilegesRequired=lowest
 DisableProgramGroupPage=yes
 OutputDir=..\..\..\artifacts\installer
-OutputBaseFilename=NFeAgendamentoBridge-Setup-v0.0.2
+OutputBaseFilename=NFeAgendamentoBridge-Setup-v0.0.3
 SetupIconFile=..\assets\nfe-agendamento-bridge.ico
 UninstallDisplayIcon={app}\NfeAgendamento.Bridge.exe
 Compression=lzma2
