@@ -8,7 +8,7 @@ namespace NfeAgendamento.Bridge.Tests;
 public sealed class SelectedCertificateMaterialTests
 {
     [Fact]
-    public async Task GetSelectedCertificate_returns_usable_certificate_with_private_key()
+    public async Task GetSelectedCertificate_returns_independent_usable_certificate_with_private_key()
     {
         var now = DateTimeOffset.UtcNow;
         using var certificate = CreateCertificate(now.AddDays(-1), now.AddDays(30));
@@ -19,11 +19,15 @@ public sealed class SelectedCertificateMaterialTests
 
         await service.SelectAsync(certificate.Thumbprint!, TestContext.Current.CancellationToken);
 
-        using var selected = service.GetSelectedCertificate();
+        var selected = service.GetSelectedCertificate();
 
         Assert.NotNull(selected);
+        Assert.NotSame(certificate, selected);
         Assert.Equal(certificate.Thumbprint, selected.Thumbprint);
         Assert.True(selected.HasPrivateKey);
+
+        selected.Dispose();
+        Assert.True(certificate.HasPrivateKey);
     }
 
     private static X509Certificate2 CreateCertificate(
