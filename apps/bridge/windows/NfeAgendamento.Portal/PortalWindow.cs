@@ -8,7 +8,7 @@ using Microsoft.Web.WebView2.WinForms;
 
 namespace NfeAgendamento.Portal;
 
-public sealed class PortalWindow : Form
+internal sealed class PortalWindow : Form
 {
     private const string OfficialHost = "www.nfe.fazenda.gov.br";
     private const string PortalUrl = "https://www.nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx?tipoConsulta=resumo&tipoConteudo=7PhJ+gAVw2g%3D";
