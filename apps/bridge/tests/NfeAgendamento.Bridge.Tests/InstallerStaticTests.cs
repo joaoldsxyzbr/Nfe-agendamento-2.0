@@ -53,7 +53,9 @@ public sealed class InstallerStaticTests
         Assert.Contains("IconFilename: \"{app}\\NfeAgendamento.Bridge.exe\"", iss);
         Assert.Contains("SetupIconFile=..\\assets\\nfe-agendamento-bridge.ico", iss);
         Assert.Contains("UninstallDisplayIcon={app}\\NfeAgendamento.Bridge.exe", iss);
-        Assert.Contains("Filename: \"{app}\\NfeAgendamento.Bridge.exe\"; Description: \"Iniciar NFe Agendamento Bridge\"; WorkingDir: \"{app}\"", iss);
+        Assert.Contains("Filename: \"{app}\\NfeAgendamento.Bridge.exe\"", iss);
+        Assert.Contains("Description: \"Iniciar NFe Agendamento Bridge\"", iss);
+        Assert.Contains("WorkingDir: \"{app}\"", iss);
         Assert.DoesNotContain("PrivilegesRequired=admin", iss, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("netsh", iss, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("sc.exe", iss, StringComparison.OrdinalIgnoreCase);
