@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using NfeAgendamento.Bridge;
+using NfeAgendamento.Bridge.Certificates;
 using NfeAgendamento.Bridge.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseUrls(BridgeConstants.ListenUrl);
 
+builder.Services.AddSingleton<CertificateService>();
 builder.Services.AddSingleton<LocalRequestGuard>(services =>
 {
     var configuration = services.GetRequiredService<IConfiguration>();
@@ -68,14 +70,47 @@ app.Use(async (context, next) =>
 
 var api = app.MapGroup(BridgeConstants.ApiPrefix);
 
-api.MapGet("/health", () => Results.Ok(new
+api.MapGet("/health", (CertificateService certificates) => Results.Ok(new
 {
     version = typeof(Program).Assembly.GetName().Version?.ToString() ?? "0.0.0",
     status = "ok",
     webView2Available = false,
-    certificateSelected = false,
+    certificateSelected = certificates.GetSelected() is not null,
 }));
 
+api.MapGet("/certificates", (CertificateService certificates) => Results.Ok(new
+{
+    certificates = certificates.ListUsable(),
+    selectedThumbprint = certificates.GetSelected()?.Thumbprint,
+}));
+
+api.MapPost("/certificate/select", async (
+    CertificateSelectRequest request,
+    CertificateService certificates,
+    CancellationToken cancellationToken) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Thumbprint))
+    {
+        return Results.BadRequest(new { error = "thumbprint_required" });
+    }
+
+    try
+    {
+        await certificates.SelectAsync(request.Thumbprint, cancellationToken);
+        return Results.NoContent();
+    }
+    catch (InvalidOperationException exception)
+    {
+        return Results.BadRequest(new
+        {
+            error = "certificate_unavailable",
+            message = exception.Message,
+        });
+    }
+});
+
 app.Run();
+
+public sealed record CertificateSelectRequest(string Thumbprint);
 
 public partial class Program;
