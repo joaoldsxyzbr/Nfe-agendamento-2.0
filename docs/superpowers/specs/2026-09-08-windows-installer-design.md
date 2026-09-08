@@ -1,7 +1,7 @@
 # NFe Agendamento 2.0 — Instalador Windows do Bridge
 
 Data: 2026-09-08
-Status: revisado; aguardando aprovação final do documento antes do plano de implementação
+Status: aprovado e implementado; release `v0.0.2` preparada para publicação após CI final verde
 
 ## 1. Objetivo
 

@@ -1,15 +1,15 @@
 # Aceitação física — NFe Agendamento 2.0
 
-Este checklist cobre o que o CI não consegue provar: navegador real falando com loopback, certificado A1 do Windows, SEFAZ, WebView2, Portal Nacional, captcha e impressão/PDF.
+Este checklist cobre o que o CI não consegue provar: instalação real no Windows, navegador falando com loopback, certificado A1, SEFAZ, WebView2, Portal Nacional, captcha e impressão/PDF.
 
 > Não provoque bloqueio/656 fazendo consultas repetidas. Valide o fallback quando o limite ocorrer naturalmente ou em um cenário controlado já disponível.
 
 ## Pré-requisitos
 
-- Windows 10/11 atualizado;
-- Bridge e `NfeAgendamento.Portal.exe` da mesma versão;
+- Windows 10/11 x64 atualizado;
+- `NFeAgendamentoBridge-Setup-v0.0.2.exe` do mesmo commit/release que será validado;
 - Microsoft Edge WebView2 Runtime instalado;
-- .NET 10 Desktop Runtime quando a distribuição usada não for self-contained;
+- .NET 10 Desktop Runtime;
 - certificado A1 válido instalado em `CurrentUser/My` com chave privada;
 - origem HTTPS exata do site configurada em `Bridge:AllowedOrigins`;
 - acesso à Internet para SEFAZ e Portal Nacional da NF-e.
@@ -25,17 +25,33 @@ Registre antes de começar:
 | Navegador + versão | |
 | PC | |
 
+## 0. Instalação, auto-start e desinstalação
+
+1. Execute `NFeAgendamentoBridge-Setup-v0.0.2.exe` em uma conta de usuário comum.
+2. Confirme que a instalação **não solicita UAC/admin**.
+3. Confirme os arquivos em `%LOCALAPPDATA%\NFe Agendamento Bridge`.
+4. Confirme que `NfeAgendamento.Bridge.exe` e `NfeAgendamento.Portal.exe` estão lado a lado.
+5. Confirme o atalho `NFe Agendamento Bridge` no Menu Iniciar e o ícone próprio azul/amarelo.
+6. Conclua a instalação com a opção de iniciar o Bridge marcada e confirme o processo em execução.
+7. Confirme a entrada `NFe Agendamento Bridge` em `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` apontando para o executável instalado.
+8. Encerre a sessão/reinicie o PC, faça login novamente e confirme que o Bridge iniciou automaticamente uma única vez.
+9. Se já existir `%LOCALAPPDATA%\NfeAgendamentoBridge\settings.json`, anote o conteúdo/seleção antes de desinstalar.
+10. Desinstale pelo Windows e confirme a remoção do diretório do aplicativo, atalho e entrada de auto-start.
+11. Confirme que `%LOCALAPPDATA%\NfeAgendamentoBridge\settings.json` permanece quando já existia, permitindo preservar a seleção local em uma reinstalação.
+
+Resultado: ☐ aprovado
+
 ## 1. Bridge e permissão de rede local
 
 Executar separadamente em **Chrome, Edge e Firefox** quando disponíveis.
 
-1. Inicie o Bridge.
+1. Confirme que o Bridge instalado está em execução.
 2. Abra o site HTTPS oficial.
 3. Se o navegador pedir acesso à rede/local host, autorize.
 4. Confirme `Bridge conectado`.
 5. Negue/revogque a permissão uma vez e confirme o estado `Permissão de acesso local necessária` quando o navegador expuser essa distinção.
 6. Feche o Bridge e confirme `Bridge não encontrado`.
-7. Reinicie o Bridge.
+7. Reinicie o Bridge pelo atalho do Menu Iniciar.
 
 Resultado:
 
@@ -133,7 +149,7 @@ Resultado: ☐ aprovado
 
 Em outro PC:
 
-1. instale/inicie outra cópia do Bridge;
+1. instale o Bridge usando o mesmo Setup validado;
 2. configure a mesma origem HTTPS permitida;
 3. use o A1 instalado **nesse segundo PC**;
 4. abra o mesmo site;
@@ -148,7 +164,8 @@ Resultado: ☐ aprovado
 Uma versão só deve ser marcada como pronta para uso real depois de:
 
 - CI do commit final totalmente verde;
-- build/pacote Windows correspondente identificado;
+- Setup e ZIP técnico correspondentes identificados;
+- etapa 0 aprovada em Windows real;
 - etapas 1–5 aprovadas;
 - etapa 7 aprovada em uma ocorrência real/controlada de limite antes de declarar o fallback Portal validado fisicamente;
-- qualquer divergência registrada e corrigida antes da release.
+- qualquer divergência registrada e corrigida antes de declarar o ambiente validado para produção.

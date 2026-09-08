@@ -11,6 +11,7 @@ Reescrita limpa do NFe Agendamento com **site estático + Bridge Windows mínimo
 - **Certificado A1:** descoberto em `CurrentUser/My`; a chave privada nunca sai do Windows/Bridge.
 - **Persistência:** somente o thumbprint selecionado em `%LOCALAPPDATA%/NfeAgendamentoBridge/settings.json`.
 - **Fallback Portal:** helper Windows separado com WebView2, Portal Nacional fixo e hCaptcha sempre manual.
+- **Distribuição Windows:** instalador Inno Setup por usuário, sem administrador, com início automático do Bridge no login.
 
 ## Estado funcional — 08/09/2026
 
@@ -55,12 +56,20 @@ Concluído e validado automaticamente no CI:
 - deploy Cloudflare pela raiz do monorepo usando `wrangler.jsonc`, com build automático do site e publicação de `apps/web/dist`;
 - `npx wrangler deploy --dry-run` no CI;
 - build real do helper `net10.0-windows` no CI;
-- pacote Windows de aceitação gerado no CI como artifact `NfeAgendamentoBridge-win-x64`, com Bridge e helper Portal lado a lado.
+- Bridge e helper versionados em `0.0.2`;
+- ícone próprio azul-escuro/amarelo incorporado ao `NfeAgendamento.Bridge.exe` e usado pelo instalador;
+- instalador Inno Setup compilado de verdade no runner Windows;
+- instalação projetada para `%LOCALAPPDATA%\NFe Agendamento Bridge`, com `PrivilegesRequired=lowest` e sem UAC/admin;
+- auto-start do Bridge por usuário em `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, reversível na desinstalação;
+- CI gera dois artifacts: `NFeAgendamentoBridge-Setup-v0.0.2` e `NfeAgendamentoBridge-win-x64`;
+- workflow da `v0.0.2` só publica depois do CI verde e baixa os artifacts do mesmo `workflow_run` validado.
 
 ## Pendência para uso real
 
-A implementação automatizável está fechada. Antes de declarar uma release validada em produção ainda é necessário executar o **teste físico Windows** descrito em `docs/testing/acceptance.md`, incluindo:
+A implementação automatizável está fechada. Antes de declarar a versão validada em produção ainda é necessário executar o **teste físico Windows** descrito em `docs/testing/acceptance.md`, incluindo:
 
+- instalar/desinstalar o Setup em Windows real e confirmar ausência de UAC;
+- confirmar auto-start após novo login;
 - navegador real acessando o Bridge em loopback;
 - certificado A1 real;
 - consulta SEFAZ real;
@@ -72,7 +81,7 @@ A origem HTTPS definitiva do site também precisa ser configurada no Bridge em `
 
 ## Fora de escopo desta versão
 
-Não existem Central, pareamento, líder/standby, servidor LAN, pasta compartilhada, login, banco, histórico ou consulta em lote.
+Não existem Central, pareamento, líder/standby, servidor LAN, pasta compartilhada, login, banco, histórico, consulta em lote ou updater automático do Bridge.
 
 ## Desenvolvimento
 
@@ -96,32 +105,39 @@ npx wrangler deploy
 
 O `wrangler.jsonc` da raiz executa `npm run build:web` e publica `./apps/web/dist`, evitando que o Wrangler tente fazer autodetecção no root do workspace. O CI executa também `npx wrangler deploy --dry-run` para validar essa configuração sem publicar.
 
-## Pacote Windows para aceitação
+## Distribuição Windows v0.0.2
 
-Depois de uma execução verde do CI, o job `windows-package` gera o artifact:
+Para uso normal, a distribuição principal é:
 
 ```text
-NfeAgendamentoBridge-win-x64
+NFeAgendamentoBridge-Setup-v0.0.2.exe
 ```
 
-O artifact reúne `NfeAgendamento.Bridge.exe` e `NfeAgendamento.Portal.exe` no mesmo diretório, como exigido pelo launcher do fallback. O pacote atual é framework-dependent e requer .NET 10 Desktop Runtime; o helper também requer Microsoft Edge WebView2 Runtime.
+O instalador:
 
-A release `v0.0.1` é publicada pelo GitHub Actions somente depois de um CI verde e recebe esse pacote Windows como asset. As notas ficam em `docs/releases/v0.0.1.md`.
+- instala somente para o usuário atual em `%LOCALAPPDATA%\NFe Agendamento Bridge`;
+- não solicita administrador;
+- mantém Bridge + helper Portal lado a lado;
+- cria atalho no Menu Iniciar;
+- registra início automático do Bridge no login do usuário;
+- inicia o Bridge ao finalizar quando a opção estiver marcada;
+- remove auto-start e arquivos instalados na desinstalação;
+- preserva por padrão `%LOCALAPPDATA%\NfeAgendamentoBridge`, onde fica a seleção local do certificado;
+- não possui updater automático.
 
-Antes de iniciar o Bridge em produção, configure a origem exata do site, por exemplo:
+O artifact `NfeAgendamentoBridge-win-x64` e o asset `NfeAgendamentoBridge-win-x64.zip` continuam existindo como fallback técnico. A distribuição é framework-dependent e requer .NET 10 Desktop Runtime; o helper Portal requer Microsoft Edge WebView2 Runtime.
 
-```powershell
-$env:Bridge__AllowedOrigins__0 = "https://SEU-DOMINIO-EXATO"
-.\NfeAgendamento.Bridge.exe
-```
+A release `v0.0.2` é preparada pelo GitHub Actions somente depois de um CI verde e recebe **Setup + ZIP** do mesmo run validado. As notas ficam em `docs/releases/v0.0.2.md`.
 
-Não use wildcard na allowlist.
+Antes de usar o Bridge com o site oficial, configure a origem HTTPS exata em `Bridge:AllowedOrigins`. Não use wildcard na allowlist.
 
 ## Documentação
 
 - arquitetura/segurança: `docs/architecture/bridge-security.md`;
 - aceitação física: `docs/testing/acceptance.md`;
-- notas da release `v0.0.1`: `docs/releases/v0.0.1.md`;
+- notas da release `v0.0.2`: `docs/releases/v0.0.2.md`;
+- design do instalador: `docs/superpowers/specs/2026-09-08-windows-installer-design.md`;
+- plano do instalador: `docs/superpowers/plans/2026-09-08-windows-installer-implementation.md`;
 - plano técnico canônico: `docs/superpowers/plans/2026-09-08-nfe-agendamento-2-implementation.md`;
 - fechamento da Task 4: `docs/superpowers/plans/2026-09-08-task-4-completion.md`;
 - fechamento da Task 5: `docs/superpowers/plans/2026-09-08-task-5-completion.md`.
