@@ -19,6 +19,7 @@ Concluído e validado automaticamente no CI:
 - bootstrap Vite/TypeScript e .NET 10;
 - build e testes web + Bridge;
 - tema visual dark inspirado no site legado, com superfícies azul-escuras, azul como ação principal, amarelo como destaque e DANFE preservado branco/fiscal;
+- certificado A1 movido para um painel de configurações aberto pela engrenagem no canto superior direito, mantendo o status do Bridge ao lado e preservando o mesmo fluxo de seleção local;
 - `GET /api/v1/health` e detecção do Bridge pelo site;
 - proteção de `Origin`/`Host` com testes de integração;
 - `GET /api/v1/certificates` e `POST /api/v1/certificate/select`;
@@ -105,6 +106,8 @@ NfeAgendamentoBridge-win-x64
 
 O artifact reúne `NfeAgendamento.Bridge.exe` e `NfeAgendamento.Portal.exe` no mesmo diretório, como exigido pelo launcher do fallback. O pacote atual é framework-dependent e requer .NET 10 Desktop Runtime; o helper também requer Microsoft Edge WebView2 Runtime.
 
+A release `v0.0.1` é publicada pelo GitHub Actions somente depois de um CI verde e recebe esse pacote Windows como asset. As notas ficam em `docs/releases/v0.0.1.md`.
+
 Antes de iniciar o Bridge em produção, configure a origem exata do site, por exemplo:
 
 ```powershell
@@ -118,6 +121,7 @@ Não use wildcard na allowlist.
 
 - arquitetura/segurança: `docs/architecture/bridge-security.md`;
 - aceitação física: `docs/testing/acceptance.md`;
+- notas da release `v0.0.1`: `docs/releases/v0.0.1.md`;
 - plano técnico canônico: `docs/superpowers/plans/2026-09-08-nfe-agendamento-2-implementation.md`;
 - fechamento da Task 4: `docs/superpowers/plans/2026-09-08-task-4-completion.md`;
 - fechamento da Task 5: `docs/superpowers/plans/2026-09-08-task-5-completion.md`.
