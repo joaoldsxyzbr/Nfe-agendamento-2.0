@@ -57,6 +57,22 @@ public sealed class CertificateService
             string.Equals(info.Thumbprint, thumbprint, StringComparison.OrdinalIgnoreCase));
     }
 
+    public X509Certificate2? GetSelectedCertificate()
+    {
+        var thumbprint = ReadSelectedThumbprint();
+        if (thumbprint is null)
+        {
+            return null;
+        }
+
+        return WithCertificates(certificates => FilterUsable(certificates, DateTimeOffset.UtcNow)
+            .FirstOrDefault(certificate =>
+                string.Equals(
+                    NormalizeThumbprint(certificate.Thumbprint),
+                    thumbprint,
+                    StringComparison.OrdinalIgnoreCase)));
+    }
+
     public async Task SelectAsync(string thumbprint, CancellationToken cancellationToken = default)
     {
         var normalized = NormalizeThumbprint(thumbprint);
