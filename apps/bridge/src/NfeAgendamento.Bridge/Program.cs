@@ -1,9 +1,58 @@
 using NfeAgendamento.Bridge;
+using NfeAgendamento.Bridge.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseUrls(BridgeConstants.ListenUrl);
 
+var allowedOrigins = builder.Configuration
+    .GetSection("Bridge:AllowedOrigins")
+    .Get<string[]>() ?? [];
+
+builder.Services.AddSingleton(new LocalRequestGuard(allowedOrigins));
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("BridgeWeb", policy =>
+    {
+        if (allowedOrigins.Length > 0)
+        {
+            policy.WithOrigins(allowedOrigins);
+        }
+
+        policy
+            .WithMethods("GET", "POST", "OPTIONS")
+            .WithHeaders("Accept", "Content-Type", "X-Nfe-Bridge")
+            .SetPreflightMaxAge(TimeSpan.FromMinutes(10));
+    });
+});
+
 var app = builder.Build();
+
+app.UseCors("BridgeWeb");
+app.Use(async (context, next) =>
+{
+    if (!context.Request.Path.StartsWithSegments(BridgeConstants.ApiPrefix))
+    {
+        await next();
+        return;
+    }
+
+    var guard = context.RequestServices.GetRequiredService<LocalRequestGuard>();
+    if (!guard.IsAllowedHost(context.Request.Host.Value))
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        return;
+    }
+
+    if (!HttpMethods.IsOptions(context.Request.Method) &&
+        !guard.IsAllowedOrigin(context.Request.Headers.Origin.ToString()))
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        return;
+    }
+
+    await next();
+});
+
 var api = app.MapGroup(BridgeConstants.ApiPrefix);
 
 api.MapGet("/health", () => Results.Ok(new
