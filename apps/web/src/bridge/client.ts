@@ -3,10 +3,21 @@ import {
   type BridgeHealth,
   type CertificateCatalog,
   type CertificateSummary,
+  type NfeLookupCategory,
+  type NfeLookupResult,
 } from './contracts';
 
 const DEFAULT_TIMEOUT_MS = 2_000;
 const CERTIFICATE_KEYS = ['issuer', 'notAfter', 'notBefore', 'subject', 'thumbprint'] as const;
+const LOOKUP_KEYS = ['cStat', 'category', 'message', 'xml'] as const;
+const LOOKUP_CATEGORIES = new Set<NfeLookupCategory>([
+  'success',
+  'fiscal_status',
+  'consumption_limit',
+  'certificate_error',
+  'transport_unavailable',
+  'technical_error',
+]);
 
 export class BridgeClient {
   constructor(
@@ -51,6 +62,31 @@ export class BridgeClient {
       },
       signal,
     );
+  }
+
+  async lookupNfe(accessKey: string, signal?: AbortSignal): Promise<NfeLookupResult> {
+    const normalized = accessKey.trim();
+    if (!normalized) {
+      throw new Error('Chave NF-e não informada');
+    }
+
+    const response = await this.request(
+      '/nfe/lookup',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ accessKey: normalized }),
+      },
+      signal,
+    );
+    const payload: unknown = await response.json();
+    if (!isNfeLookupResult(payload)) {
+      throw new Error('Resposta inválida da consulta NF-e');
+    }
+
+    return payload;
   }
 
   private async request(
@@ -124,6 +160,24 @@ function isCertificateSummary(value: unknown): value is CertificateSummary {
     typeof certificate.thumbprint === 'string' &&
     certificate.thumbprint.length > 0
   );
+}
+
+function isNfeLookupResult(value: unknown): value is NfeLookupResult {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+
+  const result = value as Record<string, unknown>;
+  if (!hasExactKeys(result, LOOKUP_KEYS)) return false;
+  if (typeof result.category !== 'string' || !LOOKUP_CATEGORIES.has(result.category as NfeLookupCategory)) {
+    return false;
+  }
+  if (result.cStat !== null && typeof result.cStat !== 'string') return false;
+  if (result.message !== null && typeof result.message !== 'string') return false;
+
+  if (result.category === 'success') {
+    return typeof result.xml === 'string' && result.xml.length > 0;
+  }
+
+  return result.xml === null;
 }
 
 function hasExactKeys(value: Record<string, unknown>, expected: readonly string[]): boolean {
