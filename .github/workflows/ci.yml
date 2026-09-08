@@ -22,8 +22,12 @@ jobs:
       - run: npm run test:web
       - run: npm run build:web
 
-  bridge-bootstrap:
+  bridge:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - run: bash apps/bridge/tests/bootstrap.sh
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet build apps/bridge/src/NfeAgendamento.Bridge/NfeAgendamento.Bridge.csproj -c Release
