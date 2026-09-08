@@ -8,7 +8,7 @@ namespace NfeAgendamento.Bridge.Tests;
 
 public sealed class BridgeSecurityIntegrationTests : IAsyncDisposable
 {
-    private const string AllowedOrigin = "https://nfeagendamento.example";
+    private const string AllowedOrigin = "https://nfeagendamento.joaolds.xyz.br";
     private readonly WebApplicationFactory<Program> _factory;
 
     public BridgeSecurityIntegrationTests()
@@ -41,6 +41,7 @@ public sealed class BridgeSecurityIntegrationTests : IAsyncDisposable
 
     [Theory]
     [InlineData("https://evil.example")]
+    [InlineData("http://nfeagendamento.joaolds.xyz.br")]
     [InlineData(null)]
     public async Task Untrusted_or_missing_origin_is_forbidden(string? origin)
     {
