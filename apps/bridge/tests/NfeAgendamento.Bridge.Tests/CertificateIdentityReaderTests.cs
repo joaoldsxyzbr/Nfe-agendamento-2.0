@@ -32,7 +32,7 @@ public sealed class CertificateIdentityReaderTests
     {
         using var certificate = CreateCertificate("CN=EMPRESA TESTE, O=Empresa Teste, C=BR");
 
-        var exception = Assert.Throws<InvalidOperationException>(() =>
+        var exception = Assert.Throws<CertificateIdentityException>(() =>
             CertificateIdentityReader.ReadCnpj(certificate));
 
         Assert.Contains("CNPJ", exception.Message, StringComparison.OrdinalIgnoreCase);
