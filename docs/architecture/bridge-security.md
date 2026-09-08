@@ -9,7 +9,8 @@ Ele **não é um servidor de rede** e não deve ser exposto na LAN ou na Interne
 ## Fronteiras de confiança
 
 ```text
-Site HTTPS
+Site HTTPS oficial
+https://nfeagendamento.joaolds.xyz.br
    │ JSON estrito
    ▼
 127.0.0.1:17345 /api/v1
@@ -33,18 +34,31 @@ O middleware rejeita `Host` diferente de `127.0.0.1:17345`. Não existem `0.0.0.
 
 ## Origin e CORS
 
-Todas as chamadas `/api/v1/*` feitas pelo navegador exigem `Origin` explicitamente permitido em `Bridge:AllowedOrigins`. Não existe wildcard e uma lista vazia mantém o Bridge fail-closed.
+Todas as chamadas `/api/v1/*` feitas pelo navegador exigem `Origin` explicitamente permitido em `Bridge:AllowedOrigins`. Não existe wildcard.
 
-Exemplo por variável de ambiente para um único site:
+A distribuição de produção `v0.0.4` inclui em `appsettings.json` exatamente:
 
-```powershell
-$env:Bridge__AllowedOrigins__0 = "https://SEU-DOMINIO-EXATO"
-.\NfeAgendamento.Bridge.exe
+```json
+{
+  "Bridge": {
+    "AllowedOrigins": [
+      "https://nfeagendamento.joaolds.xyz.br"
+    ]
+  }
+}
 ```
 
-Mais de uma origem pode ser configurada usando índices adicionais (`__1`, `__2`, ...), por exemplo durante uma migração de domínio. Use sempre a **origem exata** (`scheme + host + porta quando existir`), sem caminho e sem `*`.
+O Setup **não solicita URL**, não grava argumentos `Bridge:AllowedOrigins` no atalho, no auto-start ou no primeiro start e não amplia a allowlist. A configuração de desenvolvimento permanece separada em `appsettings.Development.json`, restrita ao Vite local em `http://127.0.0.1:5173`.
 
-A URL definitiva do Cloudflare deve ser configurada no Bridge antes do teste físico de produção. Não ampliar a allowlist para contornar esse requisito.
+A validação continua fail-closed: origem ausente, `http://nfeagendamento.joaolds.xyz.br`, qualquer host diferente ou qualquer valor não presente na allowlist recebe `403`.
+
+Não adicionar wildcard nem origem arbitrária para contornar problemas de implantação.
+
+## Instância única
+
+O executável real do Bridge adquire um mutex nomeado antes de subir o host. Se uma segunda cópia instalada for aberta na mesma sessão, ela encerra antes de criar outro listener em `127.0.0.1:17345`.
+
+A proteção é aplicada ao executável real; hosts in-process usados pelos testes de integração permanecem independentes para não interferir na suíte automatizada.
 
 ## API local
 
@@ -67,7 +81,7 @@ Entradas são revalidadas no Bridge mesmo quando o site já validou a chave.
 - cada lookup trabalha com material de certificado independente e o descarta ao concluir;
 - PFX, senha e chave privada não são gravados pelo Bridge.
 
-## Consulta SEFAZ
+## Consulta SEFAZ e timeouts
 
 - uma consulta fiscal gera no máximo uma tentativa de transporte;
 - `656`, HTTP `429`, timeout e falha ambígua **não** disparam retry automático;
@@ -75,11 +89,22 @@ Entradas são revalidadas no Bridge mesmo quando o site já validou a chave.
 - DTD é proibido e `XmlResolver` fica desabilitado;
 - `docZip`/`infNFe` deve corresponder exatamente à chave pedida antes de o XML seguir para o site.
 
+No cliente web, os timeouts são separados por classe de operação para não confundir uma consulta fiscal lenta com Bridge indisponível:
+
+- `health`: 2 s;
+- certificados/seleção local: 5 s;
+- `nfe/lookup`: 50 s;
+- start/status do Portal: 8 s por chamada.
+
+Esses limites não criam retry fiscal automático.
+
 ## Portal/WebView2
 
 O helper `NfeAgendamento.Portal.exe` é um processo Windows separado e deve acompanhar o Bridge na distribuição.
 
-Proteções:
+Antes de declarar `webView2Available=true`, o Bridge executa o helper em modo headless `--probe-runtime`. O helper consulta o WebView2 Runtime e encerra sem abrir janela. Se o helper não existir, o Runtime estiver ausente, o probe falhar ou exceder o timeout curto, o fallback é marcado como indisponível.
+
+Proteções do Portal:
 
 - URL fixa em `https://www.nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx`;
 - navegação de topo restrita ao host oficial;
@@ -98,10 +123,12 @@ O projeto não mantém login, usuários, histórico fiscal, banco ou fila. Fora 
 
 Antes de uso real:
 
-1. definir a origem HTTPS exata do site em `Bridge:AllowedOrigins`;
-2. confirmar que `/health` responde somente com o Origin autorizado;
-3. confirmar que um Origin diferente recebe `403`;
+1. confirmar que o site é servido exatamente em `https://nfeagendamento.joaolds.xyz.br`;
+2. confirmar que `/health` responde com esse `Origin` autorizado;
+3. confirmar que um Origin diferente, ausente ou em HTTP recebe `403`;
 4. confirmar que o processo escuta apenas `127.0.0.1:17345`;
-5. validar A1 real em `CurrentUser/My`;
-6. validar o helper WebView2 no Windows com o Portal oficial;
-7. executar `docs/testing/acceptance.md` e registrar os resultados.
+5. confirmar que uma segunda abertura do executável não cria outra instância/listener;
+6. validar A1 real em `CurrentUser/My`;
+7. validar que `webView2Available` reflete de fato a presença do WebView2 Runtime;
+8. validar o helper WebView2 no Windows com o Portal oficial;
+9. executar `docs/testing/acceptance.md` e registrar os resultados.
