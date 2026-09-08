@@ -3,7 +3,14 @@ using NfeAgendamento.Bridge;
 using NfeAgendamento.Bridge.Certificates;
 using NfeAgendamento.Bridge.Fiscal;
 using NfeAgendamento.Bridge.Portal;
+using NfeAgendamento.Bridge.Runtime;
 using NfeAgendamento.Bridge.Security;
+
+const string SingleInstanceName = "NfeAgendamento.Bridge";
+if (!BridgeSingleInstance.TryAcquire(SingleInstanceName, out var singleInstance))
+    return;
+
+using var bridgeInstance = singleInstance!;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseUrls(BridgeConstants.ListenUrl);
