@@ -34,11 +34,15 @@ Concluído e validado no CI:
 - tratamento de `137`, `138`, `656`, HTTP 429, timeout e falhas ambíguas sem retry automático;
 - XML fiscal bruto preservado e devolvido ao site somente quando um `procNFe` válido da chave solicitada é encontrado;
 - material do A1 clonado com ownership independente para cada consulta e descartado ao término do lookup;
-- cliente TypeScript `lookupNfe()` restrito ao Bridge local e com validação estrita do contrato JSON.
+- cliente TypeScript `lookupNfe()` restrito ao Bridge local e com validação estrita do contrato JSON;
+- validação da chave NF-e também no navegador antes de qualquer chamada ao Bridge;
+- pipeline XML integralmente no site com parser DOM, validação de `infNFe/@Id` contra a chave consultada e rejeição de XML malformado/mismatched;
+- extração tipada de emitente, destinatário, itens, totais, datas e protocolo para uso do DANFE;
+- XML original preservado sem mutação e download liberado somente depois da validação local;
+- formulário de consulta integrado ao Bridge com estados fiscais/técnicos renderizados sem injetar conteúdo retornado como HTML.
 
 Em implementação:
 
-- pipeline XML no navegador;
 - regra Fernando Klein;
 - DANFE;
 - fallback Portal/WebView2.
@@ -60,3 +64,4 @@ dotnet build apps/bridge/src/NfeAgendamento.Bridge/NfeAgendamento.Bridge.csproj 
 
 O plano técnico canônico está em `docs/superpowers/plans/2026-09-08-nfe-agendamento-2-implementation.md`.
 O fechamento da Task 4 está registrado em `docs/superpowers/plans/2026-09-08-task-4-completion.md`.
+O fechamento da Task 5 está registrado em `docs/superpowers/plans/2026-09-08-task-5-completion.md`.
