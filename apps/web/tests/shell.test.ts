@@ -48,7 +48,7 @@ describe('application shell', () => {
     const main = readFileSync(fromWeb('src/main.ts'), 'utf8');
 
     expect(main).toContain("import { validateAccessKey } from './nfe/access-key';");
-    expect(main).toContain("import { parseNfeXml } from './nfe/xml';");
+    expect(main).toMatch(/import \{[^}]*parseNfeXml[^}]*\} from '\.\/nfe\/xml';/);
     expect(main).toContain("lookupForm.addEventListener('submit'");
 
     const validateIndex = main.indexOf('validateAccessKey(');
