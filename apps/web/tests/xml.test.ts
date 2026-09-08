@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 const VALID_KEY = '42260812345678000123550010000012341000012342';
 const fixture = readFileSync(new URL('./fixtures/nfe-basic.xml', import.meta.url), 'utf8');
+const fullDanfeFixture = readFileSync(new URL('./fixtures/nfe-danfe-full.xml', import.meta.url), 'utf8');
 
 describe('parseNfeXml', () => {
   it('rejects malformed XML', async () => {
@@ -97,6 +98,71 @@ describe('parseNfeXml', () => {
         receivedAt: '2026-09-08T10:01:30-03:00',
         statusCode: '100',
         statusMessage: 'Autorizado o uso da NF-e',
+      },
+    });
+  });
+
+  it('extracts the extended fiscal model required by the approved DANFE', async () => {
+    await expect(
+      import('../src/nfe/xml').then(({ parseNfeXml }) => parseNfeXml(fullDanfeFixture, VALID_KEY)),
+    ).resolves.toMatchObject({
+      invoiceType: '1',
+      issuer: { municipalRegistration: '987654' },
+      recipient: { stateRegistrationIndicator: '9', email: 'cliente@example.com' },
+      totals: {
+        icmsStBase: 2,
+        icmsSt: 0.36,
+        importTax: 0.2,
+        icmsUfRemet: 0.1,
+        fcpUfDest: 0.15,
+        pis: 0.35,
+        insurance: 0.5,
+        other: 0.25,
+        ipi: 0.5,
+        cofins: 1.61,
+      },
+      products: [{
+        discount: 1,
+        tax: {
+          cst: '000',
+          icmsBase: 21,
+          icms: 3.78,
+          icmsRate: 18,
+          ipi: 0.5,
+          ipiRate: 2.38,
+          pis: 0.35,
+          cofins: 1.61,
+          taxNote: '',
+        },
+      }],
+      billing: {
+        invoice: { number: 'FAT123', original: 25, discount: 1, net: 24 },
+        duplicates: [{ number: '001', dueDate: '2026-09-30', value: 24 }],
+      },
+      payments: [{ methodCode: '17', methodName: 'PIX', value: 24 }],
+      transport: {
+        freightMode: '0',
+        carrier: {
+          taxId: '99887766000155',
+          name: 'TRANSPORTADORA TESTE',
+          stateRegistration: '445566',
+          address: 'Rodovia SC 401, 1000',
+          city: 'Florianópolis',
+          state: 'SC',
+        },
+        vehicle: { plate: 'ABC1D23', state: 'SC', rntc: '12345678' },
+        volumes: [{
+          quantity: 2,
+          species: 'CAIXA',
+          brand: 'TESTE',
+          number: '1-2',
+          netWeight: 9.5,
+          grossWeight: 10,
+        }],
+      },
+      additional: {
+        contributor: 'Entregar no período da manhã.',
+        taxAuthority: 'Informação reservada ao fisco.',
       },
     });
   });
