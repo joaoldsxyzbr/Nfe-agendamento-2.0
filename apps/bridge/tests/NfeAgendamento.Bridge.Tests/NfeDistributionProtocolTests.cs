@@ -22,6 +22,16 @@ public sealed class NfeDistributionProtocolTests
     }
 
     [Fact]
+    public void BuildSoap_omits_optional_cUFAutor_when_not_known()
+    {
+        var soap = NfeDistributionProtocol.BuildSoap(AccessKey, "12345678000195", null);
+
+        Assert.DoesNotContain("<cUFAutor>", soap);
+        Assert.Contains("<CNPJ>12345678000195</CNPJ>", soap);
+        Assert.Contains($"<consChNFe><chNFe>{AccessKey}</chNFe></consChNFe>", soap);
+    }
+
+    [Fact]
     public void ParseResponse_maps_137_without_document()
     {
         var response = Envelope("""
