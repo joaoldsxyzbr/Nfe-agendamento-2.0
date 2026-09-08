@@ -19,7 +19,22 @@ export type ParsedNfeParty = {
   name: string;
   tradeName?: string;
   stateRegistration?: string;
+  municipalRegistration?: string;
+  stateRegistrationIndicator?: string;
+  email?: string;
   address?: ParsedNfeAddress;
+};
+
+export type ParsedNfeProductTax = {
+  cst: string;
+  icmsBase: number;
+  icms: number;
+  icmsRate: number;
+  ipi: number;
+  ipiRate: number;
+  pis: number;
+  cofins: number;
+  taxNote: string;
 };
 
 export type ParsedNfeProduct = {
@@ -33,6 +48,72 @@ export type ParsedNfeProduct = {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  discount: number;
+  tax: ParsedNfeProductTax;
+};
+
+export type ParsedNfeTotals = {
+  products: number;
+  freight: number;
+  insurance: number;
+  discount: number;
+  other: number;
+  invoice: number;
+  icmsBase: number;
+  icms: number;
+  icmsStBase: number;
+  icmsSt: number;
+  importTax: number;
+  icmsUfRemet: number;
+  fcpUfDest: number;
+  pis: number;
+  ipi: number;
+  cofins: number;
+};
+
+export type ParsedNfeBilling = {
+  invoice: {
+    number: string;
+    original: number;
+    discount: number;
+    net: number;
+  } | null;
+  duplicates: Array<{
+    number: string;
+    dueDate: string;
+    value: number;
+  }>;
+};
+
+export type ParsedNfePayment = {
+  methodCode: string;
+  methodName?: string;
+  value: number;
+};
+
+export type ParsedNfeTransport = {
+  freightMode: string;
+  carrier: {
+    taxId: string;
+    name: string;
+    stateRegistration: string;
+    address: string;
+    city: string;
+    state: string;
+  };
+  vehicle: {
+    plate: string;
+    state: string;
+    rntc: string;
+  };
+  volumes: Array<{
+    quantity: number;
+    species: string;
+    brand: string;
+    number: string;
+    netWeight: number;
+    grossWeight: number;
+  }>;
 };
 
 export type ParsedNfe = {
@@ -42,19 +123,20 @@ export type ParsedNfe = {
   series: string;
   number: string;
   operationNature: string;
+  invoiceType: string;
   issuedAt: string | null;
   exitedAt: string | null;
   issuer: ParsedNfeParty;
   recipient: ParsedNfeParty | null;
-  totals: {
-    products: number;
-    freight: number;
-    discount: number;
-    invoice: number;
-    icmsBase: number;
-    icms: number;
-  };
+  totals: ParsedNfeTotals;
   products: ParsedNfeProduct[];
+  billing: ParsedNfeBilling;
+  payments: ParsedNfePayment[];
+  transport: ParsedNfeTransport | null;
+  additional: {
+    contributor: string;
+    taxAuthority: string;
+  };
   protocol: {
     number: string;
     receivedAt: string;
@@ -101,6 +183,9 @@ export function parseNfeXml(xml: string, expectedAccessKey: string): ParsedNfe {
   const recipientElement = first(infNFe, 'dest');
   const totalsElement = first(infNFe, 'ICMSTot');
   const protocolElement = first(document, 'infProt');
+  const billingElement = first(infNFe, 'cobr');
+  const paymentElement = first(infNFe, 'pag');
+  const additionalElement = first(infNFe, 'infAdic');
 
   return {
     accessKey,
@@ -109,19 +194,27 @@ export function parseNfeXml(xml: string, expectedAccessKey: string): ParsedNfe {
     series: text(ide, 'serie'),
     number: text(ide, 'nNF'),
     operationNature: text(ide, 'natOp'),
+    invoiceType: text(ide, 'tpNF'),
     issuedAt: nullableText(ide, 'dhEmi'),
     exitedAt: nullableText(ide, 'dhSaiEnt'),
     issuer: parseParty(issuerElement, 'enderEmit'),
     recipient: recipientElement ? parseParty(recipientElement, 'enderDest') : null,
-    totals: {
-      products: number(totalsElement, 'vProd'),
-      freight: number(totalsElement, 'vFrete'),
-      discount: number(totalsElement, 'vDesc'),
-      invoice: number(totalsElement, 'vNF'),
-      icmsBase: number(totalsElement, 'vBC'),
-      icms: number(totalsElement, 'vICMS'),
-    },
+    totals: parseTotals(totalsElement),
     products: all(infNFe, 'det').map(parseProduct),
+    billing: parseBilling(billingElement),
+    payments: all(paymentElement, 'detPag').map((payment) => {
+      const methodName = nullableText(payment, 'xPag');
+      return {
+        methodCode: text(payment, 'tPag'),
+        ...(methodName ? { methodName } : {}),
+        value: number(payment, 'vPag'),
+      };
+    }),
+    transport: parseTransport(first(infNFe, 'transp')),
+    additional: {
+      contributor: text(additionalElement, 'infCpl'),
+      taxAuthority: text(additionalElement, 'infAdFisco'),
+    },
     protocol: protocolElement
       ? {
           number: text(protocolElement, 'nProt'),
@@ -137,12 +230,18 @@ function parseParty(element: Element, addressTag: string): ParsedNfeParty {
   const addressElement = first(element, addressTag);
   const tradeName = nullableText(element, 'xFant');
   const stateRegistration = nullableText(element, 'IE');
+  const municipalRegistration = nullableText(element, 'IM');
+  const stateRegistrationIndicator = nullableText(element, 'indIEDest');
+  const email = nullableText(element, 'email');
 
   return {
     taxId: text(element, 'CNPJ') || text(element, 'CPF'),
     name: text(element, 'xNome'),
     ...(tradeName ? { tradeName } : {}),
     ...(stateRegistration ? { stateRegistration } : {}),
+    ...(municipalRegistration ? { municipalRegistration } : {}),
+    ...(stateRegistrationIndicator ? { stateRegistrationIndicator } : {}),
+    ...(email ? { email } : {}),
     ...(addressElement ? { address: parseAddress(addressElement) } : {}),
   };
 }
@@ -166,14 +265,36 @@ function parseAddress(element: Element): ParsedNfeAddress {
   };
 }
 
+function parseTotals(total: Element | null): ParsedNfeTotals {
+  return {
+    products: number(total, 'vProd'),
+    freight: number(total, 'vFrete'),
+    insurance: number(total, 'vSeg'),
+    discount: number(total, 'vDesc'),
+    other: number(total, 'vOutro'),
+    invoice: number(total, 'vNF'),
+    icmsBase: number(total, 'vBC'),
+    icms: number(total, 'vICMS'),
+    icmsStBase: number(total, 'vBCST'),
+    icmsSt: number(total, 'vST'),
+    importTax: number(total, 'vII'),
+    icmsUfRemet: number(total, 'vICMSUFRemet'),
+    fcpUfDest: number(total, 'vFCPUFDest'),
+    pis: number(total, 'vPIS'),
+    ipi: number(total, 'vIPI'),
+    cofins: number(total, 'vCOFINS'),
+  };
+}
+
 function parseProduct(det: Element): ParsedNfeProduct {
   const product = first(det, 'prod');
   const itemNumber = Number(det.getAttribute('nItem') ?? '0');
+  const ean = nullableText(product, 'cEAN');
 
   return {
     itemNumber,
     code: text(product, 'cProd'),
-    ...(nullableText(product, 'cEAN') ? { ean: text(product, 'cEAN') } : {}),
+    ...(ean ? { ean } : {}),
     description: text(product, 'xProd'),
     ncm: text(product, 'NCM'),
     cfop: text(product, 'CFOP'),
@@ -181,7 +302,118 @@ function parseProduct(det: Element): ParsedNfeProduct {
     quantity: number(product, 'qCom'),
     unitPrice: number(product, 'vUnCom'),
     totalPrice: number(product, 'vProd'),
+    discount: number(product, 'vDesc'),
+    tax: parseProductTax(det),
   };
+}
+
+function parseProductTax(det: Element): ParsedNfeProductTax {
+  const icmsContainer = first(det, 'ICMS');
+  const icms = firstChildElement(icmsContainer);
+  const ipiContainer = first(det, 'IPI');
+  const ipi = firstChildElement(ipiContainer);
+  const pisContainer = first(det, 'PIS');
+  const pis = firstChildElement(pisContainer);
+  const cofinsContainer = first(det, 'COFINS');
+  const cofins = firstChildElement(cofinsContainer);
+  const origin = text(icms, 'orig');
+  const taxCode = text(icms, 'CST') || text(icms, 'CSOSN');
+  const stRate = nullableText(icms, 'pICMSST');
+  const stBase = nullableText(icms, 'vBCST');
+  const stValue = nullableText(icms, 'vICMSST');
+  const taxNote = [
+    stRate ? `pIcmsSt=${stRate}` : '',
+    stBase ? `BcIcmsSt=${stBase}` : '',
+    stValue ? `vIcmsSt=${stValue}` : '',
+  ].filter(Boolean).join(' ');
+
+  return {
+    cst: `${origin}${taxCode}`,
+    icmsBase: number(icms, 'vBC'),
+    icms: number(icms, 'vICMS'),
+    icmsRate: number(icms, 'pICMS'),
+    ipi: number(ipi, 'vIPI'),
+    ipiRate: number(ipi, 'pIPI'),
+    pis: number(pis, 'vPIS'),
+    cofins: number(cofins, 'vCOFINS'),
+    taxNote,
+  };
+}
+
+function parseBilling(cobr: Element | null): ParsedNfeBilling {
+  const invoice = first(cobr, 'fat');
+
+  return {
+    invoice: invoice
+      ? {
+          number: text(invoice, 'nFat'),
+          original: number(invoice, 'vOrig'),
+          discount: number(invoice, 'vDesc'),
+          net: number(invoice, 'vLiq'),
+        }
+      : null,
+    duplicates: all(cobr, 'dup').map((duplicate) => ({
+      number: text(duplicate, 'nDup'),
+      dueDate: text(duplicate, 'dVenc'),
+      value: number(duplicate, 'vDup'),
+    })),
+  };
+}
+
+function parseTransport(transp: Element | null): ParsedNfeTransport | null {
+  if (!transp) return null;
+
+  const carrierElement = first(transp, 'transporta');
+  const vehicleElement = first(transp, 'veicTransp');
+  const volumes = all(transp, 'vol').map((volume) => ({
+    quantity: number(volume, 'qVol'),
+    species: text(volume, 'esp'),
+    brand: text(volume, 'marca'),
+    number: text(volume, 'nVol'),
+    netWeight: number(volume, 'pesoL'),
+    grossWeight: number(volume, 'pesoB'),
+  }));
+
+  const result: ParsedNfeTransport = {
+    freightMode: text(transp, 'modFrete'),
+    carrier: {
+      taxId: text(carrierElement, 'CNPJ') || text(carrierElement, 'CPF'),
+      name: text(carrierElement, 'xNome'),
+      stateRegistration: text(carrierElement, 'IE'),
+      address: text(carrierElement, 'xEnder'),
+      city: text(carrierElement, 'xMun'),
+      state: text(carrierElement, 'UF'),
+    },
+    vehicle: {
+      plate: text(vehicleElement, 'placa'),
+      state: text(vehicleElement, 'UF'),
+      rntc: text(vehicleElement, 'RNTC'),
+    },
+    volumes,
+  };
+
+  const useful = [
+    result.freightMode,
+    result.carrier.taxId,
+    result.carrier.name,
+    result.carrier.stateRegistration,
+    result.carrier.address,
+    result.carrier.city,
+    result.carrier.state,
+    result.vehicle.plate,
+    result.vehicle.state,
+    result.vehicle.rntc,
+    ...volumes.flatMap((volume) => [
+      volume.quantity ? String(volume.quantity) : '',
+      volume.species,
+      volume.brand,
+      volume.number,
+      volume.netWeight ? String(volume.netWeight) : '',
+      volume.grossWeight ? String(volume.grossWeight) : '',
+    ]),
+  ];
+
+  return useful.some((value) => value.trim() !== '') ? result : null;
 }
 
 function first(root: Document | Element | null, localName: string): Element | null {
@@ -199,6 +431,15 @@ function all(root: Document | Element | null, localName: string): Element[] {
     if (item) result.push(item as unknown as Element);
   }
   return result;
+}
+
+function firstChildElement(root: Element | null): Element | null {
+  if (!root) return null;
+  for (let index = 0; index < root.childNodes.length; index += 1) {
+    const node = root.childNodes.item(index);
+    if (node?.nodeType === 1) return node as unknown as Element;
+  }
+  return null;
 }
 
 function text(root: Document | Element | null, localName: string): string {
