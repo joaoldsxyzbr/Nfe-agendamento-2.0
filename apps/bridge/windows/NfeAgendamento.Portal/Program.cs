@@ -1,3 +1,6 @@
+using System.Runtime.InteropServices;
+using Microsoft.Web.WebView2.Core;
+
 namespace NfeAgendamento.Portal;
 
 internal static class Program
@@ -5,6 +8,23 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        if (args.Length == 1 && string.Equals(args[0], "--probe-runtime", StringComparison.Ordinal))
+        {
+            try
+            {
+                var version = CoreWebView2Environment.GetAvailableBrowserVersionString();
+                return string.IsNullOrWhiteSpace(version) ? 1 : 0;
+            }
+            catch (WebView2RuntimeNotFoundException)
+            {
+                return 1;
+            }
+            catch (Exception exception) when (exception is InvalidOperationException or COMException)
+            {
+                return 1;
+            }
+        }
+
         var errorPath = PortalArguments.FindValue(args, "--error");
         if (!PortalArguments.TryParse(args, out var options, out var error))
         {
