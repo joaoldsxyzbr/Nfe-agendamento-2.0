@@ -74,4 +74,25 @@ public sealed class InstallerStaticTests
         Assert.Contains("name: NfeAgendamentoBridge-win-x64", ci);
         Assert.Contains("if (!(Test-Path $setup))", ci);
     }
+
+    [Fact]
+    public void Release_v002_uses_only_artifacts_from_successful_ci_run()
+    {
+        var root = RepositoryRoot();
+        var workflowPath = Path.Combine(root, ".github", "workflows", "release-v0.0.2.yml");
+        Assert.True(File.Exists(workflowPath), "O workflow de release v0.0.2 ainda não existe.");
+        var workflow = File.ReadAllText(workflowPath);
+
+        Assert.Contains("workflows: [CI]", workflow);
+        Assert.Contains("github.event.workflow_run.conclusion == 'success'", workflow);
+        Assert.Contains("github.event.workflow_run.head_branch == 'main'", workflow);
+        Assert.Contains("release: v0.0.2", workflow);
+        Assert.Contains("name: NFeAgendamentoBridge-Setup-v0.0.2", workflow);
+        Assert.Contains("name: NfeAgendamentoBridge-win-x64", workflow);
+        Assert.Contains("run-id: ${{ github.event.workflow_run.id }}", workflow);
+        Assert.Contains("NFeAgendamentoBridge-Setup-v0.0.2.exe", workflow);
+        Assert.Contains("NfeAgendamentoBridge-win-x64.zip", workflow);
+        Assert.Contains("gh release create v0.0.2", workflow);
+        Assert.Contains("--notes-file docs/releases/v0.0.2.md", workflow);
+    }
 }
