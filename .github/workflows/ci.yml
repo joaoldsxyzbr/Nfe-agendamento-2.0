@@ -30,8 +30,6 @@ jobs:
       - uses: actions/checkout@v7
       - run: bash apps/bridge/tests/bootstrap.sh
       - uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: '10.0.x'
       - run: dotnet run --project apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeAgendamento.Bridge.Tests.csproj -c Release
       - run: dotnet build apps/bridge/src/NfeAgendamento.Bridge/NfeAgendamento.Bridge.csproj -c Release --no-restore
 
@@ -41,8 +39,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: '10.0.x'
       - name: Resolve application version
         id: version
         shell: pwsh
