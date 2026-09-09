@@ -72,14 +72,15 @@ public sealed class CertificateServiceTests
         using var temporary = new TemporaryDirectory();
         var settingsPath = Path.Combine(temporary.Path, "settings.json");
         var service = new CertificateService(settingsPath, () => [certificate]);
+        var cancellationToken = TestContext.Current.CancellationToken;
 
-        await service.SelectAsync(certificate.Thumbprint!);
+        await service.SelectAsync(certificate.Thumbprint!, cancellationToken);
 
         var selected = service.GetSelected();
         Assert.NotNull(selected);
         Assert.Equal(certificate.Thumbprint, selected.Thumbprint);
 
-        using var json = JsonDocument.Parse(await File.ReadAllTextAsync(settingsPath));
+        using var json = JsonDocument.Parse(await File.ReadAllTextAsync(settingsPath, cancellationToken));
         var properties = json.RootElement.EnumerateObject().ToArray();
         var property = Assert.Single(properties);
         Assert.Equal("selectedThumbprint", property.Name);
@@ -93,7 +94,10 @@ public sealed class CertificateServiceTests
         using var certificate = CreateCertificate(now.AddDays(-1), now.AddDays(30), true, "CN=Empresa Teste");
         using var temporary = new TemporaryDirectory();
         var settingsPath = Path.Combine(temporary.Path, "settings.json");
-        await File.WriteAllTextAsync(settingsPath, "{\"selectedThumbprint\":\"DEADBEEF\"}");
+        await File.WriteAllTextAsync(
+            settingsPath,
+            "{\"selectedThumbprint\":\"DEADBEEF\"}",
+            TestContext.Current.CancellationToken);
         var service = new CertificateService(settingsPath, () => [certificate]);
 
         Assert.Null(service.GetSelected());
