@@ -22,14 +22,15 @@ Implementado e coberto pelos testes automatizados do projeto:
 
 - bootstrap Vite/TypeScript e .NET 10;
 - dependências npm fixadas por `package-lock.json`, CI usando `npm ci` e gate `npm audit --audit-level=high`;
-- zero vulnerabilidades `high`/`critical` no lockfile atualmente validado pelo CI;
+- projetos .NET com `PackageReference` usam `packages.lock.json`, `RestorePackagesWithLockFile=true` e `RestoreLockedMode=true`, impedindo restore silencioso com grafo NuGet divergente;
+- zero vulnerabilidades `high`/`critical` no lockfile npm atualmente validado pelo CI;
 - `sharp` transitivo fixado em `0.35.4` para eliminar o advisory conhecido do toolchain Cloudflare;
 - tema visual dark e DANFE branco/fiscal;
 - certificado A1 no painel de configurações;
 - `GET /api/v1/health` e detecção do Bridge pelo site;
 - proteção de `Origin`/`Host` com testes de integração;
 - origem oficial `https://nfeagendamento.joaolds.xyz.br` embutida na configuração de produção do Bridge, sem wildcard e sem prompt no Setup;
-- CSP com `default-src 'self'`, `connect-src` limitado ao próprio site + `127.0.0.1:17345`, `object-src 'none'`, `frame-ancestors 'none'`, além de `nosniff`, `Referrer-Policy: no-referrer` e `Permissions-Policy` restritiva;
+- CSP com `default-src 'self''`, `connect-src` limitado ao próprio site + `127.0.0.1:17345`, `object-src 'none'`, `frame-ancestors 'none'`, além de `nosniff`, `Referrer-Policy: no-referrer` e `Permissions-Policy` restritiva;
 - `GET /api/v1/certificates` e `POST /api/v1/certificate/select`;
 - filtro A1 por chave privada, validade e Client Authentication quando EKU estiver presente;
 - `POST /api/v1/nfe/lookup` com validação completa da chave de 44 dígitos;
@@ -102,6 +103,8 @@ dotnet build apps/bridge/src/NfeAgendamento.Bridge/NfeAgendamento.Bridge.csproj 
 dotnet build apps/bridge/windows/NfeAgendamento.Portal/NfeAgendamento.Portal.csproj -c Release
 dotnet build apps/bridge/windows/NfeAgendamento.App/NfeAgendamento.App.csproj -c Release
 ```
+
+Os projetos .NET com dependências NuGet externas restauram em **locked mode**; se um `PackageReference` mudar, regenere e revise o `packages.lock.json` correspondente no mesmo commit.
 
 ## Deploy Cloudflare
 
