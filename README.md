@@ -5,15 +5,16 @@ Reescrita limpa do NFe Agendamento com **site estático + Bridge Windows mínimo
 ## Arquitetura atual
 
 - **Site:** Vite + TypeScript; concentra interface, parsing XML, DANFE e regras de apresentação.
+- **App Windows:** `NfeAgendamento.App.exe` em WinForms; inicia oculto, permanece na bandeja e gerencia o Bridge local.
 - **Bridge:** ASP.NET Core .NET 10 em `http://127.0.0.1:17345` somente.
 - **API local:** `/api/v1`.
 - **Segurança:** Host estrito `127.0.0.1:17345`, CORS sem wildcard e origem oficial de produção fixa em `https://nfeagendamento.joaolds.xyz.br`.
 - **Certificado A1:** descoberto em `CurrentUser/My`; a chave privada nunca sai do Windows/Bridge.
 - **Persistência:** somente o thumbprint selecionado em `%LOCALAPPDATA%/NfeAgendamentoBridge/settings.json`.
 - **Fallback Portal:** helper Windows separado com WebView2, Portal Nacional fixo e hCaptcha sempre manual.
-- **Distribuição Windows:** instalador Inno Setup por usuário, sem administrador, com início automático do Bridge no login.
+- **Distribuição Windows:** instalador Inno Setup por usuário, sem administrador, com início automático do app na bandeja no login.
 
-## Estado funcional — 08/09/2026
+## Estado funcional — 09/09/2026
 
 Implementado e coberto pelos testes automatizados do projeto:
 
@@ -42,29 +43,34 @@ Implementado e coberto pelos testes automatizados do projeto:
 - helper `NfeAgendamento.Portal.exe` em WinForms/WebView2 com hCaptcha sempre manual;
 - disponibilidade do Portal verificada por probe headless do WebView2 Runtime, sem abrir janela durante `/health`;
 - proteção de instância única no executável real do Bridge para evitar dois listeners locais concorrentes;
+- shell `NfeAgendamento.App.exe` em `WinExe`, sem janela de console, com `NotifyIcon` na bandeja;
+- duplo clique na bandeja abre o site oficial e o menu oferece **Abrir NFe Agendamento** e **Sair**;
+- o shell inicia `NfeAgendamento.Bridge.exe` com `CreateNoWindow` e encerra o Bridge ao sair;
 - deploy Cloudflare pela raiz usando `wrangler.jsonc` e `npx wrangler deploy --dry-run` no CI;
-- Bridge e helper versionados em `0.0.4`;
-- ícone próprio azul-escuro/amarelo no Bridge e instalador;
+- Bridge, App e helper Portal versionados em `0.0.5`;
+- ícone próprio azul-escuro/amarelo no App, Bridge e instalador;
 - instalador Inno Setup por usuário em `%LOCALAPPDATA%\NFe Agendamento Bridge`, sem UAC/admin;
-- auto-start em `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`;
-- Bridge e helper Portal publicados como **self-contained win-x64**, sem exigir instalação externa do .NET 10;
-- CI gera `NFeAgendamentoBridge-Setup-v0.0.4` e `NfeAgendamentoBridge-win-x64`;
-- workflow da `v0.0.4` só publica artifacts provenientes do mesmo CI verde e do commit marcador `release: v0.0.4`.
+- auto-start em `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` apontando para `NfeAgendamento.App.exe`;
+- App, Bridge e helper Portal publicados como **self-contained win-x64**, sem exigir instalação externa do .NET 10;
+- CI gera `NFeAgendamentoBridge-Setup-v0.0.5` e `NfeAgendamentoBridge-win-x64`;
+- workflow da `v0.0.5` só publica artifacts provenientes do mesmo CI verde e do commit marcador `release: v0.0.5`.
 
 ## Pendência para uso real
 
 A automação cobre build, testes e empacotamento, mas ainda é necessário executar o **teste físico Windows** em `docs/testing/acceptance.md` antes de declarar a versão validada em produção, incluindo:
 
 - instalar/desinstalar o Setup em Windows real e confirmar ausência de UAC;
+- confirmar que nenhuma janela preta de console permanece aberta;
+- confirmar o ícone do NFe Agendamento na bandeja e o menu **Abrir NFe Agendamento / Sair**;
 - confirmar que o Setup não pede URL e que o site oficial conecta diretamente ao Bridge;
-- confirmar que uma segunda abertura do Bridge não cria outra instância/listener;
+- confirmar que uma segunda abertura do app não cria outra instância de bandeja nem outro listener;
 - confirmar auto-start após novo login;
 - navegador real acessando o Bridge em loopback;
 - certificado A1 real;
 - consulta SEFAZ real;
 - DANFE/PDF;
 - ocorrência real ou controlada de limite/656 para validar WebView2 + Portal + hCaptcha manual + retorno do XML;
-- segundo PC independente com seu próprio Bridge.
+- segundo PC independente com seu próprio App/Bridge.
 
 ## Fora de escopo
 
@@ -80,6 +86,7 @@ npm run build:web
 dotnet run --project apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeAgendamento.Bridge.Tests.csproj -c Release
 dotnet build apps/bridge/src/NfeAgendamento.Bridge/NfeAgendamento.Bridge.csproj -c Release
 dotnet build apps/bridge/windows/NfeAgendamento.Portal/NfeAgendamento.Portal.csproj -c Release
+dotnet build apps/bridge/windows/NfeAgendamento.App/NfeAgendamento.App.csproj -c Release
 ```
 
 ## Deploy Cloudflare
@@ -92,23 +99,24 @@ npx wrangler deploy
 
 O `wrangler.jsonc` executa `npm run build:web` e publica `./apps/web/dist`. O CI também executa `npx wrangler deploy --dry-run`.
 
-## Distribuição Windows v0.0.4
+## Distribuição Windows v0.0.5
 
 Para uso normal, use:
 
 ```text
-NFeAgendamentoBridge-Setup-v0.0.4.exe
+NFeAgendamentoBridge-Setup-v0.0.5.exe
 ```
 
 O instalador:
 
 - instala somente para o usuário atual em `%LOCALAPPDATA%\NFe Agendamento Bridge`;
 - não solicita administrador;
-- mantém Bridge + helper Portal lado a lado;
+- mantém App + Bridge + helper Portal lado a lado;
 - inclui o runtime .NET necessário no publish self-contained;
-- cria atalho no Menu Iniciar;
-- registra início automático no login do usuário;
-- inicia o Bridge ao finalizar quando a opção estiver marcada;
+- cria atalho **NFe Agendamento** no Menu Iniciar apontando para `NfeAgendamento.App.exe`;
+- registra início automático do App no login do usuário;
+- inicia o App ao finalizar quando a opção estiver marcada;
+- o App inicia o Bridge em segundo plano sem console e fica na bandeja;
 - **não pede URL nem origem**: a origem oficial de produção já está embutida no Bridge;
 - remove auto-start e arquivos instalados na desinstalação;
 - preserva `%LOCALAPPDATA%\NfeAgendamentoBridge`, onde fica a seleção local do certificado;
@@ -120,15 +128,16 @@ O site de produção autorizado é exatamente:
 https://nfeagendamento.joaolds.xyz.br
 ```
 
-Não existe wildcard de CORS/Origin. O `NfeAgendamentoBridge-win-x64.zip` continua como fallback técnico. O .NET 10 não precisa estar previamente instalado para a distribuição `v0.0.4`. O **Microsoft Edge WebView2 Runtime** continua necessário somente para o fallback pelo Portal Nacional; o Bridge verifica sua disponibilidade por um probe headless do helper.
+Não existe wildcard de CORS/Origin. O `NfeAgendamentoBridge-win-x64.zip` continua como fallback técnico. O .NET 10 não precisa estar previamente instalado para a distribuição `v0.0.5`. O **Microsoft Edge WebView2 Runtime** continua necessário somente para o fallback pelo Portal Nacional; o Bridge verifica sua disponibilidade por um probe headless do helper.
 
-A `v0.0.4` substitui a `v0.0.3` para novos testes físicos. A `v0.0.3` exigia configuração manual da origem no Setup; essa etapa foi removida.
+A `v0.0.5` substitui a `v0.0.4` para novos testes físicos. A `v0.0.4` iniciava diretamente o executável de console do Bridge; a `v0.0.5` introduz o shell real de bandeja.
 
 ## Documentação
 
 - arquitetura/segurança: `docs/architecture/bridge-security.md`;
 - aceitação física: `docs/testing/acceptance.md`;
-- notas da release `v0.0.4`: `docs/releases/v0.0.4.md`;
+- notas da release `v0.0.5`: `docs/releases/v0.0.5.md`;
+- notas históricas da `v0.0.4`: `docs/releases/v0.0.4.md`;
 - design de confiabilidade `v0.0.4`: `docs/superpowers/specs/2026-09-08-v0.0.4-reliability-design.md`;
 - plano de implementação `v0.0.4`: `docs/superpowers/plans/2026-09-08-v0.0.4-reliability-implementation.md`;
 - design do instalador: `docs/superpowers/specs/2026-09-08-windows-installer-design.md`;
