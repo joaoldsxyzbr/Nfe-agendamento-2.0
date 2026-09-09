@@ -31,7 +31,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     public TrayApplicationContext()
     {
-        _bridgeProcess = FindBridgeProcess() ?? StartBridgeHidden();
+        StopExistingBridgeProcesses();
+        _bridgeProcess = StartBridgeHidden();
 
         _menu = new ContextMenuStrip();
         _menu.Items.Add(new ToolStripMenuItem("Abrir NFe Agendamento", null, (_, _) => OpenSite()));
@@ -48,16 +49,25 @@ internal sealed class TrayApplicationContext : ApplicationContext
         _notifyIcon.DoubleClick += (_, _) => OpenSite();
     }
 
-    private static Process? FindBridgeProcess()
+    private static void StopExistingBridgeProcesses()
     {
-        try
+        foreach (var process in Process.GetProcessesByName(BridgeProcessName))
         {
-            return Process.GetProcessesByName(BridgeProcessName)
-                .FirstOrDefault(static process => !process.HasExited);
-        }
-        catch
-        {
-            return null;
+            using (process)
+            {
+                try
+                {
+                    if (process.HasExited)
+                        continue;
+
+                    process.Kill(entireProcessTree: true);
+                    process.WaitForExit(2000);
+                }
+                catch
+                {
+                    // Um Bridge de outra sessão pode não ser encerrável pelo usuário atual.
+                }
+            }
         }
     }
 
