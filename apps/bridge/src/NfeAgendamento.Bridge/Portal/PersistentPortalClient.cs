@@ -1,11 +1,5 @@
 namespace NfeAgendamento.Bridge.Portal;
 
-public interface IPortalIpcSession : IAsyncDisposable
-{
-    Task SendAsync(PortalIpcEnvelope message, CancellationToken cancellationToken);
-    Task<PortalIpcEnvelope> ReceiveAsync(CancellationToken cancellationToken);
-}
-
 public sealed class PersistentPortalClient : IAsyncDisposable
 {
     private readonly Func<CancellationToken, Task<IPortalIpcSession>> _sessionFactory;
