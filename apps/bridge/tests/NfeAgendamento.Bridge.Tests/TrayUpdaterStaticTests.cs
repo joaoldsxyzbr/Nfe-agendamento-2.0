@@ -21,6 +21,23 @@ public sealed class TrayUpdaterStaticTests
         Assert.Contains("Assembly.GetExecutingAssembly().GetName().Version", program);
     }
 
+    [Fact]
+    public void Tray_owns_only_its_bridge_process_and_monitors_single_instance_mutex()
+    {
+        var root = RepositoryRoot();
+        var program = File.ReadAllText(Path.Combine(
+            root, "apps", "bridge", "windows", "NfeAgendamento.App", "Program.cs"));
+
+        Assert.DoesNotContain("Process.GetProcessesByName", program);
+        Assert.DoesNotContain("StopExistingBridgeProcesses", program);
+        Assert.Contains("BridgeSingleInstanceName", program);
+        Assert.Contains("Mutex.TryOpenExisting", program);
+        Assert.Contains("System.Windows.Forms.Timer", program);
+        Assert.Contains("_bridgeMonitor", program);
+        Assert.Contains("Bridge indisponível", program);
+        Assert.Contains("_bridgeProcess.Kill(entireProcessTree: true)", program);
+    }
+
     private static string RepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
