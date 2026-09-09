@@ -81,7 +81,7 @@ Motivos:
 
 - evita abrir nova porta HTTP local;
 - reduz superfície de ataque;
-- funciona bem para processo pai/serviço local + helper GUI;
+- funciona bem para processo local + helper GUI;
 - oferece framing simples de mensagens e detecção clara de desconexão.
 
 Mensagens mínimas:
@@ -101,7 +101,7 @@ CANCELLED + message
 FAILED + message
 ```
 
-O protocolo deve usar JSON UTF-8 com tamanho máximo explícito por mensagem e comprimento prefixado para evitar leitura parcial/ambígua.
+O protocolo deve usar JSON UTF-8 com tamanho máximo de 11 MiB por mensagem e comprimento prefixado em 4 bytes little-endian. O limite é deliberadamente superior ao limite de XML de 10 MiB para comportar envelope JSON sem permitir mensagens arbitrariamente grandes.
 
 ## Ciclo de vida
 
@@ -111,7 +111,8 @@ O protocolo deve usar JSON UTF-8 com tamanho máximo explícito por mensagem e c
 2. Se não estiver, inicia `NfeAgendamento.Portal.exe --server` de forma oculta.
 3. O helper cria/inicializa o WebView2 em background.
 4. O helper sinaliza `READY` após estar apto a receber operação.
-5. O Bridge cacheia o estado de disponibilidade enquanto o processo permanecer saudável.
+5. O Bridge aguarda no máximo 5 segundos por `READY`.
+6. O Bridge cacheia o estado de disponibilidade enquanto o processo permanecer saudável.
 
 ### Operação
 
@@ -132,7 +133,7 @@ O helper persistente deve encerrar quando:
 
 - o Bridge envia comando de shutdown;
 - a sessão do Windows está encerrando;
-- o processo Bridge deixa de existir por período de graça definido;
+- o processo Bridge deixa de existir por 5 segundos consecutivos;
 - ocorre falha fatal de inicialização do WebView2.
 
 Não deve permanecer órfão indefinidamente.
@@ -145,8 +146,8 @@ Antes do helper persistente, aplicar:
 
 - cache do resultado positivo do probe de WebView2 durante a vida do Bridge;
 - eliminar processos `--probe-runtime` repetidos por operação;
-- reduzir polling web de 800 ms para intervalo menor somente enquanto uma operação Portal estiver ativa;
-- manter backoff/limite para evitar polling agressivo desnecessário;
+- reduzir polling web de 800 ms para 250 ms somente enquanto uma operação Portal estiver ativa;
+- garantir no máximo uma chamada de status em voo por operação;
 - evitar criação repetida de diretórios e verificações invariantes quando já resolvidas.
 
 ### Ganhos estruturais
@@ -165,12 +166,13 @@ Com helper persistente:
 
 ### IPC
 
-- Named Pipe acessível apenas ao usuário atual.
+- Named Pipe acessível apenas ao usuário atual da sessão Windows.
 - Nome de pipe não deve conter dados fiscais.
-- O servidor rejeita mensagens acima do limite esperado.
+- O servidor rejeita mensagens acima de 11 MiB.
 - Operações exigem `operationId` conhecido pelo Bridge.
 - Uma operação ativa por vez.
 - Desconexões invalidam a operação corrente; não há replay automático.
+- O helper não aceita comandos vindos de TCP, navegador ou rede local.
 
 ### Navegação WebView2
 
@@ -188,7 +190,7 @@ Continuam obrigatórias as proteções existentes:
 
 Validação obrigatória antes da entrega ao site:
 
-- tamanho máximo atual preservado;
+- tamanho máximo atual de 10 MiB preservado;
 - DTD proibido;
 - `XmlResolver = null`;
 - raiz `nfeProc`;
@@ -199,7 +201,7 @@ Validação obrigatória antes da entrega ao site:
 
 O Portal persistente opera como recurso exclusivo.
 
-Estado lógico sugerido:
+Estado lógico:
 
 ```text
 Starting
@@ -213,7 +215,7 @@ Stopping
 Regras:
 
 - `START_OPERATION` em `Idle` -> `Busy`;
-- nova operação durante `Busy` é rejeitada de forma determinística;
+- nova operação durante `Busy` é rejeitada imediatamente com erro de operação Portal já em andamento;
 - ao completar/cancelar/falhar -> `Idle`;
 - queda do processo -> Bridge marca operação ativa como `failed` e entra em recuperação;
 - helper reiniciado só prepara a próxima operação; a operação perdida não é repetida automaticamente.
@@ -222,7 +224,7 @@ Regras:
 
 ### Helper não está rodando
 
-Bridge inicia o helper e aguarda readiness com timeout curto e explícito.
+Bridge inicia o helper e aguarda `READY` por até 5 segundos. Se não houver readiness, a operação falha sem retry automático.
 
 ### Helper cai durante operação
 
@@ -237,7 +239,7 @@ Bridge inicia o helper e aguarda readiness com timeout curto e explícito.
 - helper informa falha fatal;
 - Portal é considerado indisponível;
 - site recebe mensagem acionável;
-- o Bridge não entra em loop de reinício rápido.
+- Bridge aplica cooldown de 10 segundos antes de permitir nova tentativa de inicialização do helper, evitando loop de reinício rápido.
 
 ### Usuário fecha a janela
 
@@ -260,17 +262,17 @@ Isso preserva isolamento entre frontend e implementação Windows.
 
 ## Polling do site
 
-O polling atual de 800 ms pode ser reduzido para melhorar percepção de resposta, mas deve permanecer simples e limitado.
+O polling atual de 800 ms será reduzido para 250 ms durante uma operação Portal ativa.
 
-Recomendação:
+Regras:
 
-- 250 ms enquanto `waiting_for_user`/finalização imediata;
+- 250 ms entre respostas `waiting_for_user`;
 - sem chamadas paralelas;
-- AbortSignal continua obrigatório;
+- `AbortSignal` continua obrigatório;
 - sem deadline global artificial enquanto o usuário resolve o hCaptcha;
-- cada request mantém timeout próprio já previsto no BridgeClient.
+- cada request mantém timeout próprio já previsto no `BridgeClient`.
 
-A maior redução de latência virá do processo persistente, não do polling; portanto o polling não deve ser tornado excessivamente agressivo.
+A maior redução de latência virá do processo persistente, não do polling; portanto o polling não será reduzido abaixo de 250 ms.
 
 ## Testes obrigatórios
 
@@ -282,21 +284,23 @@ A maior redução de latência virá do processo persistente, não do polling; p
 - `transport_unavailable` não chama Portal;
 - `fiscal_status` não chama Portal;
 - polling encerra imediatamente em estado terminal;
-- AbortSignal interrompe polling;
-- novo intervalo de polling permanece controlado.
+- `AbortSignal` interrompe polling;
+- intervalo padrão do polling é 250 ms;
+- nunca existe mais de uma requisição de status simultânea por operação.
 
 ### Bridge
 
 - probe WebView2 positivo é cacheado e não cria novo processo por operação;
 - helper é iniciado quando indisponível;
-- readiness timeout retorna falha limpa;
+- readiness acima de 5 segundos retorna falha limpa;
 - segunda operação reutiliza helper já saudável;
-- operação concorrente é rejeitada/serializada conforme contrato definido;
+- segunda operação durante `Busy` é rejeitada imediatamente;
 - desconexão do helper falha a operação corrente sem retry;
 - próxima operação consegue reiniciar helper;
 - XML de chave divergente é recusado;
-- XML acima do limite é recusado;
-- cancelamento retorna `cancelled` e libera o helper.
+- XML acima de 10 MiB é recusado;
+- cancelamento retorna `cancelled` e libera o helper;
+- falha fatal de WebView2 respeita cooldown de 10 segundos.
 
 ### Portal helper
 
@@ -307,7 +311,8 @@ A maior redução de latência virá do processo persistente, não do polling; p
 - fechar manualmente durante operação produz `cancelled`;
 - navegação externa permanece bloqueada;
 - download não oficial permanece bloqueado;
-- certificado fora do host oficial permanece bloqueado.
+- certificado fora do host oficial permanece bloqueado;
+- helper encerra após detectar Bridge ausente por 5 segundos.
 
 ## Medição de desempenho
 
@@ -359,7 +364,7 @@ A implementação será considerada pronta quando:
 6. XML oficial correto chega ao site e renderiza pelo pipeline atual;
 7. queda do helper não dispara retry fiscal automático;
 8. operação seguinte se recupera após queda do helper;
-9. uma segunda operação simultânea não mistura contexto;
+9. uma segunda operação simultânea é rejeitada sem misturar contexto;
 10. todos os testes web, Bridge, Portal, build e pacote Windows passam;
 11. README, acceptance docs e release notes refletem o novo comportamento;
 12. teste físico em Windows confirma melhora perceptível entre primeira e segunda abertura.
