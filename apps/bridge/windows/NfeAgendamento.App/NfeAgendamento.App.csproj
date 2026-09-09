@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>NfeAgendamento.App</AssemblyName>
+    <RootNamespace>NfeAgendamento.App</RootNamespace>
+    <Version>0.0.5</Version>
+    <FileVersion>0.0.5.0</FileVersion>
+    <AssemblyVersion>0.0.5.0</AssemblyVersion>
+    <ApplicationIcon>..\..\assets\nfe-agendamento-bridge.ico</ApplicationIcon>
+  </PropertyGroup>
+</Project>
