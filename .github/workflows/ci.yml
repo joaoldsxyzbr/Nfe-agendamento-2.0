@@ -68,15 +68,15 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }
-          $setup = "artifacts\installer\NFeAgendamentoBridge-Setup-v0.0.5.exe"
+          $setup = "artifacts\installer\NFeAgendamentoBridge-Setup-v0.0.6.exe"
           if (!(Test-Path $setup)) {
             throw "Setup não gerado em $setup"
           }
       - name: Upload Windows installer
         uses: actions/upload-artifact@v4
         with:
-          name: NFeAgendamentoBridge-Setup-v0.0.5
-          path: artifacts/installer/NFeAgendamentoBridge-Setup-v0.0.5.exe
+          name: NFeAgendamentoBridge-Setup-v0.0.6
+          path: artifacts/installer/NFeAgendamentoBridge-Setup-v0.0.6.exe
           if-no-files-found: error
           retention-days: 14
       - name: Upload Windows package
