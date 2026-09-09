@@ -31,7 +31,8 @@ describe('portal fallback integration', () => {
   it('cancels an active Portal operation when the page is abandoned', () => {
     expect(main).toContain('let activePortalOperationId: string | null = null;');
     expect(main).toContain("window.addEventListener('pagehide'");
-    expect(main).toContain('portalFallback.cancel(activePortalOperationId)');
+    expect(main).toContain('const operationId = activePortalOperationId;');
+    expect(main).toContain('portalFallback.cancel(operationId)');
     expect(main).toContain('activePortalOperationId = operationId;');
     expect(main).toContain('activePortalOperationId = null;');
   });
