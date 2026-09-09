@@ -15,13 +15,14 @@ public sealed class PortalEndpointsIntegrationTests : IAsyncDisposable
 {
     private const string AllowedOrigin = "https://nfeagendamento.example";
     private const string AccessKey = "42260812345678000123550010000012341000012342";
+    private readonly FakeLauncher _launcher;
     private readonly PortalFallbackService _portal;
     private readonly WebApplicationFactory<Program> _factory;
 
     public PortalEndpointsIntegrationTests()
     {
-        var launcher = new FakeLauncher();
-        _portal = new PortalFallbackService(launcher, () => "ABC123");
+        _launcher = new FakeLauncher();
+        _portal = new PortalFallbackService(_launcher, () => "ABC123");
         _factory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
@@ -71,6 +72,29 @@ public sealed class PortalEndpointsIntegrationTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task Cancel_endpoint_stops_active_operation()
+    {
+        _launcher.Block = true;
+        using var client = CreateClient();
+        using var start = Request(HttpMethod.Post, "/api/v1/portal/start");
+        start.Content = JsonContent.Create(new { accessKey = AccessKey });
+        using var startResponse = await client.SendAsync(start, TestContext.Current.CancellationToken);
+        var started = await startResponse.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
+        var operationId = started.GetProperty("operationId").GetString();
+        Assert.False(string.IsNullOrWhiteSpace(operationId));
+        await _launcher.Started.Task.WaitAsync(TimeSpan.FromSeconds(1), TestContext.Current.CancellationToken);
+
+        using var cancel = Request(HttpMethod.Post, $"/api/v1/portal/cancel/{operationId}");
+        using var cancelResponse = await client.SendAsync(cancel, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.NoContent, cancelResponse.StatusCode);
+        using var statusRequest = Request(HttpMethod.Get, $"/api/v1/portal/status/{operationId}");
+        using var statusResponse = await client.SendAsync(statusRequest, TestContext.Current.CancellationToken);
+        var status = await statusResponse.Content.ReadFromJsonAsync<PortalOperationStatus>(TestContext.Current.CancellationToken);
+        Assert.Equal(PortalOperationStates.Cancelled, status?.State);
+    }
+
+    [Fact]
     public async Task Unknown_operation_returns_not_found()
     {
         using var client = CreateClient();
@@ -102,11 +126,26 @@ public sealed class PortalEndpointsIntegrationTests : IAsyncDisposable
     private sealed class FakeLauncher : IPortalWindowLauncher
     {
         public bool IsAvailable => true;
+        public bool Block { get; set; }
+        public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public Task<PortalLaunchResult> OpenAsync(PortalLaunchRequest request, CancellationToken cancellationToken)
+        public async Task<PortalLaunchResult> OpenAsync(PortalLaunchRequest request, CancellationToken cancellationToken)
         {
+            Started.TrySetResult();
+            if (Block)
+            {
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    return PortalLaunchResult.Cancelled("Portal cancelado pelo Bridge.");
+                }
+            }
+
             var xml = $"<nfeProc xmlns=\"http://www.portalfiscal.inf.br/nfe\"><NFe><infNFe Id=\"NFe{request.AccessKey}\" /></NFe></nfeProc>";
-            return Task.FromResult(PortalLaunchResult.Completed(xml));
+            return PortalLaunchResult.Completed(xml);
         }
     }
 }
