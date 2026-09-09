@@ -8,6 +8,9 @@ public sealed class ProcessPortalWindowLauncher : IPortalWindowLauncher
     private const string HelperFileName = "NfeAgendamento.Portal.exe";
     private readonly string _helperPath;
     private readonly Func<string, bool> _runtimeProbe;
+    private readonly Func<bool> _platformProbe;
+    private readonly object _probeGate = new();
+    private bool _runtimeAvailable;
 
     public ProcessPortalWindowLauncher()
         : this(Path.Combine(AppContext.BaseDirectory, HelperFileName), runtimeProbe: null)
@@ -17,15 +20,36 @@ public sealed class ProcessPortalWindowLauncher : IPortalWindowLauncher
     internal ProcessPortalWindowLauncher(
         string helperPath,
         Func<string, bool>? runtimeProbe = null)
+        : this(helperPath, runtimeProbe, OperatingSystem.IsWindows)
+    {
+    }
+
+    internal ProcessPortalWindowLauncher(
+        string helperPath,
+        Func<string, bool>? runtimeProbe,
+        Func<bool>? platformProbe)
     {
         _helperPath = helperPath;
         _runtimeProbe = runtimeProbe ?? ProbeRuntime;
+        _platformProbe = platformProbe ?? OperatingSystem.IsWindows;
     }
 
-    public bool IsAvailable =>
-        OperatingSystem.IsWindows() &&
-        File.Exists(_helperPath) &&
-        _runtimeProbe(_helperPath);
+    public bool IsAvailable
+    {
+        get
+        {
+            if (!_platformProbe() || !File.Exists(_helperPath)) return false;
+            if (_runtimeAvailable) return true;
+
+            lock (_probeGate)
+            {
+                if (_runtimeAvailable) return true;
+                if (!_runtimeProbe(_helperPath)) return false;
+                _runtimeAvailable = true;
+                return true;
+            }
+        }
+    }
 
     public async Task<PortalLaunchResult> OpenAsync(
         PortalLaunchRequest request,
