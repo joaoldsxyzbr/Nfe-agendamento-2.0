@@ -1,0 +1,42 @@
+name: Refresh Portal NuGet lock
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: ${{ github.event.head_commit.message == 'ci: gerar lockfile Portal win-x64' }}
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - name: Regenerate Portal lockfile for win-x64
+        shell: pwsh
+        run: |
+          dotnet restore apps/bridge/windows/NfeAgendamento.Portal/NfeAgendamento.Portal.csproj `
+            -r win-x64 `
+            --force-evaluate `
+            -p:RestoreLockedMode=false `
+            -p:RestorePackagesWithLockFile=true
+
+          $lock = "apps/bridge/windows/NfeAgendamento.Portal/packages.lock.json"
+          if (-not (Select-String -Path $lock -Pattern 'win-x64' -Quiet)) {
+            throw "Lockfile regenerado sem o runtime win-x64."
+          }
+      - name: Commit generated lockfile
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/bridge/windows/NfeAgendamento.Portal/packages.lock.json
+          if (git diff --cached --quiet) {
+            throw "O lockfile não mudou; esperado runtime win-x64."
+          }
+          git commit -m "build: atualizar lockfile NuGet do Portal para win-x64"
+          git push
