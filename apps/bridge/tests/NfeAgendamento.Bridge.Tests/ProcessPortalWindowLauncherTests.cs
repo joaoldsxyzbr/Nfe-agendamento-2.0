@@ -100,6 +100,20 @@ public sealed class ProcessPortalWindowLauncherTests
         }
     }
 
+    [Fact]
+    public void Launcher_disposes_the_persistent_client_before_the_owned_helper_factory()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            RepositoryRoot(),
+            "apps", "bridge", "src", "NfeAgendamento.Bridge", "Portal", "ProcessPortalWindowLauncher.cs"));
+
+        Assert.Contains("private readonly PortalProcessSessionFactory _sessions;", source);
+        var clientDispose = source.IndexOf("await _persistentClient.DisposeAsync()", StringComparison.Ordinal);
+        var factoryDispose = source.IndexOf("await _sessions.DisposeAsync()", StringComparison.Ordinal);
+        Assert.True(clientDispose >= 0);
+        Assert.True(factoryDispose > clientDispose);
+    }
+
     private static ProcessPortalWindowLauncher CreateLauncher(
         string helperPath,
         Func<string, bool> runtimeProbe,
@@ -123,4 +137,14 @@ public sealed class ProcessPortalWindowLauncherTests
             binder: null,
             types: [typeof(string), typeof(Func<string, bool>), typeof(Func<bool>)],
             modifiers: null);
+
+    private static string RepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "package.json")))
+            directory = directory.Parent;
+
+        Assert.NotNull(directory);
+        return directory.FullName;
+    }
 }
