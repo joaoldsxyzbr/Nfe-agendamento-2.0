@@ -19,6 +19,26 @@ describe('DANFE approved behavior', () => {
     expect(html).toContain('TRANSPORTADORA TESTE');
   });
 
+  it('shows authentication guidance and issuer phone in the fiscal header', async () => {
+    const { renderDanfeHtml } = await import('../src/danfe/render');
+    const html = renderDanfeHtml(parseNfeXml(fullXml, KEY));
+
+    expect(html).toContain('Consulta de autenticidade no portal nacional da NF-e');
+    expect(html).toContain('www.nfe.fazenda.gov.br/portal');
+    expect(html).toContain('Fone/Fax: 48999999999');
+  });
+
+  it('renders destination ICMS and total tax when present in ICMSTot', async () => {
+    const { renderDanfeHtml } = await import('../src/danfe/render');
+    const xml = fullXml.replace('<vFCPUFDest>0.15</vFCPUFDest>', '<vFCPUFDest>0.15</vFCPUFDest><vICMSUFDest>1.23</vICMSUFDest><vTotTrib>4.56</vTotTrib>');
+    const html = renderDanfeHtml(parseNfeXml(xml, KEY));
+
+    expect(html).toContain('V. ICMS UF dest.');
+    expect(html).toContain('V. tot. trib.');
+    expect(html).toContain('1,23');
+    expect(html).toContain('4,56');
+  });
+
   it('omits transport when there is no useful transport data', async () => {
     const { renderDanfeHtml } = await import('../src/danfe/render');
     const html = renderDanfeHtml(parseNfeXml(basicXml, KEY));
@@ -50,10 +70,13 @@ describe('DANFE approved behavior', () => {
     expect(html).toContain('/src/danfe/zoom-direct.ts');
   });
 
-  it('keeps approved A4 and compact item-column CSS', () => {
+  it('keeps approved A4 while compacting the fiscal header and expanding additional data', () => {
     const css = readFileSync(new URL('../src/danfe/styles.css', import.meta.url), 'utf8');
     for (const rule of ['width: 210mm', 'min-height: 277mm', 'font-family: Arial', '.products-table col.item', 'width: 8mm', '@media print']) {
       expect(css).toContain(rule);
     }
+    expect(css).toContain('min-height: 36px');
+    expect(css).toContain('min-height: 78px');
+    expect(css).toContain('min-height: 88px');
   });
 });
