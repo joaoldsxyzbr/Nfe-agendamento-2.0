@@ -59,6 +59,22 @@ describe('PortalFallbackController', () => {
     expect(maxInFlight).toBe(1);
   });
 
+  it('cancels an abandoned operation through the Bridge client', async () => {
+    const cancelled: string[] = [];
+    const fake = {
+      startPortal: async () => ({ operationId: 'op-cancel' }),
+      getPortalStatus: async () => ({ operationId: 'op-cancel', state: 'waiting_for_user' as const, message: null, xml: null }),
+      cancelPortal: async (operationId: string) => {
+        cancelled.push(operationId);
+      },
+    };
+    const controller = new PortalFallbackController(fake, async () => {});
+
+    await controller.cancel('op-cancel');
+
+    expect(cancelled).toEqual(['op-cancel']);
+  });
+
   it('returns failed/cancelled terminal state without retrying forever', async () => {
     let calls = 0;
     const fake = {
