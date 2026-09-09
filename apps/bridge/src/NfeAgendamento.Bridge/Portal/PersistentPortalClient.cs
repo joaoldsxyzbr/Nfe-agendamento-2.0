@@ -3,15 +3,26 @@ namespace NfeAgendamento.Bridge.Portal;
 public sealed class PersistentPortalClient : IAsyncDisposable
 {
     private static readonly TimeSpan CancelAcknowledgementTimeout = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan DefaultFailureCooldown = TimeSpan.FromSeconds(2);
 
     private readonly Func<CancellationToken, Task<IPortalIpcSession>> _sessionFactory;
+    private readonly Func<DateTimeOffset> _clock;
+    private readonly TimeSpan _failureCooldown;
     private readonly SemaphoreSlim _sessionGate = new(1, 1);
     private IPortalIpcSession? _session;
+    private DateTimeOffset? _cooldownUntil;
     private int _busy;
 
-    public PersistentPortalClient(Func<CancellationToken, Task<IPortalIpcSession>> sessionFactory)
+    public PersistentPortalClient(
+        Func<CancellationToken, Task<IPortalIpcSession>> sessionFactory,
+        Func<DateTimeOffset>? clock = null,
+        TimeSpan? failureCooldown = null)
     {
         _sessionFactory = sessionFactory ?? throw new ArgumentNullException(nameof(sessionFactory));
+        _clock = clock ?? (() => DateTimeOffset.UtcNow);
+        _failureCooldown = failureCooldown ?? DefaultFailureCooldown;
+        if (_failureCooldown <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(failureCooldown));
     }
 
     public async Task<PortalLaunchResult> OpenAsync(
@@ -25,6 +36,9 @@ public sealed class PersistentPortalClient : IAsyncDisposable
 
         try
         {
+            if (IsCoolingDown())
+                return PortalLaunchResult.Failed("A conexão local com o Portal está em recuperação; aguarde alguns segundos e tente novamente.");
+
             var session = await GetOrCreateSessionAsync(cancellationToken);
             await session.SendAsync(
                 new PortalIpcEnvelope(
@@ -38,10 +52,7 @@ public sealed class PersistentPortalClient : IAsyncDisposable
             {
                 var message = await session.ReceiveAsync(cancellationToken);
                 if (!string.Equals(message.OperationId, request.OperationId, StringComparison.Ordinal))
-                {
-                    await ResetSessionAsync();
-                    return PortalLaunchResult.Failed("O helper do Portal retornou uma operação diferente da solicitada.");
-                }
+                    return await FailFatalSessionAsync("O helper do Portal retornou uma operação diferente da solicitada.");
 
                 switch (message.Type)
                 {
@@ -50,25 +61,27 @@ public sealed class PersistentPortalClient : IAsyncDisposable
                         continue;
                     case PortalIpcMessageType.Completed:
                         if (string.IsNullOrWhiteSpace(message.Xml))
-                        {
-                            await ResetSessionAsync();
-                            return PortalLaunchResult.Failed("O helper do Portal concluiu sem retornar XML.");
-                        }
+                            return await FailFatalSessionAsync("O helper do Portal concluiu sem retornar XML.");
+                        ClearCooldown();
                         return PortalLaunchResult.Completed(message.Xml);
                     case PortalIpcMessageType.Cancelled:
+                        ClearCooldown();
                         return PortalLaunchResult.Cancelled(message.Message ?? "Portal fechado pelo usuário.");
                     case PortalIpcMessageType.Failed:
+                        ClearCooldown();
                         return PortalLaunchResult.Failed(message.Message ?? "Não foi possível concluir a consulta pelo Portal.");
                     default:
-                        await ResetSessionAsync();
-                        return PortalLaunchResult.Failed("O helper do Portal retornou uma mensagem inesperada.");
+                        return await FailFatalSessionAsync("O helper do Portal retornou uma mensagem inesperada.");
                 }
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             if (!await TryCancelOperationAsync(request.OperationId))
+            {
+                EnterCooldown();
                 await ResetSessionAsync();
+            }
 
             return PortalLaunchResult.Cancelled("Consulta pelo Portal cancelada.");
         }
@@ -78,8 +91,9 @@ public sealed class PersistentPortalClient : IAsyncDisposable
             or ObjectDisposedException
             or InvalidOperationException)
         {
+            EnterCooldown();
             await ResetSessionAsync();
-            return PortalLaunchResult.Failed("A conexão local com o Portal foi interrompida. Tente novamente na próxima consulta.");
+            return PortalLaunchResult.Failed("A conexão local com o Portal foi interrompida. Aguarde alguns segundos antes de tentar novamente.");
         }
         finally
         {
@@ -91,6 +105,30 @@ public sealed class PersistentPortalClient : IAsyncDisposable
     {
         await ResetSessionAsync();
         _sessionGate.Dispose();
+    }
+
+    private bool IsCoolingDown()
+    {
+        var cooldownUntil = _cooldownUntil;
+        if (cooldownUntil is null)
+            return false;
+
+        if (_clock() < cooldownUntil.Value)
+            return true;
+
+        _cooldownUntil = null;
+        return false;
+    }
+
+    private void EnterCooldown() => _cooldownUntil = _clock().Add(_failureCooldown);
+
+    private void ClearCooldown() => _cooldownUntil = null;
+
+    private async Task<PortalLaunchResult> FailFatalSessionAsync(string message)
+    {
+        EnterCooldown();
+        await ResetSessionAsync();
+        return PortalLaunchResult.Failed(message);
     }
 
     private async Task<bool> TryCancelOperationAsync(string operationId)
