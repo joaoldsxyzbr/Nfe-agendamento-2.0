@@ -14,6 +14,8 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/NfeAgendamento.Bridge/NfeAgendamento.Bridge.csproj" />
+    <Compile Include="../../windows/NfeAgendamento.App/BridgeControlClient.cs" Link="AppRuntime/BridgeControlClient.cs" />
+    <Compile Include="../../windows/NfeAgendamento.App/BridgeRestartPolicy.cs" Link="AppRuntime/BridgeRestartPolicy.cs" />
     <Compile Include="../../windows/NfeAgendamento.App/UpdateRelease.cs" Link="Updater/UpdateRelease.cs" />
     <Compile Include="../../windows/NfeAgendamento.App/UpdateService.cs" Link="Updater/UpdateService.cs" />
   </ItemGroup>
