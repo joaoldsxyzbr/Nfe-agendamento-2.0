@@ -4,6 +4,7 @@ public static class PortalIpcMessageType
 {
     public const string Ready = "ready";
     public const string StartOperation = "start_operation";
+    public const string CancelOperation = "cancel_operation";
     public const string WaitingForUser = "waiting_for_user";
     public const string Completed = "completed";
     public const string Cancelled = "cancelled";
