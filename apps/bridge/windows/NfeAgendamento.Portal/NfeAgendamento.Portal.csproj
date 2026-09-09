@@ -8,9 +8,6 @@
     <Nullable>enable</Nullable>
     <AssemblyName>NfeAgendamento.Portal</AssemblyName>
     <RootNamespace>NfeAgendamento.Portal</RootNamespace>
-    <Version>0.0.6</Version>
-    <FileVersion>0.0.6.0</FileVersion>
-    <AssemblyVersion>0.0.6.0</AssemblyVersion>
   </PropertyGroup>
 
   <ItemGroup>

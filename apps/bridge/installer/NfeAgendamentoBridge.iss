@@ -1,33 +1,33 @@
+#ifndef MyAppVersion
+  #error MyAppVersion must be defined, for example /DMyAppVersion=0.0.6
+#endif
+
 #define MyAppName "NFe Agendamento Bridge"
-#define MyAppVersion "0.0.6"
 #define MyAppExeName "NfeAgendamento.App.exe"
 
 [Setup]
-AppId={{8C8FBD7D-26DB-46C0-A8AB-7F118F42A1B8}
+AppId={{F59CE264-8C45-4E88-ABF2-2296D49A847C}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
-DefaultDirName={localappdata}\NFe Agendamento Bridge
-DefaultGroupName=NFe Agendamento Bridge
-PrivilegesRequired=lowest
+AppPublisher=NFe Agendamento
+DefaultDirName={localappdata}\Programs\NFe Agendamento Bridge
+DefaultGroupName=NFe Agendamento
 DisableProgramGroupPage=yes
+PrivilegesRequired=lowest
 OutputDir=..\..\..\artifacts\installer
-OutputBaseFilename=NFeAgendamentoBridge-Setup-v0.0.6
-SetupIconFile=..\assets\nfe-agendamento-bridge.ico
-UninstallDisplayIcon={app}\NfeAgendamento.App.exe
+OutputBaseFilename=NFeAgendamentoBridge-Setup-v{#MyAppVersion}
 Compression=lzma2
 SolidCompression=yes
-ArchitecturesAllowed=x64compatible
-ArchitecturesInstallIn64BitMode=x64compatible
 WizardStyle=modern
+UninstallDisplayIcon={app}\{#MyAppExeName}
+SetupIconFile=..\assets\nfe-agendamento-bridge.ico
 
 [Files]
 Source: "..\..\..\artifacts\NfeAgendamentoBridge\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\NFe Agendamento"; Filename: "{app}\NfeAgendamento.App.exe"; WorkingDir: "{app}"; IconFilename: "{app}\NfeAgendamento.App.exe"
-
-[Registry]
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "NFe Agendamento Bridge"; ValueData: """{app}\NfeAgendamento.App.exe"""; Flags: uninsdeletevalue
+Name: "{group}\NFe Agendamento"; Filename: "{app}\{#MyAppExeName}"
+Name: "{autodesktop}\NFe Agendamento"; Filename: "{app}\{#MyAppExeName}"
 
 [Run]
-Filename: "{app}\NfeAgendamento.App.exe"; Description: "Iniciar NFe Agendamento"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "Iniciar NFe Agendamento"; Flags: nowait postinstall skipifsilent
