@@ -65,7 +65,9 @@ export type ParsedNfeTotals = {
   icmsSt: number;
   importTax: number;
   icmsUfRemet: number;
+  icmsUfDest: number;
   fcpUfDest: number;
+  totalTax: number;
   pis: number;
   ipi: number;
   cofins: number;
@@ -279,7 +281,9 @@ function parseTotals(total: Element | null): ParsedNfeTotals {
     icmsSt: number(total, 'vST'),
     importTax: number(total, 'vII'),
     icmsUfRemet: number(total, 'vICMSUFRemet'),
+    icmsUfDest: number(total, 'vICMSUFDest'),
     fcpUfDest: number(total, 'vFCPUFDest'),
+    totalTax: number(total, 'vTotTrib'),
     pis: number(total, 'vPIS'),
     ipi: number(total, 'vIPI'),
     cofins: number(total, 'vCOFINS'),
