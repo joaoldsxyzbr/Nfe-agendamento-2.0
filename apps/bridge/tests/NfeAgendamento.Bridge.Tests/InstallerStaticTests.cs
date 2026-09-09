@@ -15,13 +15,13 @@ public sealed class InstallerStaticTests
     }
 
     [Fact]
-    public void Bridge_has_v004_identity_and_custom_icon()
+    public void Bridge_has_v005_identity_and_custom_icon()
     {
         var root = RepositoryRoot();
         var project = File.ReadAllText(Path.Combine(root, "apps", "bridge", "src", "NfeAgendamento.Bridge", "NfeAgendamento.Bridge.csproj"));
         var iconPath = Path.Combine(root, "apps", "bridge", "assets", "nfe-agendamento-bridge.ico");
 
-        Assert.Contains("<Version>0.0.4</Version>", project);
+        Assert.Contains("<Version>0.0.5</Version>", project);
         Assert.Contains("<ApplicationIcon>..\\..\\assets\\nfe-agendamento-bridge.ico</ApplicationIcon>", project);
         Assert.True(File.Exists(iconPath));
         var header = File.ReadAllBytes(iconPath).Take(4).ToArray();
@@ -29,11 +29,11 @@ public sealed class InstallerStaticTests
     }
 
     [Fact]
-    public void Portal_helper_matches_v004_package_version()
+    public void Portal_helper_matches_v005_package_version()
     {
         var root = RepositoryRoot();
         var project = File.ReadAllText(Path.Combine(root, "apps", "bridge", "windows", "NfeAgendamento.Portal", "NfeAgendamento.Portal.csproj"));
-        Assert.Contains("<Version>0.0.4</Version>", project);
+        Assert.Contains("<Version>0.0.5</Version>", project);
     }
 
     [Fact]
@@ -44,19 +44,19 @@ public sealed class InstallerStaticTests
         Assert.True(File.Exists(installerPath), "O script Inno Setup ainda não existe.");
         var iss = File.ReadAllText(installerPath);
 
-        Assert.Contains("#define MyAppVersion \"0.0.4\"", iss);
-        Assert.Contains("OutputBaseFilename=NFeAgendamentoBridge-Setup-v0.0.4", iss);
+        Assert.Contains("#define MyAppVersion \"0.0.5\"", iss);
+        Assert.Contains("OutputBaseFilename=NFeAgendamentoBridge-Setup-v0.0.5", iss);
         Assert.Contains("PrivilegesRequired=lowest", iss);
         Assert.Contains("DefaultDirName={localappdata}\\NFe Agendamento Bridge", iss);
         Assert.Contains("Root: HKCU", iss);
         Assert.Contains("Software\\Microsoft\\Windows\\CurrentVersion\\Run", iss);
         Assert.Contains("uninsdeletevalue", iss);
-        Assert.Contains("{app}\\NfeAgendamento.Bridge.exe", iss);
-        Assert.Contains("IconFilename: \"{app}\\NfeAgendamento.Bridge.exe\"", iss);
+        Assert.Contains("{app}\\NfeAgendamento.App.exe", iss);
+        Assert.Contains("IconFilename: \"{app}\\NfeAgendamento.App.exe\"", iss);
         Assert.Contains("SetupIconFile=..\\assets\\nfe-agendamento-bridge.ico", iss);
-        Assert.Contains("UninstallDisplayIcon={app}\\NfeAgendamento.Bridge.exe", iss);
-        Assert.Contains("Filename: \"{app}\\NfeAgendamento.Bridge.exe\"", iss);
-        Assert.Contains("Description: \"Iniciar NFe Agendamento Bridge\"", iss);
+        Assert.Contains("UninstallDisplayIcon={app}\\NfeAgendamento.App.exe", iss);
+        Assert.Contains("Filename: \"{app}\\NfeAgendamento.App.exe\"", iss);
+        Assert.Contains("Description: \"Iniciar NFe Agendamento\"", iss);
         Assert.Contains("WorkingDir: \"{app}\"", iss);
         Assert.DoesNotContain("PrivilegesRequired=admin", iss, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("netsh", iss, StringComparison.OrdinalIgnoreCase);
@@ -66,7 +66,7 @@ public sealed class InstallerStaticTests
     }
 
     [Fact]
-    public void V004_uses_fixed_production_origin_without_installer_prompt()
+    public void V005_uses_fixed_production_origin_without_installer_prompt()
     {
         var root = RepositoryRoot();
         var appsettings = File.ReadAllText(Path.Combine(root,
@@ -82,47 +82,48 @@ public sealed class InstallerStaticTests
     }
 
     [Fact]
-    public void Ci_publishes_bridge_and_portal_self_contained_for_windows()
+    public void Ci_publishes_windows_components_self_contained()
     {
         var root = RepositoryRoot();
         var ci = File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"));
 
         Assert.Contains("dotnet publish apps/bridge/src/NfeAgendamento.Bridge/NfeAgendamento.Bridge.csproj -c Release -r win-x64 --self-contained true", ci);
         Assert.Contains("dotnet publish apps/bridge/windows/NfeAgendamento.Portal/NfeAgendamento.Portal.csproj -c Release -r win-x64 --self-contained true", ci);
+        Assert.Contains("dotnet publish apps/bridge/windows/NfeAgendamento.App/NfeAgendamento.App.csproj -c Release -r win-x64 --self-contained true", ci);
         Assert.DoesNotContain("--self-contained false", ci);
     }
 
     [Fact]
-    public void Ci_builds_and_uploads_v004_setup_and_zip_fallback()
+    public void Ci_builds_and_uploads_v005_setup_and_zip_fallback()
     {
         var root = RepositoryRoot();
         var ci = File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"));
 
         Assert.Contains("Inno Setup 6\\ISCC.exe", ci);
-        Assert.Contains("NFeAgendamentoBridge-Setup-v0.0.4.exe", ci);
-        Assert.Contains("name: NFeAgendamentoBridge-Setup-v0.0.4", ci);
+        Assert.Contains("NFeAgendamentoBridge-Setup-v0.0.5.exe", ci);
+        Assert.Contains("name: NFeAgendamentoBridge-Setup-v0.0.5", ci);
         Assert.Contains("name: NfeAgendamentoBridge-win-x64", ci);
         Assert.Contains("if (!(Test-Path $setup))", ci);
     }
 
     [Fact]
-    public void Release_v004_uses_only_artifacts_from_successful_ci_run()
+    public void Release_v005_uses_only_artifacts_from_successful_ci_run()
     {
         var root = RepositoryRoot();
-        var workflowPath = Path.Combine(root, ".github", "workflows", "release-v0.0.4.yml");
-        Assert.True(File.Exists(workflowPath), "O workflow de release v0.0.4 ainda não existe.");
+        var workflowPath = Path.Combine(root, ".github", "workflows", "release-v0.0.5.yml");
+        Assert.True(File.Exists(workflowPath), "O workflow de release v0.0.5 ainda não existe.");
         var workflow = File.ReadAllText(workflowPath);
 
         Assert.Contains("workflows: [CI]", workflow);
         Assert.Contains("github.event.workflow_run.conclusion == 'success'", workflow);
         Assert.Contains("github.event.workflow_run.head_branch == 'main'", workflow);
-        Assert.Contains("release: v0.0.4", workflow);
-        Assert.Contains("name: NFeAgendamentoBridge-Setup-v0.0.4", workflow);
+        Assert.Contains("release: v0.0.5", workflow);
+        Assert.Contains("name: NFeAgendamentoBridge-Setup-v0.0.5", workflow);
         Assert.Contains("name: NfeAgendamentoBridge-win-x64", workflow);
         Assert.Contains("run-id: ${{ github.event.workflow_run.id }}", workflow);
-        Assert.Contains("NFeAgendamentoBridge-Setup-v0.0.4.exe", workflow);
+        Assert.Contains("NFeAgendamentoBridge-Setup-v0.0.5.exe", workflow);
         Assert.Contains("NfeAgendamentoBridge-win-x64.zip", workflow);
-        Assert.Contains("gh release create v0.0.4", workflow);
-        Assert.Contains("--notes-file docs/releases/v0.0.4.md", workflow);
+        Assert.Contains("gh release create v0.0.5", workflow);
+        Assert.Contains("--notes-file docs/releases/v0.0.5.md", workflow);
     }
 }
