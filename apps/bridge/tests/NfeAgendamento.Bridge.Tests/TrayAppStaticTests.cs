@@ -36,7 +36,7 @@ public sealed class TrayAppStaticTests
     }
 
     [Fact]
-    public void Windows_launcher_starts_bridge_without_console_window()
+    public void Windows_launcher_starts_bridge_without_console_window_in_managed_mode()
     {
         var root = RepositoryRoot();
         var programPath = Path.Combine(root, "apps", "bridge", "windows", "NfeAgendamento.App", "Program.cs");
@@ -44,20 +44,25 @@ public sealed class TrayAppStaticTests
 
         var program = File.ReadAllText(programPath);
         Assert.Contains("NfeAgendamento.Bridge.exe", program);
+        Assert.Contains("Arguments = \"--managed\"", program);
         Assert.Contains("CreateNoWindow = true", program);
         Assert.Contains("WindowStyle = ProcessWindowStyle.Hidden", program);
     }
 
     [Fact]
-    public void Windows_launcher_preserves_existing_bridge_and_starts_only_when_absent()
+    public void Windows_launcher_adopts_existing_managed_bridge_before_starting_a_new_one()
     {
         var root = RepositoryRoot();
         var program = File.ReadAllText(Path.Combine(root, "apps", "bridge", "windows", "NfeAgendamento.App", "Program.cs"));
 
-        Assert.Contains("if (!IsBridgeRunning())", program);
-        Assert.Contains("_bridgeProcess = StartBridgeHidden();", program);
+        var claimIndex = program.IndexOf("await TryClaimBridgeAsync", StringComparison.Ordinal);
+        var startIndex = program.IndexOf("StartBridgeHidden()", claimIndex, StringComparison.Ordinal);
+
+        Assert.True(claimIndex >= 0, "O launcher precisa tentar adotar um Bridge gerenciado existente.");
+        Assert.True(startIndex > claimIndex, "O launcher só deve iniciar um novo Bridge depois de falhar a adoção.");
         Assert.DoesNotContain("StopExistingBridgeProcesses", program);
         Assert.DoesNotContain("Process.GetProcessesByName", program);
+        Assert.DoesNotContain("Mutex.TryOpenExisting", program);
     }
 
     [Fact]
