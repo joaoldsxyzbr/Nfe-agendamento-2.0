@@ -27,20 +27,21 @@ internal static class Program
 internal sealed class TrayApplicationContext : ApplicationContext
 {
     private const string SiteUrl = "https://nfeagendamento.joaolds.xyz.br";
-    private const string BridgeProcessName = "NfeAgendamento.Bridge";
+    private const string BridgeSingleInstanceName = "NfeAgendamento.Bridge";
     private readonly ContextMenuStrip _menu;
     private readonly NotifyIcon _notifyIcon;
     private readonly ToolStripMenuItem _updateMenuItem;
     private readonly HttpClient _httpClient;
     private readonly UpdateService _updateService;
+    private readonly System.Windows.Forms.Timer _bridgeMonitor;
     private Process? _bridgeProcess;
     private int _updateInProgress;
     private bool _exitingForUpdate;
 
     public TrayApplicationContext()
     {
-        StopExistingBridgeProcesses();
-        _bridgeProcess = StartBridgeHidden();
+        if (!IsBridgeRunning())
+            _bridgeProcess = StartBridgeHidden();
 
         _httpClient = new HttpClient
         {
@@ -63,11 +64,19 @@ internal sealed class TrayApplicationContext : ApplicationContext
         _notifyIcon = new NotifyIcon
         {
             Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath) ?? SystemIcons.Application,
-            Text = "NFe Agendamento — ativo",
+            Text = "NFe Agendamento — verificando Bridge",
             ContextMenuStrip = _menu,
             Visible = true,
         };
         _notifyIcon.DoubleClick += (_, _) => OpenSite();
+
+        _bridgeMonitor = new System.Windows.Forms.Timer
+        {
+            Interval = 2000,
+        };
+        _bridgeMonitor.Tick += (_, _) => RefreshBridgeStatus();
+        _bridgeMonitor.Start();
+        RefreshBridgeStatus();
     }
 
     private async Task CheckForUpdatesAsync()
@@ -143,30 +152,39 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 _notifyIcon.Text = originalText;
                 _updateMenuItem.Enabled = true;
                 Volatile.Write(ref _updateInProgress, 0);
+                RefreshBridgeStatus();
             }
         }
     }
 
-    private static void StopExistingBridgeProcesses()
+    private static bool IsBridgeRunning()
     {
-        foreach (var process in Process.GetProcessesByName(BridgeProcessName))
+        try
         {
-            using (process)
-            {
-                try
-                {
-                    if (process.HasExited)
-                        continue;
+            if (!Mutex.TryOpenExisting(BridgeSingleInstanceName, out var mutex))
+                return false;
 
-                    process.Kill(entireProcessTree: true);
-                    process.WaitForExit(2000);
-                }
-                catch
-                {
-                    // Um Bridge de outra sessão pode não ser encerrável pelo usuário atual.
-                }
-            }
+            mutex.Dispose();
+            return true;
         }
+        catch (WaitHandleCannotBeOpenedException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return true;
+        }
+    }
+
+    private void RefreshBridgeStatus()
+    {
+        if (Volatile.Read(ref _updateInProgress) != 0)
+            return;
+
+        _notifyIcon.Text = IsBridgeRunning()
+            ? "NFe Agendamento — ativo"
+            : "NFe Agendamento — Bridge indisponível";
     }
 
     private static Process? StartBridgeHidden()
@@ -203,6 +221,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     protected override void ExitThreadCore()
     {
+        _bridgeMonitor.Stop();
+        _bridgeMonitor.Dispose();
         _notifyIcon.Visible = false;
         _notifyIcon.Dispose();
         _menu.Dispose();
