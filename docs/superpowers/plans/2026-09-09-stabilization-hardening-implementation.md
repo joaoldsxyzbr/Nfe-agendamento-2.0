@@ -17,9 +17,9 @@
 - ✅ Task 7 — lockfiles npm/NuGet, audit, Actions atuais e validação Windows.
 - ✅ Task 8 — `xUnit1051` e `MSB3277` eliminados e promovidos a gates.
 - ✅ Task 9 — README, arquitetura, checklist físico e status da spec atualizados.
-- ✅ Task 10 — revisão adversarial concluída; o aceite técnico permanece condicionado ao CI verde do próprio HEAD que contém este estado final.
+- ✅ Task 10 — revisão adversarial e verificação técnica final concluídas.
 
-Hardening externo que permanece fora do código: **Authenticode** (certificado/segredo de assinatura) e **branch protection/required status checks** (configuração administrativa do GitHub). A versão canônica permanece `0.0.6`; nenhuma release nova será criada nesta rodada sem solicitação explícita.
+Hardening externo que permanece fora do código: **Authenticode** (certificado/segredo de assinatura) e **branch protection/required status checks** (configuração administrativa do GitHub). A versão canônica permanece `0.0.6`; nenhuma release nova foi criada nesta rodada.
 
 ## Task 1 — Endurecer release no SHA validado
 
@@ -140,10 +140,21 @@ Hardening externo que permanece fora do código: **Authenticode** (certificado/s
 
 A revisão das superfícies críticas App/Bridge, Portal, web, CI, release e versionamento não encontrou novo P1/P2 de lifecycle, segurança local ou fluxo fiscal. Ela encontrou um gap remanescente do achado original de reprodutibilidade: o npm já estava travado, mas os dois projetos com `PackageReference` ainda não possuíam lockfile NuGet.
 
-Esse gap foi convertido em regressão automatizada (`DependencyLockStaticTests`) e corrigido com `packages.lock.json` commitados para o helper Portal e para a suíte .NET, além de `RestorePackagesWithLockFile=true` e `RestoreLockedMode=true`. Assim, mudança de grafo NuGet sem atualização explícita do lock passa a falhar em vez de ser aceita silenciosamente.
+Esse gap foi convertido em regressão automatizada (`DependencyLockStaticTests`) e corrigido com `packages.lock.json` commitados para o helper Portal e para a suíte .NET, além de `RestorePackagesWithLockFile=true` e `RestoreLockedMode=true`. A publicação do Portal também declara `win-x64` no projeto e o lockfile contém o grafo desse RID, impedindo a divergência `NU1004` observada durante a verificação.
+
+### Evidência de verificação
+
+O commit técnico `2773d335a8bfb11a520d259502ac5889e621b5ba` foi validado pelo CI `34395706213`:
+
+- `web`: sucesso; 61/61 testes e `npm audit --audit-level=high` com zero vulnerabilidades;
+- `bridge`: sucesso; 124/124 testes, 0 skipped, build com 0 warnings e 0 errors;
+- `windows-package`: sucesso; publish Bridge, Portal e App `win-x64`, Setup Inno e uploads dos artifacts concluídos;
+- artifacts confirmados: `NFeAgendamentoBridge-Setup-v0.0.6` e `NfeAgendamentoBridge-win-x64`.
+
+O commit deste documento apenas registra a evidência já obtida e deve também passar pelo CI antes do encerramento definitivo da rodada.
 
 Não há mudança funcional de produto nem bump de versão nesta correção. Authenticode, proteção administrativa da `main` e aceitação física Windows continuam explicitamente externos à conclusão do código/CI.
 
 ## Critério final
 
-Código/CI só será declarado estabilizado quando todos os contratos automatizados estiverem verdes no HEAD final, a documentação representar o código e não houver vulnerabilidade high/critical ou warning técnico relevante conhecido sendo ignorado. O teste físico Windows continua separado e obrigatório antes de declarar uma build validada em produção.
+Código/CI é considerado tecnicamente estabilizado quando todos os contratos automatizados estão verdes no HEAD final, a documentação representa o código e não há vulnerabilidade high/critical ou warning técnico relevante conhecido sendo ignorado. O teste físico Windows continua separado e obrigatório antes de declarar uma build validada em produção.
