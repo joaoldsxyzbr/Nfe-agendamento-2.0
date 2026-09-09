@@ -6,6 +6,7 @@
     <OutputType>Exe</OutputType>
     <IsTestProject>true</IsTestProject>
     <WarningsAsErrors>$(WarningsAsErrors);xUnit1051</WarningsAsErrors>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
   <ItemGroup>
