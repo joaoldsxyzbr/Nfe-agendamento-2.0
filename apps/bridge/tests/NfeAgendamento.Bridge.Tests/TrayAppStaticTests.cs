@@ -49,13 +49,15 @@ public sealed class TrayAppStaticTests
     }
 
     [Fact]
-    public void Windows_launcher_replaces_orphan_or_legacy_bridge_before_hidden_start()
+    public void Windows_launcher_preserves_existing_bridge_and_starts_only_when_absent()
     {
         var root = RepositoryRoot();
         var program = File.ReadAllText(Path.Combine(root, "apps", "bridge", "windows", "NfeAgendamento.App", "Program.cs"));
 
-        Assert.Contains("StopExistingBridgeProcesses();", program);
-        Assert.DoesNotContain("FindBridgeProcess() ?? StartBridgeHidden()", program);
+        Assert.Contains("if (!IsBridgeRunning())", program);
+        Assert.Contains("_bridgeProcess = StartBridgeHidden();", program);
+        Assert.DoesNotContain("StopExistingBridgeProcesses", program);
+        Assert.DoesNotContain("Process.GetProcessesByName", program);
     }
 
     [Fact]
