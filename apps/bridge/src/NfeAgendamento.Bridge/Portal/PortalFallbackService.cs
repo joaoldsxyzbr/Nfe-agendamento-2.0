@@ -5,14 +5,23 @@ namespace NfeAgendamento.Bridge.Portal;
 
 public sealed class PortalFallbackService
 {
+    private static readonly TimeSpan DefaultTerminalRetention = TimeSpan.FromMinutes(2);
+
     private readonly IPortalWindowLauncher _launcher;
     private readonly Func<string?> _selectedThumbprint;
+    private readonly TimeSpan _terminalRetention;
     private readonly ConcurrentDictionary<string, PortalOperationStatus> _operations = new(StringComparer.Ordinal);
 
-    public PortalFallbackService(IPortalWindowLauncher launcher, Func<string?> selectedThumbprint)
+    public PortalFallbackService(
+        IPortalWindowLauncher launcher,
+        Func<string?> selectedThumbprint,
+        TimeSpan? terminalRetention = null)
     {
         _launcher = launcher ?? throw new ArgumentNullException(nameof(launcher));
         _selectedThumbprint = selectedThumbprint ?? throw new ArgumentNullException(nameof(selectedThumbprint));
+        _terminalRetention = terminalRetention ?? DefaultTerminalRetention;
+        if (_terminalRetention <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(terminalRetention), "A retenção terminal do Portal deve ser positiva.");
     }
 
     public bool IsAvailable => _launcher.IsAvailable && !string.IsNullOrWhiteSpace(_selectedThumbprint());
@@ -78,6 +87,16 @@ public sealed class PortalFallbackService
         }
     }
 
-    private void Set(string operationId, string state, string? message, string? xml) =>
+    private void Set(string operationId, string state, string? message, string? xml)
+    {
         _operations[operationId] = new PortalOperationStatus(operationId, state, message, xml);
+        if (state is PortalOperationStates.Completed or PortalOperationStates.Failed or PortalOperationStates.Cancelled)
+            _ = ExpireTerminalAsync(operationId);
+    }
+
+    private async Task ExpireTerminalAsync(string operationId)
+    {
+        await Task.Delay(_terminalRetention);
+        _operations.TryRemove(operationId, out _);
+    }
 }
