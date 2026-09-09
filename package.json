@@ -7,5 +7,13 @@
   "scripts": {
     "test:web": "npm --workspace @nfe-agendamento/web test",
     "build:web": "npm --workspace @nfe-agendamento/web run build"
+  },
+  "overrides": {
+    "sharp": "0.35.4"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "sharp@0.35.4": true,
+    "workerd@1.20260907.1": true
   }
 }
