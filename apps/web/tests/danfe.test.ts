@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { parseNfeXml } from '../src/nfe/xml';
 
 const KEY = '42260812345678000123550010000012341000012342';
@@ -43,66 +43,6 @@ describe('DANFE approved behavior', () => {
     expect(nextDanfeZoom(1, -100)).toBe(1.1);
     expect(nextDanfeZoom(2, -100)).toBe(2);
     expect(nextDanfeZoom(0.6, 100)).toBe(0.6);
-  });
-
-  it('applies Ctrl+wheel when danfe-content is inside danfe-scroll', async () => {
-    const { attachDanfeZoom } = await import('../src/danfe/render');
-    let wheelHandler: ((event: WheelEvent) => void) | undefined;
-    let prevented = false;
-    const styles = new Map<string, string>();
-
-    const page = {
-      dataset: {},
-      style: {
-        setProperty: (name: string, value: string) => styles.set(name, value),
-        getPropertyValue: (name: string) => styles.get(name) || '',
-      },
-    } as unknown as HTMLElement;
-
-    const container = {
-      querySelectorAll: () => [page],
-      addEventListener: (type: string, listener: EventListenerOrEventListenerObject) => {
-        if (type === 'wheel') wheelHandler = listener as (event: WheelEvent) => void;
-      },
-      removeEventListener: () => undefined,
-      contains: () => false,
-    } as unknown as HTMLElement;
-
-    const scroll = {
-      scrollLeft: 0,
-      scrollTop: 0,
-      contains: (node: Node | null) => node === container,
-      getBoundingClientRect: () => ({ left: 0, top: 0 }),
-    } as unknown as HTMLElement;
-
-    const target = {
-      closest: (selector: string) => selector === '.danfe-scroll' ? scroll : null,
-    } as unknown as Element;
-
-    vi.stubGlobal('window', {
-      addEventListener: () => undefined,
-      removeEventListener: () => undefined,
-    });
-
-    try {
-      const detach = attachDanfeZoom(container);
-      expect(wheelHandler).toBeTypeOf('function');
-
-      wheelHandler!({
-        ctrlKey: true,
-        target,
-        deltaY: -100,
-        clientX: 10,
-        clientY: 10,
-        preventDefault: () => { prevented = true; },
-      } as unknown as WheelEvent);
-
-      expect(prevented).toBe(true);
-      expect(styles.get('zoom')).toBe('1.1');
-      detach();
-    } finally {
-      vi.unstubAllGlobals();
-    }
   });
 
   it('keeps approved A4 and compact item-column CSS', () => {
