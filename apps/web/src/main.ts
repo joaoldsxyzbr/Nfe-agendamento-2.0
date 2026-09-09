@@ -69,7 +69,7 @@ app.innerHTML = `
           />
           <button id="lookup-submit" type="submit">Consultar</button>
         </div>
-        <p id="lookup-help" class="help-text">O processamento visual acontece neste site. O Bridge local é usado apenas quando o navegador precisa acessar certificado, SEFAZ ou Portal.</p>
+        <p id="lookup-help" class="help-text">O processamento visual acontece neste site. O Bridge local acessa o certificado A1 e consulta a SEFAZ quando necessário.</p>
       </form>
     </section>
 
