@@ -49,6 +49,16 @@ public sealed class TrayAppStaticTests
     }
 
     [Fact]
+    public void Windows_launcher_replaces_orphan_or_legacy_bridge_before_hidden_start()
+    {
+        var root = RepositoryRoot();
+        var program = File.ReadAllText(Path.Combine(root, "apps", "bridge", "windows", "NfeAgendamento.App", "Program.cs"));
+
+        Assert.Contains("StopExistingBridgeProcesses();", program);
+        Assert.DoesNotContain("FindBridgeProcess() ?? StartBridgeHidden()", program);
+    }
+
+    [Fact]
     public void Installer_exposes_tray_app_instead_of_console_bridge()
     {
         var root = RepositoryRoot();
