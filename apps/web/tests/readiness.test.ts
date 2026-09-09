@@ -70,7 +70,7 @@ describe('final readiness', () => {
     expect(ci).toContain('NfeAgendamento.Bridge.csproj');
     expect(ci).toContain('NfeAgendamento.Portal.csproj');
     expect(ci).toContain('artifacts/NfeAgendamentoBridge');
-    expect(ci).toContain('actions/upload-artifact@v4');
+    expect(ci).toContain('actions/upload-artifact@v7');
     expect(ci).toContain('name: NfeAgendamentoBridge-win-x64');
   });
 });
