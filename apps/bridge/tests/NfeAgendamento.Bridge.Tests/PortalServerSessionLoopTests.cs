@@ -32,6 +32,38 @@ public sealed class PortalServerSessionLoopTests
     }
 
     [Fact]
+    public async Task Cancel_message_cancels_the_active_runner_and_keeps_session_usable()
+    {
+        var session = new ScriptedSession(
+            new PortalIpcEnvelope(PortalIpcMessageType.StartOperation, "op-1", Key, "CERT"),
+            new PortalIpcEnvelope(PortalIpcMessageType.CancelOperation, "op-1"),
+            new PortalIpcEnvelope(PortalIpcMessageType.StartOperation, "op-2", Key, "CERT"),
+            new PortalIpcEnvelope(PortalIpcMessageType.Shutdown));
+        var runner = new CancelThenCompleteRunner();
+        var loop = new PortalServerSessionLoop(runner);
+
+        await loop.RunAsync(session, TestContext.Current.CancellationToken);
+
+        Assert.Collection(
+            session.Sent,
+            message => Assert.Equal(PortalIpcMessageType.Ready, message.Type),
+            message => Assert.Equal(PortalIpcMessageType.WaitingForUser, message.Type),
+            message =>
+            {
+                Assert.Equal(PortalIpcMessageType.Cancelled, message.Type);
+                Assert.Equal("op-1", message.OperationId);
+            },
+            message => Assert.Equal(PortalIpcMessageType.WaitingForUser, message.Type),
+            message =>
+            {
+                Assert.Equal(PortalIpcMessageType.Completed, message.Type);
+                Assert.Equal("op-2", message.OperationId);
+            });
+        Assert.True(runner.FirstCancellationObserved);
+        Assert.Equal(2, runner.Requests.Count);
+    }
+
+    [Fact]
     public async Task Invalid_start_message_fails_closed_without_invoking_runner()
     {
         var session = new ScriptedSession(
@@ -86,6 +118,32 @@ public sealed class PortalServerSessionLoopTests
             return Task.FromResult(_results.Count > 0
                 ? _results.Dequeue()
                 : PortalLaunchResult.Failed("sem resultado"));
+        }
+    }
+
+    private sealed class CancelThenCompleteRunner : IPortalServerOperationRunner
+    {
+        public List<PortalLaunchRequest> Requests { get; } = [];
+        public bool FirstCancellationObserved { get; private set; }
+
+        public async Task<PortalLaunchResult> RunAsync(
+            PortalLaunchRequest request,
+            CancellationToken cancellationToken)
+        {
+            Requests.Add(request);
+            if (request.OperationId == "op-2")
+                return PortalLaunchResult.Completed("<nfeProc />");
+
+            try
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+                return PortalLaunchResult.Failed("cancelamento não observado");
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                FirstCancellationObserved = true;
+                return PortalLaunchResult.Cancelled("cancelada");
+            }
         }
     }
 }
