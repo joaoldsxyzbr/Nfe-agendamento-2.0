@@ -116,6 +116,7 @@ const danfeClose = requireElement<HTMLButtonElement>('#danfe-close');
 const danfePrint = requireElement<HTMLButtonElement>('#danfe-print');
 let currentDownloadUrl: string | null = null;
 let detachDanfeZoom: (() => void) | null = null;
+let activePortalOperationId: string | null = null;
 
 certificateApply.addEventListener('click', () => {
   void applyCertificateSelection();
@@ -133,6 +134,14 @@ danfeViewer.addEventListener('click', (event) => {
 });
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape' && !danfeViewer.hidden) closeDanfe();
+});
+window.addEventListener('pagehide', () => {
+  if (!activePortalOperationId) return;
+  const operationId = activePortalOperationId;
+  activePortalOperationId = null;
+  void portalFallback.cancel(operationId).catch(() => {
+    // Cancelamento no unload é best-effort; o Bridge também aplica retenção/limpeza terminal.
+  });
 });
 
 void refreshBridgeAndCertificates();
@@ -221,39 +230,46 @@ async function runPortalFallback(accessKey: string, lookup: NfeLookupResult): Pr
   );
 
   const operationId = await portalFallback.start(accessKey);
+  activePortalOperationId = operationId;
   renderLookupState(
     'Portal Nacional aberto',
     'Resolva o hCaptcha manualmente na janela do Portal e conclua a consulta. Esta página receberá o XML automaticamente.',
   );
 
-  const portalStatus = await portalFallback.waitForResult(operationId);
-  if (portalStatus.state === 'completed' && portalStatus.xml) {
-    try {
-      const parsed = parseNfeXml(portalStatus.xml, accessKey);
-      renderLookupSuccess(parsed);
-    } catch (error) {
-      renderInvalidXml(error);
+  try {
+    const portalStatus = await portalFallback.waitForResult(operationId);
+    if (portalStatus.state === 'completed' && portalStatus.xml) {
+      try {
+        const parsed = parseNfeXml(portalStatus.xml, accessKey);
+        renderLookupSuccess(parsed);
+      } catch (error) {
+        renderInvalidXml(error);
+      }
+      return;
     }
-    return;
-  }
 
-  if (portalStatus.state === 'cancelled') {
-    renderLookupState(
-      'Consulta pelo Portal cancelada',
-      portalStatus.message ?? 'A janela do Portal foi fechada antes de concluir o download do XML.',
-    );
-    return;
-  }
+    if (portalStatus.state === 'cancelled') {
+      renderLookupState(
+        'Consulta pelo Portal cancelada',
+        portalStatus.message ?? 'A janela do Portal foi fechada antes de concluir o download do XML.',
+      );
+      return;
+    }
 
-  if (portalStatus.state === 'failed') {
-    renderLookupState(
-      'Portal da NF-e indisponível',
-      portalStatus.message ?? 'Não foi possível concluir a consulta pelo Portal Nacional da NF-e.',
-    );
-    return;
-  }
+    if (portalStatus.state === 'failed') {
+      renderLookupState(
+        'Portal da NF-e indisponível',
+        portalStatus.message ?? 'Não foi possível concluir a consulta pelo Portal Nacional da NF-e.',
+      );
+      return;
+    }
 
-  renderLookupState('Consulta pelo Portal não concluída', portalStatus.message ?? 'O Portal não retornou XML.');
+    renderLookupState('Consulta pelo Portal não concluída', portalStatus.message ?? 'O Portal não retornou XML.');
+  } finally {
+    if (activePortalOperationId === operationId) {
+      activePortalOperationId = null;
+    }
+  }
 }
 
 function renderInvalidXml(error: unknown): void {
