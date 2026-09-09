@@ -14,7 +14,7 @@ public sealed class PortalFallbackServiceTests
         var launcher = new FakeLauncher(_ => Task.FromResult(PortalLaunchResult.Completed(xml)));
         var service = new PortalFallbackService(launcher, () => "ABC123");
 
-        var operationId = await service.StartAsync(AccessKey);
+        var operationId = await service.StartAsync(AccessKey, TestContext.Current.CancellationToken);
         var status = await WaitForTerminalAsync(service, operationId);
 
         Assert.Equal(PortalOperationStates.Completed, status.State);
@@ -35,11 +35,11 @@ public sealed class PortalFallbackServiceTests
             () => "ABC123",
             terminalRetention: TimeSpan.FromMilliseconds(30));
 
-        var operationId = await service.StartAsync(AccessKey);
+        var operationId = await service.StartAsync(AccessKey, TestContext.Current.CancellationToken);
         var status = await WaitForTerminalAsync(service, operationId);
 
         Assert.Equal(PortalOperationStates.Completed, status.State);
-        await Task.Delay(80);
+        await Task.Delay(80, TestContext.Current.CancellationToken);
         Assert.Null(service.GetStatus(operationId));
     }
 
@@ -48,13 +48,14 @@ public sealed class PortalFallbackServiceTests
     {
         var launcher = new BlockingLauncher();
         var service = new PortalFallbackService(launcher, () => "ABC123");
+        var cancellationToken = TestContext.Current.CancellationToken;
 
-        var operationId = await service.StartAsync(AccessKey);
-        await launcher.Started.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        var operationId = await service.StartAsync(AccessKey, cancellationToken);
+        await launcher.Started.Task.WaitAsync(TimeSpan.FromSeconds(1), cancellationToken);
 
         Assert.True(service.Cancel(operationId));
         var status = await WaitForTerminalAsync(service, operationId);
-        await launcher.CancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        await launcher.CancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(1), cancellationToken);
 
         Assert.Equal(PortalOperationStates.Cancelled, status.State);
         Assert.Null(status.Xml);
@@ -67,7 +68,7 @@ public sealed class PortalFallbackServiceTests
         var launcher = new FakeLauncher(_ => Task.FromResult(PortalLaunchResult.Completed(ValidXml(wrongKey))));
         var service = new PortalFallbackService(launcher, () => "ABC123");
 
-        var operationId = await service.StartAsync(AccessKey);
+        var operationId = await service.StartAsync(AccessKey, TestContext.Current.CancellationToken);
         var status = await WaitForTerminalAsync(service, operationId);
 
         Assert.Equal(PortalOperationStates.Failed, status.State);
@@ -90,11 +91,13 @@ public sealed class PortalFallbackServiceTests
     {
         var available = new FakeLauncher(_ => Task.FromResult(PortalLaunchResult.Cancelled("cancelled")));
         var noCertificate = new PortalFallbackService(available, () => null);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => noCertificate.StartAsync(AccessKey));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            noCertificate.StartAsync(AccessKey, TestContext.Current.CancellationToken));
 
         var unavailable = new FakeLauncher(_ => Task.FromResult(PortalLaunchResult.Cancelled("cancelled"))) { IsAvailable = false };
         var service = new PortalFallbackService(unavailable, () => "ABC123");
-        await Assert.ThrowsAsync<InvalidOperationException>(() => service.StartAsync(AccessKey));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.StartAsync(AccessKey, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -103,7 +106,7 @@ public sealed class PortalFallbackServiceTests
         var launcher = new FakeLauncher(_ => Task.FromResult(PortalLaunchResult.Cancelled("Portal fechado pelo usuário.")));
         var service = new PortalFallbackService(launcher, () => "ABC123");
 
-        var operationId = await service.StartAsync(AccessKey);
+        var operationId = await service.StartAsync(AccessKey, TestContext.Current.CancellationToken);
         var status = await WaitForTerminalAsync(service, operationId);
 
         Assert.Equal(PortalOperationStates.Cancelled, status.State);
@@ -117,7 +120,7 @@ public sealed class PortalFallbackServiceTests
             var status = service.GetStatus(operationId) ?? throw new Xunit.Sdk.XunitException("Operation not found.");
             if (status.State is PortalOperationStates.Completed or PortalOperationStates.Failed or PortalOperationStates.Cancelled)
                 return status;
-            await Task.Delay(10);
+            await Task.Delay(10, TestContext.Current.CancellationToken);
         }
         throw new Xunit.Sdk.XunitException("Portal operation did not complete.");
     }
