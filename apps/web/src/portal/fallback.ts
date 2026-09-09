@@ -4,6 +4,7 @@ import type { PortalOperationStatus, PortalStartResult } from '../bridge/contrac
 interface PortalClient {
   startPortal(accessKey: string, signal?: AbortSignal): Promise<PortalStartResult>;
   getPortalStatus(operationId: string, signal?: AbortSignal): Promise<PortalOperationStatus>;
+  cancelPortal(operationId: string): Promise<void>;
 }
 
 type Sleep = (milliseconds: number, signal?: AbortSignal) => Promise<void>;
@@ -32,6 +33,12 @@ export class PortalFallbackController {
       if (status.state !== 'waiting_for_user') return status;
       await this.sleep(this.pollMs, signal);
     }
+  }
+
+  async cancel(operationId: string): Promise<void> {
+    const normalized = operationId.trim();
+    if (!normalized) return;
+    await this.client.cancelPortal(normalized);
   }
 }
 
