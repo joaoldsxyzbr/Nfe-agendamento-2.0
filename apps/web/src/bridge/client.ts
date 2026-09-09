@@ -122,7 +122,7 @@ export class BridgeClient {
 
     await this.request(
       `/portal/cancel/${encodeURIComponent(normalized)}`,
-      { method: 'POST' },
+      { method: 'POST', keepalive: true },
       this.timeouts.portalMs,
     );
   }
