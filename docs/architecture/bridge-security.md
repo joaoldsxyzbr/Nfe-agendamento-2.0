@@ -32,11 +32,11 @@ http://127.0.0.1:17345
 
 O middleware rejeita `Host` diferente de `127.0.0.1:17345`. Não existem `0.0.0.0`, bind LAN, mDNS, pareamento, líder/standby ou servidor central.
 
-## Origin e CORS
+## Origin, CORS e headers do site
 
 Todas as chamadas `/api/v1/*` feitas pelo navegador exigem `Origin` explicitamente permitido em `Bridge:AllowedOrigins`. Não existe wildcard.
 
-A distribuição de produção `v0.0.4` inclui em `appsettings.json` exatamente:
+A distribuição de produção inclui em `appsettings.json` exatamente:
 
 ```json
 {
@@ -52,11 +52,15 @@ O Setup **não solicita URL**, não grava argumentos `Bridge:AllowedOrigins` no 
 
 A validação continua fail-closed: origem ausente, `http://nfeagendamento.joaolds.xyz.br`, qualquer host diferente ou qualquer valor não presente na allowlist recebe `403`.
 
+O site publica `apps/web/public/_headers` com CSP restritiva. Em produção, `connect-src` permite somente o próprio site e `http://127.0.0.1:17345`; `object-src` e `frame-ancestors` são bloqueados, e também são enviados `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `Permissions-Policy` restritiva e `X-Frame-Options: DENY`.
+
 Não adicionar wildcard nem origem arbitrária para contornar problemas de implantação.
 
-## Instância única
+## Instância única e ownership do processo
 
 O executável real do Bridge adquire um mutex nomeado antes de subir o host. Se uma segunda cópia instalada for aberta na mesma sessão, ela encerra antes de criar outro listener em `127.0.0.1:17345`.
+
+O tray `NfeAgendamento.App.exe` não faz varredura nem encerramento de processos por nome. Se o mutex indicar que já existe um Bridge, ele preserva essa instância. Quando o tray inicia seu próprio Bridge, guarda a referência desse processo e só encerra essa instância ao sair ou ao iniciar uma atualização confirmada.
 
 A proteção é aplicada ao executável real; hosts in-process usados pelos testes de integração permanecem independentes para não interferir na suíte automatizada.
 
@@ -69,7 +73,8 @@ A API é versionada em `/api/v1` e expõe somente:
 - `POST /certificate/select`;
 - `POST /nfe/lookup`;
 - `POST /portal/start`;
-- `GET /portal/status/{operationId}`.
+- `GET /portal/status/{operationId}`;
+- `POST /portal/cancel/{operationId}`.
 
 Entradas são revalidadas no Bridge mesmo quando o site já validou a chave.
 
@@ -102,7 +107,11 @@ Esses limites não criam retry fiscal automático.
 
 O helper `NfeAgendamento.Portal.exe` é um processo Windows separado e deve acompanhar o Bridge na distribuição.
 
-Antes de declarar `webView2Available=true`, o Bridge executa o helper em modo headless `--probe-runtime`. O helper consulta o WebView2 Runtime e encerra sem abrir janela. Se o helper não existir, o Runtime estiver ausente, o probe falhar ou exceder o timeout curto, o fallback é marcado como indisponível.
+Antes de declarar `webView2Available=true`, o Bridge executa o helper em modo headless `--probe-runtime`. O resultado positivo é cacheado para evitar probes redundantes. Se o helper não existir, o Runtime estiver ausente, o probe falhar ou exceder o timeout curto, o fallback é marcado como indisponível.
+
+No fallback, o helper opera em modo servidor persistente com IPC local por Named Pipe e reaproveita o processo/WebView2 entre consultas sequenciais do mesmo Bridge. Uma operação por vez é aceita. Falha de comunicação descarta a sessão para reconexão posterior, sem retry fiscal automático.
+
+A página mantém o `operationId` somente enquanto a operação está ativa e faz cancelamento best-effort em `pagehide`; o Bridge também mantém o estado terminal e a limpeza de ciclo de vida.
 
 Proteções do Portal:
 
@@ -111,9 +120,17 @@ Proteções do Portal:
 - novas janelas externas bloqueadas;
 - seleção do certificado pelo thumbprint já escolhido no site;
 - somente download HTTPS oficial `/portal/downloadNFe.aspx` é aceito;
-- XML temporário limitado a 10 MiB, validado contra a chave e apagado após handoff;
+- XML limitado a 10 MiB e validado contra a chave antes do handoff;
 - hCaptcha é sempre resolvido manualmente pelo usuário;
 - não existe `hcaptcha.execute`, `grecaptcha.execute` ou mecanismo equivalente de bypass.
+
+O fluxo normal do site não anuncia o Portal. O fallback só é exibido quando a resposta SEFAZ é classificada como `consumption_limit`.
+
+## Atualizações e versionamento
+
+O App oferece somente atualização **manual e confirmada**. Ele consulta a release estável mais recente do repositório oficial, seleciona o Setup esperado e valida tamanho e SHA-256 antes de permitir sua execução.
+
+A versão canônica fica em `Directory.Build.props`. Bridge, App, Portal, CI, instalador e release derivam dessa fonte; o workflow `.github/workflows/release.yml` é genérico e publica somente artifacts de um CI verde do mesmo commit marcador `release: v<versão>`.
 
 ## Dados persistentes
 
@@ -127,8 +144,9 @@ Antes de uso real:
 2. confirmar que `/health` responde com esse `Origin` autorizado;
 3. confirmar que um Origin diferente, ausente ou em HTTP recebe `403`;
 4. confirmar que o processo escuta apenas `127.0.0.1:17345`;
-5. confirmar que uma segunda abertura do executável não cria outra instância/listener;
-6. validar A1 real em `CurrentUser/My`;
-7. validar que `webView2Available` reflete de fato a presença do WebView2 Runtime;
-8. validar o helper WebView2 no Windows com o Portal oficial;
-9. executar `docs/testing/acceptance.md` e registrar os resultados.
+5. confirmar que os headers de produção estão presentes e que a CSP ainda permite o Bridge em loopback;
+6. confirmar que uma segunda abertura do executável não cria outra instância/listener;
+7. validar A1 real em `CurrentUser/My`;
+8. validar que `webView2Available` reflete de fato a presença do WebView2 Runtime;
+9. validar o helper WebView2 no Windows com o Portal oficial;
+10. executar `docs/testing/acceptance.md` e registrar os resultados.
