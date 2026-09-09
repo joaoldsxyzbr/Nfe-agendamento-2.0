@@ -6,6 +6,21 @@
 
 **Estratégia:** TDD por bloco. Para cada comportamento novo: teste vermelho comprovado, implementação mínima, CI verde. A rodada só termina após revisão adversarial do diff completo, documentação atualizada e CI final completo incluindo instalador Windows.
 
+## Status de execução — 09/09/2026
+
+- ✅ Task 1 — release vinculada ao SHA validado.
+- ✅ Task 2 — contrato de controle/lease do Bridge.
+- ✅ Task 3 — servidor de controle no Bridge gerenciado.
+- ✅ Task 4 — adoção, monitoramento, shutdown e restart controlado pelo App.
+- ✅ Task 5 — cancelamento/reconexão/cooldown do Portal.
+- ✅ Task 6 — cancelamento web confiável no unload.
+- ✅ Task 7 — lockfile, audit, Actions atuais e validação Windows.
+- ✅ Task 8 — `xUnit1051` e `MSB3277` eliminados e promovidos a gates.
+- ✅ Task 9 — README, arquitetura, checklist físico e status da spec atualizados.
+- ⏳ Task 10 — revisão adversarial do diff + CI final do HEAD.
+
+Hardening externo que permanece fora do código: **Authenticode** (certificado/segredo de assinatura) e **branch protection/required status checks** (configuração administrativa do GitHub). A versão canônica permanece `0.0.6`; nenhuma release nova será criada nesta rodada sem solicitação explícita.
+
 ## Task 1 — Endurecer release no SHA validado
 
 **Arquivos:**
@@ -91,7 +106,7 @@
 
 **Diagnóstico:** executar gate para capturar advisories reais.
 
-**GREEN:** atualizar dependências para versões seguras (major somente se necessário), manter lockfile real, usar runner Windows para builds desktop e eliminar warnings relevantes em vez de suprimi-los.
+**GREEN:** dependência transitiva vulnerável corrigida via lockfile/override revisado, `npm audit` sem high/critical, `npm ci` mantido e desktop validado no runner Windows.
 
 ## Task 8 — Eliminar warnings .NET e tornar testes canceláveis
 
@@ -99,7 +114,7 @@
 - Modify: testes apontados por xUnit1051
 - Modify: CI/projetos somente quando tecnicamente necessário
 
-Corrigir uso de `TestContext.Current.CancellationToken` e validar Portal/App em Windows. Não mascarar `MSB3277` com `NoWarn`.
+**GREEN final:** testes async usam `TestContext.Current.CancellationToken`; `xUnit1051` é erro; Portal remove somente a referência WebView2 WPF não usada, preserva Core/WinForms e trata `MSB3277` como erro. Publish Windows e Setup passaram.
 
 ## Task 9 — Documentação e checklist físico
 
@@ -109,18 +124,18 @@ Corrigir uso de `TestContext.Current.CancellationToken` e validar Portal/App em 
 - Modify: `docs/testing/acceptance.md`
 - Modify: spec/plano status
 
-Documentar control pipe/lease, restart policy, Portal reconnect/cooldown, audit gate e comportamento exato de `Sair`. Manter Authenticode e branch protection como hardening externo, sem alegar implementação inexistente.
+**GREEN:** documentação descreve control pipe/lease, restart policy, Portal reconnect/cooldown/cancelamento, audit gate, `Sair`, validação física e hardenings externos sem alegar implementação inexistente.
 
 ## Task 10 — Revisão adversarial e verificação final
 
 1. Comparar base `d87c46a...` até HEAD e revisar superfícies de falha.
 2. Conferir que todos os achados P1/P2 da revisão foram convertidos em código + teste.
 3. Executar CI final sem novos pushes até terminar.
-4. Exigir sucesso de `web`, `bridge`/builds Windows e `windows-package`.
-5. Inspecionar logs por `warning`, `high severity`, `MSB3277`, falhas/skips inesperados.
+4. Exigir sucesso de `web`, `bridge` e `windows-package`.
+5. Inspecionar logs por `warning`, `high severity`, `MSB3277`, `xUnit1051`, falhas/skips inesperados.
 6. Confirmar artifacts do instalador/pacote.
 7. Não criar release nem alterar `0.0.6` sem solicitação explícita.
 
 ## Critério final
 
-Código/CI só será declarado estabilizado quando todos os contratos automatizados estiverem verdes no HEAD final, a documentação representar o código e não houver vulnerabilidade high/critical ou warning técnico relevante conhecido sendo ignorado.
+Código/CI só será declarado estabilizado quando todos os contratos automatizados estiverem verdes no HEAD final, a documentação representar o código e não houver vulnerabilidade high/critical ou warning técnico relevante conhecido sendo ignorado. O teste físico Windows continua separado e obrigatório antes de declarar uma build validada em produção.
