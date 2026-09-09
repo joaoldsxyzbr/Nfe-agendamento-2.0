@@ -1,19 +1,19 @@
 # Aceitação física — NFe Agendamento 2.0
 
-Este checklist cobre o que o CI não consegue provar: instalação real no Windows, navegador falando com loopback, certificado A1, SEFAZ, WebView2, Portal Nacional, captcha e impressão/PDF.
+Este checklist cobre o que o CI não consegue provar: instalação real no Windows, app na bandeja, navegador falando com loopback, certificado A1, SEFAZ, WebView2, Portal Nacional, captcha e impressão/PDF.
 
 > Não provoque bloqueio/656 fazendo consultas repetidas. Valide o fallback quando o limite ocorrer naturalmente ou em um cenário controlado já disponível.
 
 ## Pré-requisitos
 
 - Windows 10/11 x64 atualizado;
-- `NFeAgendamentoBridge-Setup-v0.0.4.exe` do mesmo commit/release que será validado;
+- `NFeAgendamentoBridge-Setup-v0.0.5.exe` do mesmo commit/release que será validado;
 - Microsoft Edge WebView2 Runtime instalado para testar o fallback Portal;
 - certificado A1 válido instalado em `CurrentUser/My` com chave privada;
 - site oficial disponível exatamente em `https://nfeagendamento.joaolds.xyz.br`;
 - acesso à Internet para SEFAZ e Portal Nacional da NF-e.
 
-> A `v0.0.4` é self-contained: não exige instalação prévia do .NET 10. O WebView2 Runtime continua necessário somente para o fallback Portal.
+> A `v0.0.5` é self-contained: não exige instalação prévia do .NET 10. O WebView2 Runtime continua necessário somente para o fallback Portal.
 
 Registre antes de começar:
 
@@ -26,23 +26,27 @@ Registre antes de começar:
 | Navegador + versão | |
 | PC | |
 
-## 0. Instalação, origem fixa, instância única, auto-start e desinstalação
+## 0. Instalação, bandeja, instância única, auto-start e desinstalação
 
-1. Execute `NFeAgendamentoBridge-Setup-v0.0.4.exe` em uma conta de usuário comum.
+1. Execute `NFeAgendamentoBridge-Setup-v0.0.5.exe` em uma conta de usuário comum.
 2. Confirme que a instalação **não solicita UAC/admin**.
 3. Confirme que o Setup **não pede URL/origem** em nenhuma tela.
 4. Confirme os arquivos em `%LOCALAPPDATA%\NFe Agendamento Bridge`.
-5. Confirme que `NfeAgendamento.Bridge.exe` e `NfeAgendamento.Portal.exe` estão lado a lado.
-6. Confirme o atalho `NFe Agendamento Bridge` no Menu Iniciar e o ícone próprio azul/amarelo.
-7. Conclua a instalação com a opção de iniciar o Bridge marcada e confirme o processo em execução sem instalar runtime .NET adicional.
-8. Confirme a entrada `NFe Agendamento Bridge` em `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` apontando somente para o executável instalado, sem parâmetros de `Bridge:AllowedOrigins`.
-9. Abra o atalho do Menu Iniciar e confirme que ele inicia o Bridge sem pedir configuração adicional.
-10. Com uma instância do Bridge já aberta, execute novamente o atalho/executável e confirme que não surge uma segunda instância/listener concorrente.
-11. Confirme no Gerenciador de Tarefas que permanece somente uma instância real do Bridge para a sessão do usuário.
-12. Encerre a sessão/reinicie o PC, faça login novamente e confirme que o Bridge iniciou automaticamente uma única vez.
-13. Se já existir `%LOCALAPPDATA%\NfeAgendamentoBridge\settings.json`, anote o conteúdo/seleção antes de desinstalar.
-14. Desinstale pelo Windows e confirme a remoção do diretório do aplicativo, atalho e entrada de auto-start.
-15. Confirme que `%LOCALAPPDATA%\NfeAgendamentoBridge\settings.json` permanece quando já existia, permitindo preservar a seleção local em uma reinstalação.
+5. Confirme que `NfeAgendamento.App.exe`, `NfeAgendamento.Bridge.exe` e `NfeAgendamento.Portal.exe` estão lado a lado.
+6. Confirme o atalho **NFe Agendamento** no Menu Iniciar e o ícone próprio azul/amarelo.
+7. Conclua a instalação com a opção de iniciar marcada e confirme que **nenhuma janela preta de console permanece aberta**.
+8. Confirme que o ícone do NFe Agendamento aparece na bandeja do Windows com o texto `NFe Agendamento — ativo`.
+9. Abra o menu do ícone e confirme as ações **Abrir NFe Agendamento** e **Sair**.
+10. Dê duplo clique no ícone e confirme que o navegador abre `https://nfeagendamento.joaolds.xyz.br`.
+11. Confirme a entrada `NFe Agendamento Bridge` em `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` apontando para `NfeAgendamento.App.exe`, sem parâmetros de `Bridge:AllowedOrigins`.
+12. Abra novamente o atalho do Menu Iniciar e confirme que não surge uma segunda instância de bandeja nem outro listener concorrente.
+13. Confirme no Gerenciador de Tarefas uma instância de `NfeAgendamento.App.exe` e uma instância de `NfeAgendamento.Bridge.exe` para a sessão do usuário.
+14. Use **Sair** no menu da bandeja e confirme que o ícone desaparece e o `NfeAgendamento.Bridge.exe` é encerrado.
+15. Abra novamente o atalho e confirme retorno do ícone e do Bridge sem janela de console.
+16. Encerre a sessão/reinicie o PC, faça login novamente e confirme que o App iniciou automaticamente uma única vez na bandeja.
+17. Se já existir `%LOCALAPPDATA%\NfeAgendamentoBridge\settings.json`, anote o conteúdo/seleção antes de desinstalar.
+18. Desinstale pelo Windows e confirme a remoção do diretório do aplicativo, atalho e entrada de auto-start.
+19. Confirme que `%LOCALAPPDATA%\NfeAgendamentoBridge\settings.json` permanece quando já existia, permitindo preservar a seleção local em uma reinstalação.
 
 Resultado: ☐ aprovado
 
@@ -50,13 +54,13 @@ Resultado: ☐ aprovado
 
 Executar separadamente em **Chrome, Edge e Firefox** quando disponíveis.
 
-1. Confirme que o Bridge instalado está em execução.
+1. Confirme que o App está na bandeja e o Bridge instalado está em execução.
 2. Abra `https://nfeagendamento.joaolds.xyz.br`.
 3. Se o navegador pedir acesso à rede/local host, autorize.
 4. Confirme `Bridge conectado`.
 5. Negue/revogque a permissão uma vez e confirme o estado `Permissão de acesso local necessária` quando o navegador expuser essa distinção.
-6. Feche o Bridge e confirme `Bridge não encontrado`.
-7. Reinicie o Bridge pelo atalho do Menu Iniciar e confirme que volta a conectar sem qualquer configuração de origem.
+6. Use **Sair** no ícone da bandeja e confirme `Bridge não encontrado`.
+7. Reinicie pelo atalho **NFe Agendamento** no Menu Iniciar e confirme que volta a conectar sem qualquer configuração de origem.
 8. Em uma página de origem diferente, confirme que chamadas ao Bridge são rejeitadas; a distribuição não deve aceitar wildcard nem outro domínio.
 
 Resultado:
@@ -161,8 +165,8 @@ Resultado: ☐ aprovado
 
 Em outro PC:
 
-1. instale o Bridge usando o mesmo Setup validado;
-2. confirme novamente que o Setup não pede URL/origem;
+1. instale o App/Bridge usando o mesmo Setup validado;
+2. confirme novamente que o Setup não pede URL/origem e inicia na bandeja sem console;
 3. use o A1 instalado **nesse segundo PC**;
 4. abra `https://nfeagendamento.joaolds.xyz.br`;
 5. faça uma consulta normal.
