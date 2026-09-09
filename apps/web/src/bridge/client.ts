@@ -116,6 +116,17 @@ export class BridgeClient {
     return payload;
   }
 
+  async cancelPortal(operationId: string): Promise<void> {
+    const normalized = operationId.trim();
+    if (!normalized) throw new Error('Operação do Portal não informada');
+
+    await this.request(
+      `/portal/cancel/${encodeURIComponent(normalized)}`,
+      { method: 'POST' },
+      this.timeouts.portalMs,
+    );
+  }
+
   private async request(
     path: string,
     init: RequestInit,
