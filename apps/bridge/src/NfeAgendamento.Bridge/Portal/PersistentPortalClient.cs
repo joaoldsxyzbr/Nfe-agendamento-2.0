@@ -2,6 +2,8 @@ namespace NfeAgendamento.Bridge.Portal;
 
 public sealed class PersistentPortalClient : IAsyncDisposable
 {
+    private static readonly TimeSpan CancelAcknowledgementTimeout = TimeSpan.FromSeconds(1);
+
     private readonly Func<CancellationToken, Task<IPortalIpcSession>> _sessionFactory;
     private readonly SemaphoreSlim _sessionGate = new(1, 1);
     private IPortalIpcSession? _session;
@@ -63,10 +65,12 @@ public sealed class PersistentPortalClient : IAsyncDisposable
                 }
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            await ResetSessionAsync();
-            throw;
+            if (!await TryCancelOperationAsync(request.OperationId))
+                await ResetSessionAsync();
+
+            return PortalLaunchResult.Cancelled("Consulta pelo Portal cancelada.");
         }
         catch (Exception exception) when (
             exception is IOException
@@ -87,6 +91,33 @@ public sealed class PersistentPortalClient : IAsyncDisposable
     {
         await ResetSessionAsync();
         _sessionGate.Dispose();
+    }
+
+    private async Task<bool> TryCancelOperationAsync(string operationId)
+    {
+        var session = _session;
+        if (session is null)
+            return false;
+
+        using var timeout = new CancellationTokenSource(CancelAcknowledgementTimeout);
+        try
+        {
+            await session.SendAsync(
+                new PortalIpcEnvelope(PortalIpcMessageType.CancelOperation, operationId),
+                timeout.Token);
+            var acknowledgement = await session.ReceiveAsync(timeout.Token);
+            return string.Equals(acknowledgement.OperationId, operationId, StringComparison.Ordinal) &&
+                string.Equals(acknowledgement.Type, PortalIpcMessageType.Cancelled, StringComparison.Ordinal);
+        }
+        catch (Exception exception) when (
+            exception is IOException
+            or InvalidDataException
+            or ObjectDisposedException
+            or InvalidOperationException
+            or OperationCanceledException)
+        {
+            return false;
+        }
     }
 
     private async Task<IPortalIpcSession> GetOrCreateSessionAsync(CancellationToken cancellationToken)
