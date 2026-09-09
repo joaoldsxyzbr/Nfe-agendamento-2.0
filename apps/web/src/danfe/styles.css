@@ -4,49 +4,53 @@
 .danfe-block { border: 1px solid #111; }
 .danfe-block + .danfe-block, .danfe-section + .danfe-section { margin-top: 1px; }
 .danfe-section-title { margin: 1px 0; font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: .12px; }
-.fiscal-label { display: block; margin-bottom: 2px; font-size: 5.8px; text-transform: uppercase; }
-.fiscal-value { display: block; font-size: 8px; font-weight: 700; }
-.receipt-stub { display: grid; grid-template-columns: 1fr 130px; min-height: 48px; margin-bottom: 3px; }
-.receipt-copy { padding: 3px 5px; border-right: 1px solid #111; line-height: 1.2; text-transform: uppercase; }
-.receipt-nfe { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
-.receipt-nfe strong { font-size: 14px; }
-.receipt-signature { grid-column: 1 / -1; display: grid; grid-template-columns: 160px 1fr; min-height: 18px; border-top: 1px solid #111; }
-.receipt-signature > div { padding: 3px 5px; }
+.fiscal-label { display: block; margin-bottom: 1px; font-size: 5.7px; text-transform: uppercase; }
+.fiscal-value { display: block; font-size: 7.8px; font-weight: 700; }
+.receipt-stub { display: grid; grid-template-columns: 1fr 130px; min-height: 36px; margin-bottom: 2px; flex-shrink: 0; }
+.receipt-copy { padding: 2px 4px; border-right: 1px solid #111; line-height: 1.14; text-transform: uppercase; }
+.receipt-nfe { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
+.receipt-nfe strong { font-size: 13px; }
+.receipt-signature { grid-column: 1 / -1; display: grid; grid-template-columns: 160px 1fr; min-height: 14px; border-top: 1px solid #111; }
+.receipt-signature > div { padding: 2px 4px; }
 .receipt-signature > div + div { border-left: 1px solid #111; }
-.danfe-header { display: grid; grid-template-columns: 1.05fr .52fr 1.28fr; min-height: 92px; }
+.danfe-header { display: grid; grid-template-columns: 1.05fr .52fr 1.28fr; min-height: 78px; flex-shrink: 0; }
 .danfe-header > div + div { border-left: 1px solid #111; }
-.issuer-identification { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px; text-align: center; }
-.issuer-identification .issuer-title { width: 100%; margin-bottom: 5px; font-size: 6.3px; text-transform: uppercase; }
-.issuer-identification strong { font-size: 11px; text-transform: uppercase; }
-.issuer-identification span { margin-top: 2px; font-size: 7.2px; }
-.danfe-identity { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5px; text-align: center; }
-.danfe-word { font-size: 21px; font-weight: 800; line-height: .95; }
-.danfe-subtitle { margin: 3px 0 4px; font-size: 6.8px; }
-.entry-exit { display: grid; grid-template-columns: 1fr 24px; width: 100%; align-items: center; margin: 2px 0; }
-.entry-exit span { text-align: left; font-size: 7px; }
-.entry-exit b { display: grid; place-items: center; height: 23px; border: 1px solid #111; font-size: 13px; }
-.invoice-id { margin-top: 2px; font-size: 8px; }
-.invoice-id strong { display: block; font-size: 11px; }
-.barcode-area { display: grid; grid-template-rows: 49px auto 1fr; }
-.barcode-wrap { padding: 4px 8px 1px; }
-.barcode-wrap svg { width: 100%; height: 40px; fill: #000; }
-.access-key, .protocol-box { padding: 3px 5px; border-top: 1px solid #111; text-align: center; }
+.issuer-identification { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3px; text-align: center; }
+.issuer-identification .issuer-title { width: 100%; margin-bottom: 3px; font-size: 6.1px; text-transform: uppercase; }
+.issuer-identification strong { font-size: 10.5px; text-transform: uppercase; }
+.issuer-identification span { margin-top: 1px; font-size: 6.9px; }
+.issuer-phone { font-weight: 700; }
+.danfe-identity { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3px 4px; text-align: center; }
+.danfe-word { font-size: 19px; font-weight: 800; line-height: .95; }
+.danfe-subtitle { margin: 2px 0 3px; font-size: 6.5px; }
+.entry-exit { display: grid; grid-template-columns: 1fr 22px; width: 100%; align-items: center; margin: 1px 0; }
+.entry-exit span { text-align: left; font-size: 6.7px; }
+.entry-exit b { display: grid; place-items: center; height: 20px; border: 1px solid #111; font-size: 12px; }
+.invoice-id { margin-top: 1px; font-size: 7.8px; }
+.invoice-id strong { display: block; font-size: 10.5px; }
+.barcode-area { display: grid; grid-template-rows: 40px auto auto 1fr; }
+.barcode-wrap { padding: 3px 7px 0; }
+.barcode-wrap svg { width: 100%; height: 34px; fill: #000; }
+.access-key, .authenticity-box, .protocol-box { padding: 2px 4px; border-top: 1px solid #111; text-align: center; }
+.access-key strong { font-size: 7.8px; }
+.authenticity-box { font-size: 5.9px; line-height: 1.15; }
+.protocol-box strong { font-size: 7.6px; }
 .operation-grid { display: grid; grid-template-columns: 2fr .8fr .8fr .8fr; }
 .issuer-registry { display: grid; grid-template-columns: repeat(4, 1fr); }
 .recipient-grid { display: grid; grid-template-columns: 2fr 1fr .8fr; }
 .transport-grid { display: grid; grid-template-columns: 1.6fr 1.3fr .8fr .8fr .4fr 1.1fr; }
-.operation-grid > div, .issuer-registry > div, .recipient-grid > div, .transport-grid > div, .total-grid > div { min-height: 24px; padding: 2px 4px; border-right: 1px solid #111; border-bottom: 1px solid #111; }
+.operation-grid > div, .issuer-registry > div, .recipient-grid > div, .transport-grid > div, .total-grid > div { min-height: 20px; padding: 1.5px 3px; border-right: 1px solid #111; border-bottom: 1px solid #111; }
 .operation-grid > div:last-child, .issuer-registry > div:last-child { border-right: 0; }
 .payment-wrap { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); }
-.payment-item { min-height: 24px; padding: 3px 4px; border-right: 1px solid #111; }
-.total-grid { display: grid; grid-template-columns: repeat(8, 1fr); }
-.total-grid > div { min-height: 28px; }
+.payment-item { min-height: 20px; padding: 2px 3px; border-right: 1px solid #111; }
+.total-grid { display: grid; grid-template-columns: repeat(9, 1fr); }
+.total-grid > div { min-height: 24px; }
 .invoice-total .fiscal-value { font-size: 9px; }
 .products-table.danfe-products-fill { width: 100%; flex: 1; border-collapse: collapse; table-layout: fixed; }
 .products-table.danfe-products-fill tbody tr:last-child td { height: 100%; }
-.products-table th, .products-table td { padding: 2.3px 2.5px; border: 1px solid #111; vertical-align: top; }
-.products-table th { font-size: 6.4px; line-height: 1.1; text-transform: uppercase; }
-.products-table td { font-size: 7.2px; line-height: 1.16; }
+.products-table th, .products-table td { padding: 2.2px 2.4px; border: 1px solid #111; vertical-align: top; }
+.products-table th { font-size: 6.4px; line-height: 1.08; text-transform: uppercase; }
+.products-table td { font-size: 7.2px; line-height: 1.15; }
 .products-table .description { font-size: 7.4px; }
 .products-table col.item { width: 8mm; }
 .products-table col.code { width: 20mm; }
@@ -61,10 +65,10 @@
 .source-product-code { display: block; }
 .internal-product-code { display: block; margin-top: 1px; font-size: .95em; font-weight: 700; }
 .tax-detail { display: block; margin-top: 1px; font-size: 6.2px; }
-.additional-grid { display: grid; grid-template-columns: 2fr 1fr; min-height: 72px; }
+.additional-grid { display: grid; grid-template-columns: 2fr 1fr; min-height: 88px; flex-shrink: 0; }
 .additional-grid > div { padding: 3px 4px; }
 .additional-grid > div + div { border-left: 1px solid #111; }
-.additional-grid p { margin: 2px 0 0; font-size: 6.4px; line-height: 1.14; white-space: pre-wrap; }
+.additional-grid p { margin: 2px 0 0; font-size: 6.6px; line-height: 1.16; white-space: pre-wrap; }
 .danfe-footer { margin-top: 2px; text-align: right; font-size: 6px; color: #333; }
 .danfe-zoom-hint { margin-left: auto; margin-right: 4px; color: #9fb0c3; font-size: 10.5px; font-weight: 600; white-space: nowrap; }
 
