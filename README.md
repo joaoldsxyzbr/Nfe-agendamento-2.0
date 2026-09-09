@@ -50,13 +50,13 @@ Implementado e coberto pelos testes automatizados do projeto:
 - atualizador manual consulta somente a release estável mais recente do repositório oficial, exige confirmação do usuário e valida asset, tamanho e SHA-256 antes de iniciar o Setup;
 - o shell inicia `NfeAgendamento.Bridge.exe` com `CreateNoWindow` e encerra o Bridge ao sair ou antes de instalar atualização confirmada;
 - deploy Cloudflare pela raiz usando `wrangler.jsonc` e `npx wrangler deploy --dry-run` no CI;
-- Bridge, App e helper Portal atualmente versionados em `0.0.5` até a próxima release do instalador;
+- Bridge, App e helper Portal versionados em `0.0.6`;
 - ícone próprio azul-escuro/amarelo no App, Bridge e instalador;
 - instalador Inno Setup por usuário em `%LOCALAPPDATA%\NFe Agendamento Bridge`, sem UAC/admin;
 - auto-start em `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` apontando para `NfeAgendamento.App.exe`;
 - App, Bridge e helper Portal publicados como **self-contained win-x64**, sem exigir instalação externa do .NET 10;
-- CI gera `NFeAgendamentoBridge-Setup-v0.0.5` e `NfeAgendamentoBridge-win-x64` enquanto a versão de distribuição permanecer `0.0.5`;
-- workflow da `v0.0.5` só publica artifacts provenientes do mesmo CI verde e do commit marcador `release: v0.0.5`.
+- CI gera `NFeAgendamentoBridge-Setup-v0.0.6` e `NfeAgendamentoBridge-win-x64`;
+- workflow da `v0.0.6` só publica artifacts provenientes do mesmo CI verde e do commit marcador `release: v0.0.6`.
 
 ## Pendência para uso real
 
@@ -73,7 +73,7 @@ A automação cobre build, testes e empacotamento, mas ainda é necessário exec
 - consulta SEFAZ real;
 - DANFE/PDF;
 - ocorrência real ou controlada de limite/656 para validar WebView2 + Portal + hCaptcha manual + retorno do XML e reaproveitamento do helper numa segunda consulta;
-- após publicação de uma versão posterior, validar o fluxo físico de atualização descrito em `docs/testing/bridge-updater.md`;
+- após publicação de uma versão posterior à `v0.0.6`, validar o fluxo físico de atualização descrito em `docs/testing/bridge-updater.md`;
 - segundo PC independente com seu próprio App/Bridge.
 
 ## Fora de escopo
@@ -103,12 +103,12 @@ npx wrangler deploy
 
 O `wrangler.jsonc` executa `npm run build:web` e publica `./apps/web/dist`. O CI também executa `npx wrangler deploy --dry-run`.
 
-## Distribuição Windows v0.0.5
+## Distribuição Windows v0.0.6
 
-Para uso normal da release pública atual, use:
+Para uso normal, use:
 
 ```text
-NFeAgendamentoBridge-Setup-v0.0.5.exe
+NFeAgendamentoBridge-Setup-v0.0.6.exe
 ```
 
 O instalador:
@@ -126,7 +126,7 @@ O instalador:
 - preserva `%LOCALAPPDATA%\NfeAgendamentoBridge`, onde fica a seleção local do certificado;
 - não instala atualizações silenciosamente.
 
-O código atual do App já possui **Verificar atualizações** na bandeja. Para esse recurso chegar a uma instalação pública `v0.0.5`, será necessário publicar uma nova versão do instalador contendo esse código. Depois disso, versões seguintes poderão ser descobertas e instaladas pelo próprio App com confirmação do usuário e verificação SHA-256 do asset da release.
+A `v0.0.6` é a primeira versão pública com **Verificar atualizações** na bandeja. O usuário inicia a verificação manualmente; o App consulta a release estável mais recente do repositório oficial, valida o asset do Setup, o tamanho publicado e o SHA-256 informado pelo GitHub, pede confirmação e só então inicia o instalador.
 
 O site de produção autorizado é exatamente:
 
@@ -134,17 +134,17 @@ O site de produção autorizado é exatamente:
 https://nfeagendamento.joaolds.xyz.br
 ```
 
-Não existe wildcard de CORS/Origin. O `NfeAgendamentoBridge-win-x64.zip` continua como fallback técnico. O .NET 10 não precisa estar previamente instalado para a distribuição `v0.0.5`. O **Microsoft Edge WebView2 Runtime** continua necessário somente para o fallback pelo Portal Nacional; o Bridge verifica sua disponibilidade por um probe headless do helper.
+Não existe wildcard de CORS/Origin. O `NfeAgendamentoBridge-win-x64.zip` continua como fallback técnico. O .NET 10 não precisa estar previamente instalado para a distribuição `v0.0.6`. O **Microsoft Edge WebView2 Runtime** continua necessário somente para o fallback pelo Portal Nacional; o Bridge verifica sua disponibilidade por um probe headless do helper.
 
-A `v0.0.5` substitui a `v0.0.4` para novos testes físicos. A `v0.0.4` iniciava diretamente o executável de console do Bridge; a `v0.0.5` introduziu o shell real de bandeja.
+A `v0.0.6` substitui a `v0.0.5` para novos testes físicos. Além do atualizador manual, ela introduz o helper Portal persistente e otimizações de latência no fallback.
 
 ## Documentação
 
 - arquitetura/segurança: `docs/architecture/bridge-security.md`;
 - aceitação física: `docs/testing/acceptance.md`;
 - atualizador manual: `docs/testing/bridge-updater.md`;
-- notas da release `v0.0.5`: `docs/releases/v0.0.5.md`;
-- notas históricas da `v0.0.4`: `docs/releases/v0.0.4.md`;
+- notas da release `v0.0.6`: `docs/releases/v0.0.6.md`;
+- notas históricas da `v0.0.5`: `docs/releases/v0.0.5.md`;
 - design do fallback Portal persistente: `docs/superpowers/specs/2026-09-09-persistent-portal-fallback-design.md`;
 - plano do fallback Portal persistente: `docs/superpowers/plans/2026-09-09-persistent-portal-fallback-implementation.md`;
 - design de confiabilidade `v0.0.4`: `docs/superpowers/specs/2026-09-08-v0.0.4-reliability-design.md`;
