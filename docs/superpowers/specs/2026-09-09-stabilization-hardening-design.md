@@ -1,7 +1,7 @@
 # Estabilização e hardening — NFe Agendamento 2.0
 
 Data: 2026-09-09
-Status: design aprovado em conversa, aguardando revisão formal da spec antes da implementação
+Status: implementação técnica concluída; revisão adversarial e CI final do HEAD documentado ainda pendentes
 
 ## 1. Objetivo
 
@@ -294,15 +294,15 @@ Warnings puramente de analisador em teste podem ser corrigidos de forma cirúrgi
 
 ## 9. CI
 
-O CI continuará dividido em web, Bridge e pacote Windows.
+O CI continua dividido em web, Bridge e pacote Windows.
 
 ### 9.1 Web
 
-Deve executar:
+Executa:
 
 1. setup Node suportado;
 2. `npm ci`;
-3. gate de vulnerabilidade;
+3. `npm audit --audit-level=high`;
 4. testes;
 5. type-check/build;
 6. Wrangler dry-run;
@@ -310,25 +310,25 @@ Deve executar:
 
 ### 9.2 Bridge
 
-Deve executar:
+No runner Linux, executa:
 
 1. bootstrap/contratos estáticos necessários;
-2. restore determinístico;
-3. testes .NET;
-4. build Bridge;
-5. build Portal;
-6. build App;
-7. ausência de warnings definidos como bloqueantes.
+2. restore/testes .NET;
+3. build do Bridge core;
+4. ausência de warnings definidos como bloqueantes na suíte/core.
+
+Os projetos desktop Portal/App são validados no runner Windows para evitar falsos positivos/ruído de targeting fora da plataforma.
 
 ### 9.3 Windows package
 
-Deve:
+Executa no Windows:
 
 1. resolver versão exclusivamente da fonte canônica;
-2. publicar Bridge/Portal/App;
-3. gerar Setup Inno;
-4. validar presença dos executáveis esperados;
-5. publicar artifacts nomeados com a versão canônica.
+2. publicar Bridge/Portal/App self-contained win-x64;
+3. tratar `MSB3277` do Portal como erro;
+4. gerar Setup Inno;
+5. validar presença dos executáveis esperados;
+6. publicar artifacts nomeados com a versão canônica.
 
 ## 10. Release
 
@@ -441,7 +441,7 @@ A lista da API local deve incluir também:
 
 ## 14. Estratégia de implementação
 
-A implementação será dividida em blocos independentes, cada um usando TDD:
+A implementação foi dividida em blocos independentes, cada um usando TDD:
 
 1. controle/lease do Bridge;
 2. shutdown/adoption/restart no tray;
@@ -454,7 +454,7 @@ A implementação será dividida em blocos independentes, cada um usando TDD:
 9. revisão adversarial final;
 10. CI final completo.
 
-Cada bloco começa com teste que falha pelo motivo esperado e termina com teste verde antes do próximo bloco.
+Cada bloco começou com teste que falhou pelo motivo esperado e terminou com teste verde antes do próximo bloco.
 
 ## 15. Critérios de aceite
 
@@ -476,3 +476,21 @@ A rodada de estabilização só pode ser declarada concluída quando todos os it
 - nenhuma funcionalidade fora de escopo introduzida.
 
 O teste físico em Windows real continua necessário antes de declarar uma versão validada em produção, pois CI não substitui A1 real, SEFAZ real, WebView2/hCaptcha e comportamento dos navegadores no Windows.
+
+## 16. Estado da implementação em 09/09/2026
+
+Concluído tecnicamente antes da revisão final:
+
+- Tasks 1–8 do plano implementadas por TDD;
+- controle/lease/restart do Bridge implementado;
+- Portal reconectável, cancelável e com retenção/cooldown implementado;
+- `package-lock.json` regenerado com `sharp 0.35.4` e gate npm em zero `high`/`critical`;
+- `xUnit1051` promovido a erro e eliminado;
+- `MSB3277` promovido a erro e eliminado removendo somente a referência WebView2 WPF não utilizada no projeto WinForms;
+- CI Windows já comprovou publish de Bridge, Portal, App, compilação do Setup e upload dos dois artifacts.
+
+Permanecem fora da conclusão técnica do código:
+
+- teste físico Windows/A1/SEFAZ/Portal;
+- Authenticode, por depender de certificado/segredo externo;
+- branch protection/required checks, por depender de configuração administrativa do GitHub.
