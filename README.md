@@ -21,6 +21,7 @@ Reescrita limpa do NFe Agendamento com **site estático + App/Bridge Windows loc
 Implementado e coberto pelos testes automatizados do projeto:
 
 - bootstrap Vite/TypeScript e .NET 10;
+- estratégia do SDK .NET fixada em `global.json` (`10.0.401`, `rollForward=latestPatch`, sem prerelease); o CI usa o mesmo arquivo em Linux e Windows;
 - dependências npm fixadas por `package-lock.json`, CI usando `npm ci` e gate `npm audit --audit-level=high`;
 - projetos .NET com `PackageReference` usam `packages.lock.json`, `RestorePackagesWithLockFile=true` e `RestoreLockedMode=true`, impedindo restore silencioso com grafo NuGet divergente;
 - zero vulnerabilidades `high`/`critical` no lockfile npm atualmente validado pelo CI;
@@ -73,7 +74,7 @@ Implementado e coberto pelos testes automatizados do projeto:
 - `windows-package` publica Bridge/Portal/App no Windows e gera Setup + pacote técnico;
 - `xUnit1051` é tratado como erro na suíte .NET;
 - `MSB3277` é tratado como erro no Portal; a referência WPF não utilizada do pacote WebView2 é removida antes de `ResolveAssemblyReferences`, mantendo apenas Core + WinForms;
-- `release.yml` é genérico e só publica artifacts do mesmo CI verde quando o commit marcador segue `release: v<versão>` e aponta a tag explicitamente para o SHA validado.
+- `release.yml` usa Actions suportadas, só publica artifacts do mesmo CI verde quando o commit marcador segue `release: v<versão>`, aponta a tag explicitamente para o SHA validado e, se a release já existir, exige que tamanho e SHA-256 dos dois assets coincidam com os artifacts validados antes de encerrar sem republicar.
 
 ## Pendências antes de declarar uso real validado
 
@@ -104,7 +105,7 @@ dotnet build apps/bridge/windows/NfeAgendamento.Portal/NfeAgendamento.Portal.csp
 dotnet build apps/bridge/windows/NfeAgendamento.App/NfeAgendamento.App.csproj -c Release
 ```
 
-Os projetos .NET com dependências NuGet externas restauram em **locked mode**; se um `PackageReference` mudar, regenere e revise o `packages.lock.json` correspondente no mesmo commit.
+O SDK .NET esperado pelo repositório está em `global.json`; atualizações do SDK devem alterar esse arquivo explicitamente e passar pelo CI completo. Os projetos .NET com dependências NuGet externas restauram em **locked mode**; se um `PackageReference` mudar, regenere e revise o `packages.lock.json` correspondente no mesmo commit.
 
 ## Deploy Cloudflare
 
@@ -149,6 +150,7 @@ O **Microsoft Edge WebView2 Runtime** continua necessário somente para o fallba
 3. Faça o commit final com mensagem `release: v<versão>`.
 4. O CI testa, compila e empacota os artifacts Windows.
 5. O workflow `.github/workflows/release.yml` publica somente os artifacts daquele `workflow_run` verde e cria/valida a tag no SHA exato que o CI aprovou.
+6. Se a tag/release já existirem no SHA validado, o workflow só encerra sem publicar depois de conferir nome, tamanho e digest SHA-256 do Setup e do ZIP técnico contra os assets já publicados.
 
 ## Documentação
 
@@ -157,5 +159,6 @@ O **Microsoft Edge WebView2 Runtime** continua necessário somente para o fallba
 - atualizador manual: `docs/testing/bridge-updater.md`;
 - design de estabilização: `docs/superpowers/specs/2026-09-09-stabilization-hardening-design.md`;
 - plano/status da estabilização: `docs/superpowers/plans/2026-09-09-stabilization-hardening-implementation.md`;
+- índice/status dos planos históricos: `docs/superpowers/plans/README.md`;
 - layout DANFE: `docs/testing/danfe-layout.md`;
 - notas da release pública atual: `docs/releases/v0.0.6.md`.
