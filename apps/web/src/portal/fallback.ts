@@ -8,7 +8,7 @@ interface PortalClient {
 
 type Sleep = (milliseconds: number, signal?: AbortSignal) => Promise<void>;
 
-const DEFAULT_POLL_MS = 800;
+const DEFAULT_POLL_MS = 250;
 
 export class PortalFallbackController {
   constructor(
