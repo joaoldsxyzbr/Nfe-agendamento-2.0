@@ -23,4 +23,13 @@
     <Compile Include="..\..\src\NfeAgendamento.Bridge\Portal\PortalServerSessionLoop.cs" Link="Shared\PortalServerSessionLoop.cs" />
     <Compile Include="..\..\src\NfeAgendamento.Bridge\Portal\PortalServerConnectionLoop.cs" Link="Shared\PortalServerConnectionLoop.cs" />
   </ItemGroup>
+
+  <Target
+    Name="RemoveUnusedWebView2WpfReference"
+    BeforeTargets="ResolveAssemblyReferences"
+    Condition="'$(UseWPF)' != 'true'">
+    <ItemGroup>
+      <Reference Remove="@(Reference)" Condition="'%(Reference.Filename)' == 'Microsoft.Web.WebView2.Wpf'" />
+    </ItemGroup>
+  </Target>
 </Project>
