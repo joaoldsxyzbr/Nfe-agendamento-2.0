@@ -1,6 +1,6 @@
 #define MyAppName "NFe Agendamento Bridge"
-#define MyAppVersion "0.0.4"
-#define MyAppExeName "NfeAgendamento.Bridge.exe"
+#define MyAppVersion "0.0.5"
+#define MyAppExeName "NfeAgendamento.App.exe"
 
 [Setup]
 AppId={{8C8FBD7D-26DB-46C0-A8AB-7F118F42A1B8}
@@ -11,9 +11,9 @@ DefaultGroupName=NFe Agendamento Bridge
 PrivilegesRequired=lowest
 DisableProgramGroupPage=yes
 OutputDir=..\..\..\artifacts\installer
-OutputBaseFilename=NFeAgendamentoBridge-Setup-v0.0.4
+OutputBaseFilename=NFeAgendamentoBridge-Setup-v0.0.5
 SetupIconFile=..\assets\nfe-agendamento-bridge.ico
-UninstallDisplayIcon={app}\NfeAgendamento.Bridge.exe
+UninstallDisplayIcon={app}\NfeAgendamento.App.exe
 Compression=lzma2
 SolidCompression=yes
 ArchitecturesAllowed=x64compatible
@@ -24,10 +24,10 @@ WizardStyle=modern
 Source: "..\..\..\artifacts\NfeAgendamentoBridge\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\NFe Agendamento Bridge"; Filename: "{app}\NfeAgendamento.Bridge.exe"; WorkingDir: "{app}"; IconFilename: "{app}\NfeAgendamento.Bridge.exe"
+Name: "{group}\NFe Agendamento"; Filename: "{app}\NfeAgendamento.App.exe"; WorkingDir: "{app}"; IconFilename: "{app}\NfeAgendamento.App.exe"
 
 [Registry]
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "NFe Agendamento Bridge"; ValueData: """{app}\NfeAgendamento.Bridge.exe"""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "NFe Agendamento Bridge"; ValueData: """{app}\NfeAgendamento.App.exe"""; Flags: uninsdeletevalue
 
 [Run]
-Filename: "{app}\NfeAgendamento.Bridge.exe"; Description: "Iniciar NFe Agendamento Bridge"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\NfeAgendamento.App.exe"; Description: "Iniciar NFe Agendamento"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent
