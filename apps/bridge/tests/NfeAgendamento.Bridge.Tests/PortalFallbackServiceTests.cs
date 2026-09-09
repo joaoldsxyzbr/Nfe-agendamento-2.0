@@ -44,6 +44,23 @@ public sealed class PortalFallbackServiceTests
     }
 
     [Fact]
+    public async Task Explicit_cancel_marks_operation_cancelled_and_cancels_launcher()
+    {
+        var launcher = new BlockingLauncher();
+        var service = new PortalFallbackService(launcher, () => "ABC123");
+
+        var operationId = await service.StartAsync(AccessKey);
+        await launcher.Started.Task.WaitAsync(TimeSpan.FromSeconds(1));
+
+        Assert.True(service.Cancel(operationId));
+        var status = await WaitForTerminalAsync(service, operationId);
+
+        Assert.Equal(PortalOperationStates.Cancelled, status.State);
+        Assert.Null(status.Xml);
+        Assert.True(launcher.CancellationObserved);
+    }
+
+    [Fact]
     public async Task Mismatched_xml_fails_the_operation_and_never_exposes_xml()
     {
         var wrongKey = "42260812345678000123550010000012341000012359";
@@ -117,6 +134,28 @@ public sealed class PortalFallbackServiceTests
         {
             Requests.Add(request);
             return await handler(request);
+        }
+    }
+
+    private sealed class BlockingLauncher : IPortalWindowLauncher
+    {
+        public bool IsAvailable => true;
+        public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public bool CancellationObserved { get; private set; }
+
+        public async Task<PortalLaunchResult> OpenAsync(PortalLaunchRequest request, CancellationToken cancellationToken)
+        {
+            Started.TrySetResult();
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+                return PortalLaunchResult.Failed("A operação não foi cancelada.");
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                CancellationObserved = true;
+                return PortalLaunchResult.Cancelled("Portal cancelado pelo Bridge.");
+            }
         }
     }
 }
