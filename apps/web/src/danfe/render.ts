@@ -142,12 +142,14 @@ function buildReceipt(nfe: ParsedNfe): string {
 function buildHeader(nfe: ParsedNfe, page: number, totalPages: number): string {
   const address = nfe.issuer.address;
   const issueType = nfe.invoiceType === '1' ? '1' : '0';
+  const phone = address?.phone ? `<span class="issuer-phone">Fone/Fax: ${escapeHtml(address.phone)}</span>` : '';
   return `<section class="danfe-block danfe-header">
     <div class="issuer-identification">
       <span class="issuer-title">Identificação do emitente</span>
       <strong>${escapeHtml(nfe.issuer.name)}</strong>
       <span>${escapeHtml(joinAddress(address))}</span>
       <span>${escapeHtml(address ? [address.district, formatCep(address.postalCode || ''), address.city, address.state].filter(Boolean).join(' - ') : '')}</span>
+      ${phone}
       <span>${escapeHtml(formatDocument(nfe.issuer.taxId))}</span>
     </div>
     <div class="danfe-identity">
@@ -160,6 +162,7 @@ function buildHeader(nfe: ParsedNfe, page: number, totalPages: number): string {
     <div class="barcode-area">
       <div class="barcode-wrap">${barcodeSvg(nfe.accessKey)}</div>
       <div class="access-key"><span class="fiscal-label">Chave de acesso</span><strong>${formatKey(nfe.accessKey)}</strong></div>
+      <div class="authenticity-box">Consulta de autenticidade no portal nacional da NF-e<br><strong>www.nfe.fazenda.gov.br/portal</strong> ou no site da Sefaz Autorizadora</div>
       <div class="protocol-box"><span class="fiscal-label">Protocolo de autorização de uso</span><strong>${escapeHtml(protocolText(nfe))}</strong></div>
     </div>
   </section>`;
@@ -233,10 +236,12 @@ function buildTotals(nfe: ParsedNfe): string {
   const t = nfe.totals;
   const fields: Array<[string, number]> = [
     ['Base de cálc. do ICMS', t.icmsBase], ['Valor do ICMS', t.icms], ['BASE DE CÁLC. ICMS S.T.', t.icmsStBase], ['VALOR DO ICMS SUBST.', t.icmsSt],
-    ['V. Imp. importação', t.importTax], ['V. ICMS UF remet.', t.icmsUfRemet], ['V. FCP UF dest.', t.fcpUfDest], ['VALOR DO PIS', t.pis],
-    ['V. total produtos', t.products], ['Valor do frete', t.freight], ['Valor do seguro', t.insurance], ['Desconto', t.discount],
-    ['Outras despesas', t.other], ['Valor total IPI', t.ipi], ['VALOR DA COFINS', t.cofins], ['V. total da nota', t.invoice],
+    ['V. Imp. importação', t.importTax], ['V. ICMS UF remet.', t.icmsUfRemet], ['V. FCP UF dest.', t.fcpUfDest], ['VALOR DO PIS', t.pis], ['V. total produtos', t.products],
+    ['Valor do frete', t.freight], ['Valor do seguro', t.insurance], ['Desconto', t.discount], ['Outras despesas', t.other], ['Valor total IPI', t.ipi],
   ];
+  if (nfe.originalXml.includes('<vICMSUFDest>')) fields.push(['V. ICMS UF dest.', t.icmsUfDest]);
+  if (nfe.originalXml.includes('<vTotTrib>')) fields.push(['V. tot. trib.', t.totalTax]);
+  fields.push(['VALOR DA COFINS', t.cofins], ['V. total da nota', t.invoice]);
   return `<div class="danfe-section-title">Cálculo do imposto</div><section class="danfe-block total-grid">${fields.map(([label, value], index) => fiscalCell(label, moneyFiscal(value), index === fields.length - 1 ? 'invoice-total' : '')).join('')}</section>`;
 }
 
