@@ -83,4 +83,11 @@ public sealed class UpdateReleaseParserTests
         Assert.Throws<InvalidDataException>(() =>
             UpdateReleaseParser.Parse(json, new Version(0, 0, 5)));
     }
+
+    [Fact]
+    public void Rejects_malformed_release_json_as_invalid_data()
+    {
+        Assert.Throws<InvalidDataException>(() =>
+            UpdateReleaseParser.Parse("{\"tag_name\":", new Version(0, 0, 5)));
+    }
 }
