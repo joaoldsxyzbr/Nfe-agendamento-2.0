@@ -14,10 +14,10 @@
 - ✅ Task 4 — adoção, monitoramento, shutdown e restart controlado pelo App.
 - ✅ Task 5 — cancelamento/reconexão/cooldown do Portal.
 - ✅ Task 6 — cancelamento web confiável no unload.
-- ✅ Task 7 — lockfile, audit, Actions atuais e validação Windows.
+- ✅ Task 7 — lockfiles npm/NuGet, audit, Actions atuais e validação Windows.
 - ✅ Task 8 — `xUnit1051` e `MSB3277` eliminados e promovidos a gates.
 - ✅ Task 9 — README, arquitetura, checklist físico e status da spec atualizados.
-- ⏳ Task 10 — revisão adversarial do diff + CI final do HEAD.
+- ✅ Task 10 — revisão adversarial concluída; o aceite técnico permanece condicionado ao CI verde do próprio HEAD que contém este estado final.
 
 Hardening externo que permanece fora do código: **Authenticode** (certificado/segredo de assinatura) e **branch protection/required status checks** (configuração administrativa do GitHub). A versão canônica permanece `0.0.6`; nenhuma release nova será criada nesta rodada sem solicitação explícita.
 
@@ -100,13 +100,13 @@ Hardening externo que permanece fora do código: **Authenticode** (certificado/s
 - Modify: `apps/web/tests/deploy-config.test.ts`
 - Modify: `.github/workflows/ci.yml`
 - Modify: `package.json`, `apps/web/package.json`, `package-lock.json` conforme advisories
-- Create/Modify: `global.json` e lockfiles NuGet se necessários
+- Modify: `global.json` e projetos/lockfiles NuGet quando aplicável
 
-**RED:** CI deve conter gate `npm audit --audit-level=high` e jobs corretos por plataforma.
+**RED:** CI deve conter gate `npm audit --audit-level=high`, jobs corretos por plataforma e projetos com `PackageReference` devem exigir lockfiles NuGet em locked mode.
 
-**Diagnóstico:** executar gate para capturar advisories reais.
+**Diagnóstico:** executar gates para capturar advisories e divergências reais.
 
-**GREEN:** dependência transitiva vulnerável corrigida via lockfile/override revisado, `npm audit` sem high/critical, `npm ci` mantido e desktop validado no runner Windows.
+**GREEN:** dependência transitiva vulnerável corrigida via lockfile/override revisado, `npm audit` sem high/critical, `npm ci` mantido, `packages.lock.json` commitado para Portal/testes com `RestoreLockedMode=true` e desktop validado no runner Windows.
 
 ## Task 8 — Eliminar warnings .NET e tornar testes canceláveis
 
@@ -135,6 +135,14 @@ Hardening externo que permanece fora do código: **Authenticode** (certificado/s
 5. Inspecionar logs por `warning`, `high severity`, `MSB3277`, `xUnit1051`, falhas/skips inesperados.
 6. Confirmar artifacts do instalador/pacote.
 7. Não criar release nem alterar `0.0.6` sem solicitação explícita.
+
+### Resultado da revisão adversarial
+
+A revisão das superfícies críticas App/Bridge, Portal, web, CI, release e versionamento não encontrou novo P1/P2 de lifecycle, segurança local ou fluxo fiscal. Ela encontrou um gap remanescente do achado original de reprodutibilidade: o npm já estava travado, mas os dois projetos com `PackageReference` ainda não possuíam lockfile NuGet.
+
+Esse gap foi convertido em regressão automatizada (`DependencyLockStaticTests`) e corrigido com `packages.lock.json` commitados para o helper Portal e para a suíte .NET, além de `RestorePackagesWithLockFile=true` e `RestoreLockedMode=true`. Assim, mudança de grafo NuGet sem atualização explícita do lock passa a falhar em vez de ser aceita silenciosamente.
+
+Não há mudança funcional de produto nem bump de versão nesta correção. Authenticode, proteção administrativa da `main` e aceitação física Windows continuam explicitamente externos à conclusão do código/CI.
 
 ## Critério final
 
