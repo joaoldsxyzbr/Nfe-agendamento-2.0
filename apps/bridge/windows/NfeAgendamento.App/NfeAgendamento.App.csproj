@@ -8,9 +8,9 @@
     <Nullable>enable</Nullable>
     <AssemblyName>NfeAgendamento.App</AssemblyName>
     <RootNamespace>NfeAgendamento.App</RootNamespace>
-    <Version>0.0.5</Version>
-    <FileVersion>0.0.5.0</FileVersion>
-    <AssemblyVersion>0.0.5.0</AssemblyVersion>
+    <Version>0.0.6</Version>
+    <FileVersion>0.0.6.0</FileVersion>
+    <AssemblyVersion>0.0.6.0</AssemblyVersion>
     <ApplicationIcon>..\..\assets\nfe-agendamento-bridge.ico</ApplicationIcon>
   </PropertyGroup>
 </Project>
