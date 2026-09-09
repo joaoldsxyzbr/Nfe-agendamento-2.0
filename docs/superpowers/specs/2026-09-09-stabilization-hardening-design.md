@@ -1,7 +1,7 @@
 # Estabilização e hardening — NFe Agendamento 2.0
 
 Data: 2026-09-09
-Status: implementação técnica concluída; revisão adversarial e CI final do HEAD documentado ainda pendentes
+Status: implementação e revisão adversarial concluídas; aceite técnico condicionado ao CI verde do próprio HEAD que contém este estado final
 
 ## 1. Objetivo
 
@@ -272,6 +272,8 @@ Scripts necessários de pacotes como bundler/runtime devem ser tratados de forma
 
 ## 8. .NET, NuGet e warnings
 
+Os projetos que possuem `PackageReference` devem manter `packages.lock.json` versionado e restaurar com `RestoreLockedMode=true`. Alterar dependências sem atualizar explicitamente o lockfile deve falhar no restore, evitando mudança silenciosa do grafo NuGet.
+
 ### 8.1 Conflito WindowsBase/WebView2
 
 O warning `MSB3277` entre versões de `WindowsBase` deve ser eliminado pela configuração correta de target/framework/referências/pacote WebView2.
@@ -313,7 +315,7 @@ Executa:
 No runner Linux, executa:
 
 1. bootstrap/contratos estáticos necessários;
-2. restore/testes .NET;
+2. restore/testes .NET em locked mode para projetos com `PackageReference`;
 3. build do Bridge core;
 4. ausência de warnings definidos como bloqueantes na suíte/core.
 
@@ -324,7 +326,7 @@ Os projetos desktop Portal/App são validados no runner Windows para evitar fals
 Executa no Windows:
 
 1. resolver versão exclusivamente da fonte canônica;
-2. publicar Bridge/Portal/App self-contained win-x64;
+2. publicar Bridge/Portal/App self-contained win-x64, respeitando o lockfile NuGet do Portal;
 3. tratar `MSB3277` do Portal como erro;
 4. gerar Setup Inno;
 5. validar presença dos executáveis esperados;
@@ -416,6 +418,7 @@ A rodada deve adicionar ou manter testes que cubram explicitamente:
 - tag divergente causa falha;
 - `npm ci` obrigatório;
 - gate high/critical presente;
+- `packages.lock.json` + locked mode obrigatórios nos projetos .NET com `PackageReference`;
 - CSP/headers presentes.
 
 ### Build
@@ -447,7 +450,7 @@ A implementação foi dividida em blocos independentes, cada um usando TDD:
 2. shutdown/adoption/restart no tray;
 3. Portal reconectável + cooldown;
 4. cancelamento end-to-end do Portal;
-5. dependências/npm audit;
+5. dependências/npm audit e lockfiles NuGet;
 6. resolução do warning WindowsBase;
 7. CI/release hardening;
 8. documentação;
@@ -469,6 +472,7 @@ A rodada de estabilização só pode ser declarada concluída quando todos os it
 - build App verde;
 - Windows package/Setup verde;
 - zero vulnerabilidades npm `high`/`critical` segundo o gate do CI;
+- restore NuGet determinístico por lockfiles nos projetos que usam `PackageReference`;
 - release workflow explicitamente amarrado ao SHA validado;
 - lifecycle App/Bridge coberto por testes de ownership, shutdown e crash-loop;
 - Portal coberto por testes de reconexão, cooldown, cancelamento e expiração;
@@ -479,15 +483,16 @@ O teste físico em Windows real continua necessário antes de declarar uma vers�
 
 ## 16. Estado da implementação em 09/09/2026
 
-Concluído tecnicamente antes da revisão final:
+Concluído tecnicamente e revisado de forma adversarial:
 
-- Tasks 1–8 do plano implementadas por TDD;
+- Tasks 1–10 do plano implementadas/revisadas; o aceite final depende do CI verde do HEAD que contém este documento;
 - controle/lease/restart do Bridge implementado;
 - Portal reconectável, cancelável e com retenção/cooldown implementado;
 - `package-lock.json` regenerado com `sharp 0.35.4` e gate npm em zero `high`/`critical`;
+- `packages.lock.json` versionados para Portal e testes, com restore em locked mode e teste de regressão específico;
 - `xUnit1051` promovido a erro e eliminado;
 - `MSB3277` promovido a erro e eliminado removendo somente a referência WebView2 WPF não utilizada no projeto WinForms;
-- CI Windows já comprovou publish de Bridge, Portal, App, compilação do Setup e upload dos dois artifacts.
+- CI Windows comprovou publish de Bridge, Portal, App, compilação do Setup e upload dos dois artifacts antes do commit documental final; o mesmo conjunto deve permanecer verde no HEAD final.
 
 Permanecem fora da conclusão técnica do código:
 
