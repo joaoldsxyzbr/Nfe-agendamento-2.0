@@ -33,4 +33,28 @@ public sealed class PortalProcessSessionFactoryTests
         Assert.Throws<InvalidDataException>(() =>
             PortalProcessSessionFactory.ValidateReady(new PortalIpcEnvelope(PortalIpcMessageType.Ready, "unexpected-op")));
     }
+
+    [Fact]
+    public void Factory_owns_helper_lifetime_instead_of_each_ipc_session()
+    {
+        Assert.True(typeof(IAsyncDisposable).IsAssignableFrom(typeof(PortalProcessSessionFactory)));
+
+        var source = File.ReadAllText(Path.Combine(
+            RepositoryRoot(),
+            "apps", "bridge", "src", "NfeAgendamento.Bridge", "Portal", "PortalProcessSessionFactory.cs"));
+
+        Assert.Contains("private Process? _process;", source);
+        Assert.Contains("new NamedPipePortalIpcSession(pipe)", source);
+        Assert.DoesNotContain("private readonly Process _process;", source);
+    }
+
+    private static string RepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "package.json")))
+            directory = directory.Parent;
+
+        Assert.NotNull(directory);
+        return directory.FullName;
+    }
 }
