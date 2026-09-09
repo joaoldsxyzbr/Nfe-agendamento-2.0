@@ -14,5 +14,6 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/NfeAgendamento.Bridge/NfeAgendamento.Bridge.csproj" />
+    <Compile Include="../../windows/NfeAgendamento.App/UpdateRelease.cs" Link="Updater/UpdateRelease.cs" />
   </ItemGroup>
 </Project>
