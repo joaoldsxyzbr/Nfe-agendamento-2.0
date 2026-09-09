@@ -1,12 +1,13 @@
 # NFe Agendamento 2.0
 
-Reescrita limpa do NFe Agendamento com **site estático + Bridge Windows mínimo**.
+Reescrita limpa do NFe Agendamento com **site estático + App/Bridge Windows local**.
 
 ## Arquitetura atual
 
 - **Site:** Vite + TypeScript; concentra interface, parsing XML, DANFE e regras de apresentação.
-- **App Windows:** `NfeAgendamento.App.exe` em WinForms; inicia oculto, permanece na bandeja, gerencia o Bridge local e oferece atualização manual confirmada pelo usuário.
+- **App Windows:** `NfeAgendamento.App.exe` em WinForms; inicia oculto, permanece na bandeja, gerencia o lifecycle do Bridge e oferece atualização manual confirmada pelo usuário.
 - **Bridge:** ASP.NET Core .NET 10 em `http://127.0.0.1:17345` somente.
+- **Controle App → Bridge:** Named Pipe local separado da API web, restrito ao usuário atual, com identidade, lease, heartbeat e shutdown controlado.
 - **API local:** `/api/v1`.
 - **Segurança:** Host estrito `127.0.0.1:17345`, CORS sem wildcard, origem oficial fixa em `https://nfeagendamento.joaolds.xyz.br` e headers web restritivos via `_headers`.
 - **Certificado A1:** descoberto em `CurrentUser/My`; a chave privada nunca sai do Windows/Bridge.
@@ -20,18 +21,17 @@ Reescrita limpa do NFe Agendamento com **site estático + Bridge Windows mínimo
 Implementado e coberto pelos testes automatizados do projeto:
 
 - bootstrap Vite/TypeScript e .NET 10;
-- build e testes web + Bridge;
-- dependências npm fixadas por `package-lock.json` e CI usando `npm ci`;
-- tema visual dark inspirado no site legado, com superfícies azul-escuras, azul como ação principal, amarelo como destaque e DANFE preservado branco/fiscal;
-- certificado A1 movido para painel de configurações aberto pela engrenagem no canto superior direito;
+- dependências npm fixadas por `package-lock.json`, CI usando `npm ci` e gate `npm audit --audit-level=high`;
+- zero vulnerabilidades `high`/`critical` no lockfile atualmente validado pelo CI;
+- `sharp` transitivo fixado em `0.35.4` para eliminar o advisory conhecido do toolchain Cloudflare;
+- tema visual dark e DANFE branco/fiscal;
+- certificado A1 no painel de configurações;
 - `GET /api/v1/health` e detecção do Bridge pelo site;
 - proteção de `Origin`/`Host` com testes de integração;
 - origem oficial `https://nfeagendamento.joaolds.xyz.br` embutida na configuração de produção do Bridge, sem wildcard e sem prompt no Setup;
 - CSP com `default-src 'self'`, `connect-src` limitado ao próprio site + `127.0.0.1:17345`, `object-src 'none'`, `frame-ancestors 'none'`, além de `nosniff`, `Referrer-Policy: no-referrer` e `Permissions-Policy` restritiva;
 - `GET /api/v1/certificates` e `POST /api/v1/certificate/select`;
 - filtro A1 por chave privada, validade e Client Authentication quando EKU estiver presente;
-- seleção do certificado diretamente no site;
-- estados `Bridge conectado`, `Bridge não encontrado` e `Permissão de acesso local necessária`;
 - `POST /api/v1/nfe/lookup` com validação completa da chave de 44 dígitos;
 - transporte para `NFeDistribuicaoDFe` autenticado pelo certificado A1 selecionado;
 - parsing defensivo da resposta SEFAZ, DTD desabilitado e limite de 10 MiB;
@@ -43,44 +43,47 @@ Implementado e coberto pelos testes automatizados do projeto:
 - tratamento Fernando Klein preservando o `cProd` fiscal;
 - preview DANFE em modal, `Ctrl + scroll`, impressão/PDF e download XML;
 - fallback automático `consumption_limit/656 → Portal Nacional → XML → mesmo parser/DANFE`;
-- o Portal não é anunciado na ajuda normal da consulta; só aparece quando a SEFAZ retorna limite de consumo;
+- Portal não anunciado na ajuda normal; o fallback só aparece após limite de consumo da SEFAZ;
 - helper `NfeAgendamento.Portal.exe` em WinForms/WebView2 com hCaptcha sempre manual;
-- helper Portal em modo servidor persistente com IPC local por Named Pipe, reaproveitando o processo/WebView2 entre consultas e reiniciando a sessão após falha de comunicação;
-- disponibilidade do Portal verificada por probe headless do WebView2 Runtime, com resultado positivo cacheado, sem abrir janela durante `/health`;
-- polling web do resultado do Portal reduzido para 250 ms;
-- cancelamento best-effort da operação Portal quando a página é descarregada, além da limpeza do `operationId` terminal;
-- proteção de instância única no executável real do Bridge para evitar dois listeners locais concorrentes;
-- shell `NfeAgendamento.App.exe` em `WinExe`, sem janela de console, com `NotifyIcon` na bandeja;
+- helper Portal persistente e reconectável por Named Pipe local, uma operação por vez;
+- cancelamento Portal end-to-end, inclusive comando IPC `cancel_operation` até o runner/WebView2;
+- cancelamento web best-effort em `pagehide/reload` com `fetch(..., { keepalive: true })`;
+- estados terminais do Portal (`completed`, `failed`, `cancelled`) retidos por 2 minutos e depois removidos com XML/CTS associados;
+- falha fatal da sessão Portal invalida a sessão e aplica cooldown curto antes de recriar o helper, evitando restart-loop;
+- probe headless do WebView2 Runtime, com resultado positivo cacheado, sem abrir janela durante `/health`;
+- instância única no executável real do Bridge para impedir listeners concorrentes;
+- App inicia o Bridge instalado com `--managed`;
+- control pipe `NfeAgendamento.Bridge.Control.v1` usa `PipeOptions.CurrentUserOnly`;
+- o App valida PID, versão, caminho do executável, `instanceId` e modo gerenciado antes de assumir um Bridge existente;
+- lease único com heartbeat periódico; Bridge gerenciado órfão encerra sozinho quando o lease expira;
+- o App tenta adotar uma instância gerenciada válida existente antes de iniciar outra;
+- o tray não mata processos arbitrários por nome;
+- queda inesperada do Bridge usa reinício com backoff `1 s → 2 s → 5 s` e circuit breaker em vez de crash-loop infinito;
+- status da bandeja acompanha o estado real: ativo, reconectando ou indisponível;
+- **Sair** envia `Shutdown` pelo control pipe e aguarda encerramento gracioso; término forçado só pode ser usado como último recurso sobre PID/caminho previamente validados;
+- `NfeAgendamento.App.exe` é `WinExe`, sem janela de console, com `NotifyIcon` na bandeja;
 - duplo clique na bandeja abre o site oficial e o menu oferece **Abrir NFe Agendamento**, **Verificar atualizações** e **Sair**;
-- o tray não encerra processos Bridge arbitrários pelo nome: preserva uma instância já existente, acompanha o mutex da instância única e só encerra o Bridge que ele próprio iniciou;
-- atualizador manual consulta somente a release estável mais recente do repositório oficial, exige confirmação do usuário e valida asset, tamanho e SHA-256 antes de iniciar o Setup;
-- o shell inicia `NfeAgendamento.Bridge.exe` com `CreateNoWindow` e encerra seu próprio Bridge ao sair ou antes de instalar atualização confirmada;
+- atualizador manual consulta somente a release estável mais recente do repositório oficial, exige confirmação e valida asset, tamanho e SHA-256 antes de iniciar o Setup;
 - deploy Cloudflare pela raiz usando `wrangler.jsonc` e `npx wrangler deploy --dry-run` no CI;
 - versão canônica atual `0.0.6` em `Directory.Build.props`;
-- ícone próprio azul-escuro/amarelo no App, Bridge e instalador;
 - instalador Inno Setup por usuário em `%LOCALAPPDATA%\NFe Agendamento Bridge`, sem UAC/admin;
 - auto-start em `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` apontando para `NfeAgendamento.App.exe`;
-- App, Bridge e helper Portal publicados como **self-contained win-x64**, sem exigir instalação externa do .NET 10;
-- CI resolve a versão canônica e gera `NFeAgendamentoBridge-Setup-v<versão>` + `NfeAgendamentoBridge-win-x64`;
-- `release.yml` é genérico e só publica artifacts do mesmo CI verde quando o commit marcador segue `release: v<versão>`.
+- App, Bridge e Portal publicados como **self-contained win-x64**;
+- `windows-package` publica Bridge/Portal/App no Windows e gera Setup + pacote técnico;
+- `xUnit1051` é tratado como erro na suíte .NET;
+- `MSB3277` é tratado como erro no Portal; a referência WPF não utilizada do pacote WebView2 é removida antes de `ResolveAssemblyReferences`, mantendo apenas Core + WinForms;
+- `release.yml` é genérico e só publica artifacts do mesmo CI verde quando o commit marcador segue `release: v<versão>` e aponta a tag explicitamente para o SHA validado.
 
-## Pendência para uso real
+## Pendências antes de declarar uso real validado
 
-A automação cobre build, testes e empacotamento, mas ainda é necessário executar o **teste físico Windows** em `docs/testing/acceptance.md` antes de declarar a versão validada em produção, incluindo:
+A automação cobre código, testes e empacotamento, mas ainda é necessário executar o **teste físico Windows** em `docs/testing/acceptance.md` no commit/Setup que será efetivamente usado. Isso inclui instalação/desinstalação, bandeja, lifecycle do Bridge, navegador real, A1 real, consulta SEFAZ, DANFE/PDF, fallback Portal/WebView2/hCaptcha e segundo PC independente.
 
-- instalar/desinstalar o Setup em Windows real e confirmar ausência de UAC;
-- confirmar que nenhuma janela preta de console permanece aberta;
-- confirmar o ícone do NFe Agendamento na bandeja e o menu **Abrir NFe Agendamento / Verificar atualizações / Sair**;
-- confirmar que o Setup não pede URL e que o site oficial conecta diretamente ao Bridge;
-- confirmar que uma segunda abertura do app não cria outra instância de bandeja nem outro listener;
-- confirmar auto-start após novo login;
-- navegador real acessando o Bridge em loopback;
-- certificado A1 real;
-- consulta SEFAZ real;
-- DANFE/PDF;
-- ocorrência real ou controlada de limite/656 para validar WebView2 + Portal + hCaptcha manual + retorno do XML e reaproveitamento do helper numa segunda consulta;
-- após publicação de uma versão posterior à `v0.0.6`, validar o fluxo físico de atualização descrito em `docs/testing/bridge-updater.md`;
-- segundo PC independente com seu próprio App/Bridge.
+Dois hardenings permanecem externos ao código desta rodada:
+
+- **Authenticode:** os executáveis/Setup não são assinados enquanto não houver certificado de code signing e segredo de assinatura disponíveis ao pipeline;
+- **proteção da `main`:** branch protection/ruleset e status checks obrigatórios dependem de configuração administrativa do repositório GitHub.
+
+Essas pendências não reduzem os gates já existentes no CI, mas impedem afirmar identidade criptográfica do publisher ou política administrativa da branch enquanto não forem configuradas.
 
 ## Fora de escopo
 
@@ -90,6 +93,7 @@ Não existem Central, pareamento, líder/standby, servidor LAN, pasta compartilh
 
 ```bash
 npm ci
+npm audit --audit-level=high
 npm run test:web
 npm run build:web
 
@@ -109,13 +113,9 @@ npx wrangler deploy
 
 O `wrangler.jsonc` executa `npm run build:web` e publica `./apps/web/dist`. O CI também executa `npx wrangler deploy --dry-run`.
 
-## Distribuição Windows v0.0.6
+## Distribuição Windows
 
-Para uso normal, use:
-
-```text
-NFeAgendamentoBridge-Setup-v0.0.6.exe
-```
+A versão canônica continua `0.0.6` e **não foi criada uma nova release nesta rodada de estabilização**. Para qualquer teste pós-`v0.0.6`, use o Setup/artifact produzido pelo **mesmo commit CI** que está sendo validado; não confunda um artifact de Actions pós-release com o binário da release pública `v0.0.6`.
 
 O instalador:
 
@@ -123,16 +123,13 @@ O instalador:
 - não solicita administrador;
 - mantém App + Bridge + helper Portal lado a lado;
 - inclui o runtime .NET necessário no publish self-contained;
-- cria atalho **NFe Agendamento** no Menu Iniciar apontando para `NfeAgendamento.App.exe`;
+- cria atalho **NFe Agendamento** no Menu Iniciar;
 - registra início automático do App no login do usuário;
 - inicia o App ao finalizar quando a opção estiver marcada;
-- o App inicia o Bridge em segundo plano sem console e fica na bandeja;
-- **não pede URL nem origem**: a origem oficial de produção já está embutida no Bridge;
+- não pede URL nem origem;
 - remove auto-start e arquivos instalados na desinstalação;
 - preserva `%LOCALAPPDATA%\NfeAgendamentoBridge`, onde fica a seleção local do certificado;
 - não instala atualizações silenciosamente.
-
-A `v0.0.6` é a primeira versão pública com **Verificar atualizações** na bandeja. O usuário inicia a verificação manualmente; o App consulta a release estável mais recente do repositório oficial, valida o asset do Setup, o tamanho publicado e o SHA-256 informado pelo GitHub, pede confirmação e só então inicia o instalador.
 
 O site de produção autorizado é exatamente:
 
@@ -140,28 +137,22 @@ O site de produção autorizado é exatamente:
 https://nfeagendamento.joaolds.xyz.br
 ```
 
-Não existe wildcard de CORS/Origin. O `NfeAgendamentoBridge-win-x64.zip` continua como fallback técnico. O .NET 10 não precisa estar previamente instalado para a distribuição `v0.0.6`. O **Microsoft Edge WebView2 Runtime** continua necessário somente para o fallback pelo Portal Nacional; o Bridge verifica sua disponibilidade por um probe headless do helper.
-
-A `v0.0.6` substitui a `v0.0.5` para novos testes físicos. Além do atualizador manual, ela introduz o helper Portal persistente e otimizações de latência no fallback.
+O **Microsoft Edge WebView2 Runtime** continua necessário somente para o fallback pelo Portal Nacional.
 
 ## Fluxo de release
 
 1. Atualize a versão apenas em `Directory.Build.props`.
-2. Faça o commit final com mensagem `release: v<versão>`.
-3. O CI resolve essa versão, testa, compila e empacota os artifacts Windows.
-4. O workflow genérico `.github/workflows/release.yml` publica a release somente se o CI desse mesmo commit terminar com sucesso.
+2. Adicione/atualize `docs/releases/v<versão>.md`.
+3. Faça o commit final com mensagem `release: v<versão>`.
+4. O CI testa, compila e empacota os artifacts Windows.
+5. O workflow `.github/workflows/release.yml` publica somente os artifacts daquele `workflow_run` verde e cria/valida a tag no SHA exato que o CI aprovou.
 
 ## Documentação
 
 - arquitetura/segurança: `docs/architecture/bridge-security.md`;
 - aceitação física: `docs/testing/acceptance.md`;
 - atualizador manual: `docs/testing/bridge-updater.md`;
-- notas da release `v0.0.6`: `docs/releases/v0.0.6.md`;
-- notas históricas da `v0.0.5`: `docs/releases/v0.0.5.md`;
-- design do fallback Portal persistente: `docs/superpowers/specs/2026-09-09-persistent-portal-fallback-design.md`;
-- plano do fallback Portal persistente: `docs/superpowers/plans/2026-09-09-persistent-portal-fallback-implementation.md`;
-- design de confiabilidade `v0.0.4`: `docs/superpowers/specs/2026-09-08-v0.0.4-reliability-design.md`;
-- plano de implementação `v0.0.4`: `docs/superpowers/plans/2026-09-08-v0.0.4-reliability-implementation.md`;
-- design do instalador: `docs/superpowers/specs/2026-09-08-windows-installer-design.md`;
-- plano do instalador: `docs/superpowers/plans/2026-09-08-windows-installer-implementation.md`;
-- plano técnico canônico: `docs/superpowers/plans/2026-09-08-nfe-agendamento-2-implementation.md`.
+- design de estabilização: `docs/superpowers/specs/2026-09-09-stabilization-hardening-design.md`;
+- plano/status da estabilização: `docs/superpowers/plans/2026-09-09-stabilization-hardening-implementation.md`;
+- layout DANFE: `docs/testing/danfe-layout.md`;
+- notas da release pública atual: `docs/releases/v0.0.6.md`.
