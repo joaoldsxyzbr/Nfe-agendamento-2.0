@@ -30,6 +30,35 @@ describe('PortalFallbackController', () => {
     expect(statuses).toHaveLength(0);
   });
 
+  it('uses 250ms as the default active polling interval without parallel polls', async () => {
+    const statuses: PortalOperationStatus[] = [
+      { operationId: 'op-fast', state: 'waiting_for_user', message: 'captcha', xml: null },
+      { operationId: 'op-fast', state: 'completed', message: 'ok', xml: '<nfeProc />' },
+    ];
+    const sleeps: number[] = [];
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const fake = {
+      startPortal: async () => ({ operationId: 'op-fast' }),
+      getPortalStatus: async () => {
+        inFlight += 1;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        const status = statuses.shift()!;
+        inFlight -= 1;
+        return status;
+      },
+    };
+    const controller = new PortalFallbackController(fake, async (milliseconds) => {
+      sleeps.push(milliseconds);
+    });
+
+    const result = await controller.waitForResult('op-fast');
+
+    expect(result.state).toBe('completed');
+    expect(sleeps).toEqual([250]);
+    expect(maxInFlight).toBe(1);
+  });
+
   it('returns failed/cancelled terminal state without retrying forever', async () => {
     let calls = 0;
     const fake = {
