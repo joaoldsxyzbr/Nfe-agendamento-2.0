@@ -7,13 +7,13 @@ Este checklist cobre o que o CI não consegue provar: instalação real no Windo
 ## Pré-requisitos
 
 - Windows 10/11 x64 atualizado;
-- `NFeAgendamentoBridge-Setup-v0.0.5.exe` do mesmo commit/release que será validado;
+- `NFeAgendamentoBridge-Setup-v0.0.6.exe` do mesmo commit/release que será validado;
 - Microsoft Edge WebView2 Runtime instalado para testar o fallback Portal;
 - certificado A1 válido instalado em `CurrentUser/My` com chave privada;
 - site oficial disponível exatamente em `https://nfeagendamento.joaolds.xyz.br`;
-- acesso à Internet para SEFAZ e Portal Nacional da NF-e.
+- acesso à Internet para SEFAZ, GitHub Releases e Portal Nacional da NF-e.
 
-> A `v0.0.5` é self-contained: não exige instalação prévia do .NET 10. O WebView2 Runtime continua necessário somente para o fallback Portal.
+> A `v0.0.6` é self-contained: não exige instalação prévia do .NET 10. O WebView2 Runtime continua necessário somente para o fallback Portal.
 
 Registre antes de começar:
 
@@ -28,7 +28,7 @@ Registre antes de começar:
 
 ## 0. Instalação, bandeja, instância única, auto-start e desinstalação
 
-1. Execute `NFeAgendamentoBridge-Setup-v0.0.5.exe` em uma conta de usuário comum.
+1. Execute `NFeAgendamentoBridge-Setup-v0.0.6.exe` em uma conta de usuário comum.
 2. Confirme que a instalação **não solicita UAC/admin**.
 3. Confirme que o Setup **não pede URL/origem** em nenhuma tela.
 4. Confirme os arquivos em `%LOCALAPPDATA%\NFe Agendamento Bridge`.
@@ -36,7 +36,7 @@ Registre antes de começar:
 6. Confirme o atalho **NFe Agendamento** no Menu Iniciar e o ícone próprio azul/amarelo.
 7. Conclua a instalação com a opção de iniciar marcada e confirme que **nenhuma janela preta de console permanece aberta**.
 8. Confirme que o ícone do NFe Agendamento aparece na bandeja do Windows com o texto `NFe Agendamento — ativo`.
-9. Abra o menu do ícone e confirme as ações **Abrir NFe Agendamento** e **Sair**.
+9. Abra o menu do ícone e confirme as ações **Abrir NFe Agendamento**, **Verificar atualizações** e **Sair**.
 10. Dê duplo clique no ícone e confirme que o navegador abre `https://nfeagendamento.joaolds.xyz.br`.
 11. Confirme a entrada `NFe Agendamento Bridge` em `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` apontando para `NfeAgendamento.App.exe`, sem parâmetros de `Bridge:AllowedOrigins`.
 12. Abra novamente o atalho do Menu Iniciar e confirme que não surge uma segunda instância de bandeja nem outro listener concorrente.
@@ -138,7 +138,7 @@ Antes do cenário de limite:
 Execute os passos abaixo somente quando o limite de consumo ocorrer naturalmente ou houver cenário de teste controlado:
 
 3. A resposta `consumption_limit` deve iniciar o fallback sem repetir `NFeDistribuicaoDFe`.
-4. Confirme que abre uma janela separada do Portal Nacional.
+4. Confirme que abre uma janela separada do Portal Nacional somente após o limite.
 5. Confirme que a chave foi apenas pré-preenchida.
 6. Resolva o **hCaptcha manualmente**.
 7. Faça a consulta no Portal.
@@ -146,7 +146,8 @@ Execute os passos abaixo somente quando o limite de consumo ocorrer naturalmente
 9. Baixe o XML pelo fluxo oficial.
 10. A janela deve devolver o XML ao Bridge e o site deve apresentar a NF-e usando o mesmo parser/DANFE do fluxo normal.
 11. Confirme que o XML baixado pelo Portal corresponde à chave pedida.
-12. Repita fechando a janela antes do fim e confirme `Consulta pelo Portal cancelada`.
+12. Faça uma segunda ocorrência controlada na mesma sessão do Bridge e confirme que o helper Portal reutiliza o processo/WebView2 em vez de fazer uma nova inicialização completa.
+13. Repita fechando a janela antes do fim e confirme `Consulta pelo Portal cancelada`.
 
 Resultado: ☐ aprovado
 
@@ -161,7 +162,21 @@ Durante o teste do Portal:
 
 Resultado: ☐ aprovado
 
-## 9. Segundo PC independente
+## 9. Atualizador manual
+
+A `v0.0.6` é a primeira versão com o atualizador no App. A validação completa de instalação de atualização exige existir uma release estável **posterior** à `v0.0.6`.
+
+1. Abra o menu da bandeja e clique em **Verificar atualizações**.
+2. Enquanto `v0.0.6` for a release mais recente, confirme a mensagem de que o aplicativo já está atualizado.
+3. Quando existir uma versão posterior, confirme que o App mostra a nova versão e pede confirmação antes de baixar/instalar.
+4. Confirme que o instalador aceito pertence ao repositório/release esperados e que falhas de tamanho ou SHA-256 impedem a execução.
+5. Após confirmação válida, verifique que o Setup inicia e o App/Bridge encerram para permitir a substituição dos arquivos.
+
+Detalhes adicionais: `docs/testing/bridge-updater.md`.
+
+Resultado: ☐ aprovado
+
+## 10. Segundo PC independente
 
 Em outro PC:
 
@@ -184,4 +199,5 @@ Uma versão só deve ser marcada como pronta para uso real depois de:
 - etapa 0 aprovada em Windows real;
 - etapas 1–5 aprovadas;
 - etapa 7 aprovada em uma ocorrência real/controlada de limite antes de declarar o fallback Portal validado fisicamente;
+- etapa 9 parcialmente validada na própria `v0.0.6` e concluída quando existir uma release posterior;
 - qualquer divergência registrada e corrigida antes de declarar o ambiente validado para produção.
