@@ -26,6 +26,24 @@ public sealed class PortalFallbackServiceTests
     }
 
     [Fact]
+    public async Task Terminal_operation_is_evicted_after_retention_period()
+    {
+        var xml = ValidXml(AccessKey);
+        var launcher = new FakeLauncher(_ => Task.FromResult(PortalLaunchResult.Completed(xml)));
+        var service = new PortalFallbackService(
+            launcher,
+            () => "ABC123",
+            terminalRetention: TimeSpan.FromMilliseconds(30));
+
+        var operationId = await service.StartAsync(AccessKey);
+        var status = await WaitForTerminalAsync(service, operationId);
+
+        Assert.Equal(PortalOperationStates.Completed, status.State);
+        await Task.Delay(80);
+        Assert.Null(service.GetStatus(operationId));
+    }
+
+    [Fact]
     public async Task Mismatched_xml_fails_the_operation_and_never_exposes_xml()
     {
         var wrongKey = "42260812345678000123550010000012341000012359";
