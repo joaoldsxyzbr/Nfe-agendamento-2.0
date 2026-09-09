@@ -20,5 +20,6 @@
     <Compile Include="..\..\src\NfeAgendamento.Bridge\Portal\PortalIpcProtocol.cs" Link="Shared\PortalIpcProtocol.cs" />
     <Compile Include="..\..\src\NfeAgendamento.Bridge\Portal\PortalIpcSession.cs" Link="Shared\PortalIpcSession.cs" />
     <Compile Include="..\..\src\NfeAgendamento.Bridge\Portal\PortalServerSessionLoop.cs" Link="Shared\PortalServerSessionLoop.cs" />
+    <Compile Include="..\..\src\NfeAgendamento.Bridge\Portal\PortalServerConnectionLoop.cs" Link="Shared\PortalServerConnectionLoop.cs" />
   </ItemGroup>
 </Project>
