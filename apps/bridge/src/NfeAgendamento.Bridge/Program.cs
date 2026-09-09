@@ -188,6 +188,11 @@ api.MapPost("/portal/start", async (
     }
 });
 
+api.MapPost("/portal/cancel/{operationId}", (
+    string operationId,
+    PortalFallbackService portal) =>
+    portal.Cancel(operationId) ? Results.NoContent() : Results.NotFound());
+
 api.MapGet("/portal/status/{operationId}", (
     string operationId,
     PortalFallbackService portal) =>
