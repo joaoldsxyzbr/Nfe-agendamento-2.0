@@ -19,6 +19,7 @@ describe('PortalFallbackController', () => {
         expect(operationId).toBe('op1');
         return statuses.shift()!;
       },
+      cancelPortal: async () => {},
     };
     const controller = new PortalFallbackController(fake, async () => {});
 
@@ -47,6 +48,7 @@ describe('PortalFallbackController', () => {
         inFlight -= 1;
         return status;
       },
+      cancelPortal: async () => {},
     };
     const controller = new PortalFallbackController(fake, async (milliseconds) => {
       sleeps.push(milliseconds);
@@ -83,6 +85,7 @@ describe('PortalFallbackController', () => {
         calls += 1;
         return { operationId: 'op2', state: 'cancelled' as const, message: 'fechado', xml: null };
       },
+      cancelPortal: async () => {},
     };
     const controller = new PortalFallbackController(fake, async () => {});
 
@@ -102,6 +105,7 @@ describe('PortalFallbackController', () => {
         abort.abort();
         return { operationId: 'op3', state: 'waiting_for_user' as const, message: null, xml: null };
       },
+      cancelPortal: async () => {},
     };
     const controller = new PortalFallbackController(fake, async () => {});
 
