@@ -112,7 +112,7 @@ public sealed class InstallerStaticTests
     }
 
     [Fact]
-    public void Generic_release_uses_only_artifacts_from_successful_ci_run()
+    public void Generic_release_uses_only_artifacts_from_successful_ci_run_and_pins_the_validated_sha()
     {
         var root = RepositoryRoot();
         var workflowPath = Path.Combine(root, ".github", "workflows", "release.yml");
@@ -126,6 +126,10 @@ public sealed class InstallerStaticTests
         Assert.Contains("Directory.Build.props", workflow);
         Assert.Contains("run-id: ${{ github.event.workflow_run.id }}", workflow);
         Assert.Contains("NFeAgendamentoBridge-Setup-v${version}.exe", workflow);
+        Assert.Contains("validated_sha=\"${{ github.event.workflow_run.head_sha }}\"", workflow);
+        Assert.Contains("gh api \"repos/${GITHUB_REPOSITORY}/commits/$tag\"", workflow);
+        Assert.Contains("existing_sha", workflow);
+        Assert.Contains("--target \"$validated_sha\"", workflow);
         Assert.Contains("gh release create \"$tag\"", workflow);
         Assert.Contains("--notes-file", workflow);
     }
