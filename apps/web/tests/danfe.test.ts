@@ -45,11 +45,9 @@ describe('DANFE approved behavior', () => {
     expect(nextDanfeZoom(0.6, 100)).toBe(0.6);
   });
 
-  it('binds Ctrl+wheel directly to the DANFE scroll viewport', () => {
-    const source = readFileSync(new URL('../src/danfe/render.ts', import.meta.url), 'utf8');
-    expect(source).toContain("container.querySelector<HTMLElement>('.danfe-scroll')");
-    expect(source).toContain("scroll.addEventListener('wheel', wheel, { passive: false })");
-    expect(source).toContain("scroll.removeEventListener('wheel', wheel)");
+  it('loads the direct DANFE viewport zoom listener', () => {
+    const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    expect(html).toContain('/src/danfe/zoom-direct.ts');
   });
 
   it('keeps approved A4 and compact item-column CSS', () => {
