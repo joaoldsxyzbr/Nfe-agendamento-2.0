@@ -8,6 +8,7 @@ public sealed class ProcessPortalWindowLauncher : IPortalWindowLauncher, IAsyncD
     private readonly string _helperPath;
     private readonly Func<string, bool> _runtimeProbe;
     private readonly Func<bool> _platformProbe;
+    private readonly PortalProcessSessionFactory _sessions;
     private readonly PersistentPortalClient _persistentClient;
     private readonly object _probeGate = new();
     private bool _runtimeAvailable;
@@ -32,8 +33,8 @@ public sealed class ProcessPortalWindowLauncher : IPortalWindowLauncher, IAsyncD
         _helperPath = helperPath;
         _runtimeProbe = runtimeProbe ?? ProbeRuntime;
         _platformProbe = platformProbe ?? OperatingSystem.IsWindows;
-        var sessions = new PortalProcessSessionFactory(_helperPath);
-        _persistentClient = new PersistentPortalClient(sessions.CreateAsync);
+        _sessions = new PortalProcessSessionFactory(_helperPath);
+        _persistentClient = new PersistentPortalClient(_sessions.CreateAsync);
     }
 
     public bool IsAvailable
@@ -66,7 +67,11 @@ public sealed class ProcessPortalWindowLauncher : IPortalWindowLauncher, IAsyncD
         return _persistentClient.OpenAsync(request, cancellationToken);
     }
 
-    public ValueTask DisposeAsync() => _persistentClient.DisposeAsync();
+    public async ValueTask DisposeAsync()
+    {
+        await _persistentClient.DisposeAsync();
+        await _sessions.DisposeAsync();
+    }
 
     private static bool ProbeRuntime(string helperPath)
     {
