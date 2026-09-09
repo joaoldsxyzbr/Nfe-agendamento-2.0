@@ -28,6 +28,19 @@ describe('Cloudflare deploy configuration', () => {
     expect(ci).not.toContain('- run: npm install');
   });
 
+  it('blocks high npm advisories and builds desktop artifacts on Windows', async () => {
+    const ci = await readFile(ciUrl, 'utf8');
+    expect(ci).toContain('- run: npm audit --audit-level=high');
+
+    const bridgeJob = ci.match(/\n  bridge:\n([\s\S]*?)\n  windows-package:/)?.[1] ?? '';
+    const windowsJob = ci.match(/\n  windows-package:\n([\s\S]*)$/)?.[1] ?? '';
+    expect(bridgeJob).not.toContain('apps/bridge/windows/NfeAgendamento.Portal');
+    expect(bridgeJob).not.toContain('apps/bridge/windows/NfeAgendamento.App');
+    expect(windowsJob).toContain('runs-on: windows-latest');
+    expect(windowsJob).toContain('NfeAgendamento.Portal.csproj');
+    expect(windowsJob).toContain('NfeAgendamento.App.csproj');
+  });
+
   it('ships restrictive security headers without breaking the local Bridge', async () => {
     const headers = await readFile(headersUrl, 'utf8');
     expect(headers).toContain("default-src 'self'");
