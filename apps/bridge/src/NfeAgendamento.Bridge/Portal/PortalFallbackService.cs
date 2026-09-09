@@ -11,6 +11,7 @@ public sealed class PortalFallbackService
     private readonly Func<string?> _selectedThumbprint;
     private readonly TimeSpan _terminalRetention;
     private readonly ConcurrentDictionary<string, PortalOperationStatus> _operations = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, CancellationTokenSource> _operationCancellation = new(StringComparer.Ordinal);
 
     public PortalFallbackService(
         IPortalWindowLauncher launcher,
@@ -40,13 +41,22 @@ public sealed class PortalFallbackService
         cancellationToken.ThrowIfCancellationRequested();
 
         var operationId = Guid.NewGuid().ToString("N");
+        var operationCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        if (!_operationCancellation.TryAdd(operationId, operationCancellation))
+        {
+            operationCancellation.Dispose();
+            throw new InvalidOperationException("Não foi possível registrar a operação do Portal.");
+        }
+
         _operations[operationId] = new PortalOperationStatus(
             operationId,
             PortalOperationStates.WaitingForUser,
             "Portal aberto neste computador. Resolva o hCaptcha manualmente e solicite o XML.",
             null);
 
-        _ = RunOperationAsync(new PortalLaunchRequest(operationId, accessKey, thumbprint));
+        _ = RunOperationAsync(
+            new PortalLaunchRequest(operationId, accessKey, thumbprint),
+            operationCancellation.Token);
         return Task.FromResult(operationId);
     }
 
@@ -56,11 +66,38 @@ public sealed class PortalFallbackService
         return _operations.TryGetValue(operationId, out var status) ? status : null;
     }
 
-    private async Task RunOperationAsync(PortalLaunchRequest request)
+    public bool Cancel(string operationId)
+    {
+        if (string.IsNullOrWhiteSpace(operationId) ||
+            !_operations.TryGetValue(operationId, out var status) ||
+            IsTerminal(status.State) ||
+            !_operationCancellation.TryGetValue(operationId, out var cancellation))
+        {
+            return false;
+        }
+
+        try
+        {
+            cancellation.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            return false;
+        }
+
+        Set(
+            operationId,
+            PortalOperationStates.Cancelled,
+            "Consulta pelo Portal cancelada.",
+            null);
+        return true;
+    }
+
+    private async Task RunOperationAsync(PortalLaunchRequest request, CancellationToken cancellationToken)
     {
         try
         {
-            var result = await _launcher.OpenAsync(request, CancellationToken.None);
+            var result = await _launcher.OpenAsync(request, cancellationToken);
             switch (result.Outcome)
             {
                 case PortalLaunchOutcome.Completed:
@@ -77,6 +114,10 @@ public sealed class PortalFallbackService
                     break;
             }
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            Set(request.OperationId, PortalOperationStates.Cancelled, "Consulta pelo Portal cancelada.", null);
+        }
         catch (Exception exception) when (exception is InvalidDataException or IOException or UnauthorizedAccessException or InvalidOperationException)
         {
             Set(request.OperationId, PortalOperationStates.Failed, exception.Message, null);
@@ -89,9 +130,24 @@ public sealed class PortalFallbackService
 
     private void Set(string operationId, string state, string? message, string? xml)
     {
-        _operations[operationId] = new PortalOperationStatus(operationId, state, message, xml);
-        if (state is PortalOperationStates.Completed or PortalOperationStates.Failed or PortalOperationStates.Cancelled)
-            _ = ExpireTerminalAsync(operationId);
+        var next = new PortalOperationStatus(operationId, state, message, xml);
+
+        while (true)
+        {
+            if (!_operations.TryGetValue(operationId, out var current))
+                return;
+            if (IsTerminal(current.State))
+                return;
+            if (_operations.TryUpdate(operationId, next, current))
+                break;
+        }
+
+        if (!IsTerminal(state))
+            return;
+
+        if (_operationCancellation.TryRemove(operationId, out var cancellation))
+            cancellation.Dispose();
+        _ = ExpireTerminalAsync(operationId);
     }
 
     private async Task ExpireTerminalAsync(string operationId)
@@ -99,4 +155,7 @@ public sealed class PortalFallbackService
         await Task.Delay(_terminalRetention);
         _operations.TryRemove(operationId, out _);
     }
+
+    private static bool IsTerminal(string state) =>
+        state is PortalOperationStates.Completed or PortalOperationStates.Failed or PortalOperationStates.Cancelled;
 }
