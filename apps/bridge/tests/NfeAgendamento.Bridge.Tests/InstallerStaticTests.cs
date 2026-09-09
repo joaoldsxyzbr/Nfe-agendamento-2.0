@@ -112,6 +112,21 @@ public sealed class InstallerStaticTests
     }
 
     [Fact]
+    public void Ci_uses_repository_global_json_for_dotnet_sdk()
+    {
+        var root = RepositoryRoot();
+        var globalJsonPath = Path.Combine(root, "global.json");
+        var ci = File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"));
+
+        Assert.True(File.Exists(globalJsonPath), "global.json deve fixar a estratégia do SDK .NET.");
+        var globalJson = File.ReadAllText(globalJsonPath);
+        Assert.Contains("\"version\": \"10.0.401\"", globalJson);
+        Assert.Contains("\"rollForward\": \"latestPatch\"", globalJson);
+        Assert.Contains("actions/setup-dotnet@v6", ci);
+        Assert.DoesNotContain("dotnet-version:", ci);
+    }
+
+    [Fact]
     public void Generic_release_uses_only_artifacts_from_successful_ci_run_and_pins_the_validated_sha()
     {
         var root = RepositoryRoot();
@@ -132,5 +147,20 @@ public sealed class InstallerStaticTests
         Assert.Contains("--target \"$validated_sha\"", workflow);
         Assert.Contains("gh release create \"$tag\"", workflow);
         Assert.Contains("--notes-file", workflow);
+        Assert.Contains("uses: actions/checkout@v7", workflow);
+        Assert.Contains("uses: actions/download-artifact@v8", workflow);
+    }
+
+    [Fact]
+    public void Existing_release_must_match_the_validated_assets_before_skipping_publication()
+    {
+        var root = RepositoryRoot();
+        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "release.yml"));
+
+        Assert.Contains("verify_release_asset", workflow);
+        Assert.Contains("releases/tags/$tag", workflow);
+        Assert.Contains("sha256sum", workflow);
+        Assert.Contains("digest", workflow);
+        Assert.Contains("size", workflow);
     }
 }
