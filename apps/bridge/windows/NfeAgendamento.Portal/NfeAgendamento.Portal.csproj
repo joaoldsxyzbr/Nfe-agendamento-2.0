@@ -8,6 +8,7 @@
     <Nullable>enable</Nullable>
     <AssemblyName>NfeAgendamento.Portal</AssemblyName>
     <RootNamespace>NfeAgendamento.Portal</RootNamespace>
+    <MSBuildWarningsAsErrors>$(MSBuildWarningsAsErrors);MSB3277</MSBuildWarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
