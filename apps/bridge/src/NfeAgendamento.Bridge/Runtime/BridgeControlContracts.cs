@@ -1,5 +1,14 @@
 namespace NfeAgendamento.Bridge.Runtime;
 
+public static class BridgeControlConstants
+{
+    public const string PipeName = "NfeAgendamento.Bridge.Control.v1";
+    public static readonly TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(2);
+    public static readonly TimeSpan LeaseTimeout = TimeSpan.FromSeconds(8);
+    public static readonly TimeSpan InitialLeaseTimeout = TimeSpan.FromSeconds(10);
+    public static readonly TimeSpan WatchdogInterval = TimeSpan.FromMilliseconds(500);
+}
+
 public static class BridgeControlMessageTypes
 {
     public const string Hello = "hello";
@@ -26,3 +35,7 @@ public sealed record BridgeControlResponse(
     string? Error = null,
     BridgeControlIdentity? Identity = null,
     string? LeaseId = null);
+
+public sealed record BridgeControlDispatchResult(
+    BridgeControlResponse Response,
+    bool StopApplication);
