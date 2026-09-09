@@ -234,4 +234,19 @@ describe('BridgeClient', () => {
     await rejected;
     expect(aborted).toBe(true);
   });
+
+  it('cancels Portal with keepalive so pagehide can deliver the request', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }));
+
+    await new BridgeClient().cancelPortal('op-123');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${BRIDGE_BASE_URL}/portal/cancel/op-123`,
+      expect.objectContaining({
+        method: 'POST',
+        cache: 'no-store',
+        keepalive: true,
+      }),
+    );
+  });
 });
