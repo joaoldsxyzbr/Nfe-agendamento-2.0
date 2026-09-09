@@ -24,16 +24,18 @@ public sealed class PortalProcessSessionFactory
             throw new FileNotFoundException("O helper do Portal não foi encontrado.", _helperPath);
 
         var pipeName = $"nfe-agendamento-portal-{Environment.ProcessId}-{Guid.NewGuid():N}";
-        using var process = new Process
+        var process = new Process
         {
             StartInfo = CreateServerStartInfo(_helperPath, pipeName, Environment.ProcessId, _workingDirectory),
             EnableRaisingEvents = true,
         };
 
         if (!process.Start())
+        {
+            process.Dispose();
             throw new InvalidOperationException("Não foi possível iniciar o helper persistente do Portal.");
+        }
 
-        var ownedProcess = process;
         var pipe = new NamedPipeClientStream(
             ".",
             pipeName,
@@ -56,13 +58,13 @@ public sealed class PortalProcessSessionFactory
                 throw new TimeoutException("O helper do Portal não ficou pronto dentro de 5 segundos.");
             }
 
-            GC.SuppressFinalize(ownedProcess);
-            return new NamedPipePortalIpcSession(pipe, ownedProcess);
+            return new NamedPipePortalIpcSession(pipe, process);
         }
         catch
         {
             pipe.Dispose();
             TryTerminate(process);
+            process.Dispose();
             throw;
         }
     }
