@@ -30,7 +30,7 @@ Implementado e coberto pelos testes automatizados do projeto:
 - `GET /api/v1/health` e detecção do Bridge pelo site;
 - proteção de `Origin`/`Host` com testes de integração;
 - origem oficial `https://nfeagendamento.joaolds.xyz.br` embutida na configuração de produção do Bridge, sem wildcard e sem prompt no Setup;
-- CSP com `default-src 'self''`, `connect-src` limitado ao próprio site + `127.0.0.1:17345`, `object-src 'none'`, `frame-ancestors 'none'`, além de `nosniff`, `Referrer-Policy: no-referrer` e `Permissions-Policy` restritiva;
+- CSP com `default-src 'self'`, `connect-src` limitado ao próprio site + `127.0.0.1:17345`, `object-src 'none'`, `frame-ancestors 'none'`, além de `nosniff`, `Referrer-Policy: no-referrer` e `Permissions-Policy` restritiva;
 - `GET /api/v1/certificates` e `POST /api/v1/certificate/select`;
 - filtro A1 por chave privada, validade e Client Authentication quando EKU estiver presente;
 - `POST /api/v1/nfe/lookup` com validação completa da chave de 44 dígitos;
