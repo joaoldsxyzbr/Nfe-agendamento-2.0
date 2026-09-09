@@ -54,10 +54,10 @@ public sealed class PortalFallbackServiceTests
 
         Assert.True(service.Cancel(operationId));
         var status = await WaitForTerminalAsync(service, operationId);
+        await launcher.CancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(1));
 
         Assert.Equal(PortalOperationStates.Cancelled, status.State);
         Assert.Null(status.Xml);
-        Assert.True(launcher.CancellationObserved);
     }
 
     [Fact]
@@ -141,7 +141,7 @@ public sealed class PortalFallbackServiceTests
     {
         public bool IsAvailable => true;
         public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        public bool CancellationObserved { get; private set; }
+        public TaskCompletionSource CancellationObserved { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public async Task<PortalLaunchResult> OpenAsync(PortalLaunchRequest request, CancellationToken cancellationToken)
         {
@@ -153,7 +153,7 @@ public sealed class PortalFallbackServiceTests
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                CancellationObserved = true;
+                CancellationObserved.TrySetResult();
                 return PortalLaunchResult.Cancelled("Portal cancelado pelo Bridge.");
             }
         }
