@@ -16,4 +16,12 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4191.47" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\src\NfeAgendamento.Bridge\Portal\PortalContracts.cs" Link="Shared\PortalContracts.cs" />
+    <Compile Include="..\..\src\NfeAgendamento.Bridge\Portal\PortalIpcContracts.cs" Link="Shared\PortalIpcContracts.cs" />
+    <Compile Include="..\..\src\NfeAgendamento.Bridge\Portal\PortalIpcProtocol.cs" Link="Shared\PortalIpcProtocol.cs" />
+    <Compile Include="..\..\src\NfeAgendamento.Bridge\Portal\PortalIpcSession.cs" Link="Shared\PortalIpcSession.cs" />
+    <Compile Include="..\..\src\NfeAgendamento.Bridge\Portal\PortalServerSessionLoop.cs" Link="Shared\PortalServerSessionLoop.cs" />
+  </ItemGroup>
 </Project>
