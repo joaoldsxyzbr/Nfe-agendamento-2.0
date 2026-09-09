@@ -23,22 +23,13 @@ internal sealed class PortalServer
 
     public async Task RunAsync(CancellationToken cancellationToken)
     {
-        using var server = new NamedPipeServerStream(
-            _pipeName,
-            PipeDirection.InOut,
-            maxNumberOfServerInstances: 1,
-            PipeTransmissionMode.Byte,
-            PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
-
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var watchdog = WatchParentAsync(lifetime);
 
         try
         {
-            await server.WaitForConnectionAsync(lifetime.Token);
-            await using var session = new PortalPipeSession(server);
-            var loop = new PortalServerSessionLoop(_runner);
-            await loop.RunAsync(session, lifetime.Token);
+            var connections = new PortalServerConnectionLoop(AcceptSessionAsync, _runner);
+            await connections.RunAsync(lifetime.Token);
         }
         finally
         {
@@ -50,6 +41,27 @@ internal sealed class PortalServer
             catch (OperationCanceledException)
             {
             }
+        }
+    }
+
+    private async Task<IPortalIpcSession> AcceptSessionAsync(CancellationToken cancellationToken)
+    {
+        var server = new NamedPipeServerStream(
+            _pipeName,
+            PipeDirection.InOut,
+            maxNumberOfServerInstances: 1,
+            PipeTransmissionMode.Byte,
+            PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
+
+        try
+        {
+            await server.WaitForConnectionAsync(cancellationToken);
+            return new PortalPipeSession(server);
+        }
+        catch
+        {
+            server.Dispose();
+            throw;
         }
     }
 
@@ -86,6 +98,6 @@ internal sealed class PortalServer
         public Task<PortalIpcEnvelope> ReceiveAsync(CancellationToken cancellationToken) =>
             PortalIpcProtocol.ReadAsync(_stream, cancellationToken);
 
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+        public ValueTask DisposeAsync() => _stream.DisposeAsync();
     }
 }
