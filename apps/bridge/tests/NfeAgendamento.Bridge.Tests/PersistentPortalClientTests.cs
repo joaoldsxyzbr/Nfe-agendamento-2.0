@@ -88,50 +88,71 @@ public sealed class PersistentPortalClientTests
     }
 
     [Fact]
-    public async Task Broken_session_fails_current_operation_and_next_operation_reconnects()
+    public async Task Broken_session_enters_cooldown_then_reconnects_and_recovers()
     {
+        var now = new DateTimeOffset(2026, 9, 9, 18, 0, 0, TimeSpan.Zero);
         var broken = new ThrowingSession();
         var recovered = new ScriptedSession(
-            Envelope(PortalIpcMessageType.Completed, "op-2", xml: "<nfeProc />")
+            Envelope(PortalIpcMessageType.Completed, "op-3", xml: "<nfeProc />")
         );
         var sessions = new Queue<IPortalIpcSession>([broken, recovered]);
         var creates = 0;
-        var client = new PersistentPortalClient(_ =>
-        {
-            creates += 1;
-            return Task.FromResult(sessions.Dequeue());
-        });
+        var client = new PersistentPortalClient(
+            _ =>
+            {
+                creates += 1;
+                return Task.FromResult(sessions.Dequeue());
+            },
+            clock: () => now,
+            failureCooldown: TimeSpan.FromSeconds(2));
 
         var first = await client.OpenAsync(Request("op-1"), TestContext.Current.CancellationToken);
-        var second = await client.OpenAsync(Request("op-2"), TestContext.Current.CancellationToken);
+        var duringCooldown = await client.OpenAsync(Request("op-2"), TestContext.Current.CancellationToken);
 
         Assert.Equal(PortalLaunchOutcome.Failed, first.Outcome);
-        Assert.Equal(PortalLaunchOutcome.Completed, second.Outcome);
+        Assert.Equal(PortalLaunchOutcome.Failed, duringCooldown.Outcome);
+        Assert.Contains("aguarde", duringCooldown.Message ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(1, creates);
+
+        now = now.AddSeconds(3);
+        var recoveredResult = await client.OpenAsync(Request("op-3"), TestContext.Current.CancellationToken);
+
+        Assert.Equal(PortalLaunchOutcome.Completed, recoveredResult.Outcome);
         Assert.Equal(2, creates);
     }
 
     [Fact]
-    public async Task Mismatched_operation_id_fails_closed_and_discards_session()
+    public async Task Protocol_mismatch_enters_cooldown_before_reconnecting()
     {
+        var now = new DateTimeOffset(2026, 9, 9, 18, 0, 0, TimeSpan.Zero);
         var bad = new ScriptedSession(
             Envelope(PortalIpcMessageType.Completed, "other-op", xml: "<nfeProc />")
         );
         var recovered = new ScriptedSession(
-            Envelope(PortalIpcMessageType.Completed, "op-2", xml: "<nfeProc />")
+            Envelope(PortalIpcMessageType.Completed, "op-3", xml: "<nfeProc />")
         );
         var sessions = new Queue<IPortalIpcSession>([bad, recovered]);
         var creates = 0;
-        var client = new PersistentPortalClient(_ =>
-        {
-            creates += 1;
-            return Task.FromResult(sessions.Dequeue());
-        });
+        var client = new PersistentPortalClient(
+            _ =>
+            {
+                creates += 1;
+                return Task.FromResult(sessions.Dequeue());
+            },
+            clock: () => now,
+            failureCooldown: TimeSpan.FromSeconds(2));
 
         var first = await client.OpenAsync(Request("op-1"), TestContext.Current.CancellationToken);
-        var second = await client.OpenAsync(Request("op-2"), TestContext.Current.CancellationToken);
+        var duringCooldown = await client.OpenAsync(Request("op-2"), TestContext.Current.CancellationToken);
 
         Assert.Equal(PortalLaunchOutcome.Failed, first.Outcome);
-        Assert.Equal(PortalLaunchOutcome.Completed, second.Outcome);
+        Assert.Equal(PortalLaunchOutcome.Failed, duringCooldown.Outcome);
+        Assert.Equal(1, creates);
+
+        now = now.AddSeconds(3);
+        var recoveredResult = await client.OpenAsync(Request("op-3"), TestContext.Current.CancellationToken);
+
+        Assert.Equal(PortalLaunchOutcome.Completed, recoveredResult.Outcome);
         Assert.Equal(2, creates);
     }
 
