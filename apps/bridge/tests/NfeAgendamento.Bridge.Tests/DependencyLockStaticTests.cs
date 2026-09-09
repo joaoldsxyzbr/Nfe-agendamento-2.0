@@ -31,4 +31,16 @@ public sealed class DependencyLockStaticTests
         Assert.True(File.Exists(Path.Combine(portalDirectory, "packages.lock.json")), "Lockfile NuGet do Portal não foi commitado.");
         Assert.True(File.Exists(Path.Combine(testsDirectory, "packages.lock.json")), "Lockfile NuGet dos testes não foi commitado.");
     }
+
+    [Fact]
+    public void Portal_lockfile_tracks_the_win_x64_publish_runtime()
+    {
+        var root = RepositoryRoot();
+        var portalDirectory = Path.Combine(root, "apps", "bridge", "windows", "NfeAgendamento.Portal");
+        var portalProject = File.ReadAllText(Path.Combine(portalDirectory, "NfeAgendamento.Portal.csproj"));
+        var portalLockfile = File.ReadAllText(Path.Combine(portalDirectory, "packages.lock.json"));
+
+        Assert.Contains("<RuntimeIdentifier>win-x64</RuntimeIdentifier>", portalProject);
+        Assert.Contains("win-x64", portalLockfile);
+    }
 }
