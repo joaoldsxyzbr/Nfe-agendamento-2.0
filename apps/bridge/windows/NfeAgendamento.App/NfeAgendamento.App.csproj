@@ -10,4 +10,9 @@
     <RootNamespace>NfeAgendamento.App</RootNamespace>
     <ApplicationIcon>..\..\assets\nfe-agendamento-bridge.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\src\NfeAgendamento.Bridge\Runtime\BridgeControlContracts.cs" Link="BridgeControl\BridgeControlContracts.cs" />
+    <Compile Include="..\..\src\NfeAgendamento.Bridge\Runtime\BridgeControlProtocol.cs" Link="BridgeControl\BridgeControlProtocol.cs" />
+  </ItemGroup>
 </Project>
