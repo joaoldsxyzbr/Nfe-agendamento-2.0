@@ -7,6 +7,7 @@
     <IsTestProject>true</IsTestProject>
     <WarningsAsErrors>$(WarningsAsErrors);xUnit1051</WarningsAsErrors>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RestoreLockedMode>true</RestoreLockedMode>
   </PropertyGroup>
 
   <ItemGroup>
