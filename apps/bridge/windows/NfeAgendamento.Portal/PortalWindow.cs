@@ -5,10 +5,11 @@ using System.Xml;
 using System.Xml.Linq;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
+using NfeAgendamento.Bridge.Portal;
 
 namespace NfeAgendamento.Portal;
 
-internal sealed class PortalWindow : Form
+internal sealed class PortalWindow : Form, IPortalServerOperationRunner
 {
     private const string OfficialHost = "www.nfe.fazenda.gov.br";
     private const string PortalUrl = "https://www.nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx?tipoConsulta=resumo&tipoConteudo=7PhJ+gAVw2g%3D";
@@ -17,22 +18,45 @@ internal sealed class PortalWindow : Form
     private const int RoEClosed = unchecked((int)0x80000013);
     private const int EAbort = unchecked((int)0x80004004);
 
-    private readonly PortalOptions _options;
+    private readonly PortalOptions? _legacyOptions;
+    private readonly bool _serverMode;
     private readonly WebView2 _webView;
     private readonly Label _status;
+    private Task? _browserPreparation;
+    private PortalLaunchRequest? _activeRequest;
+    private TaskCompletionSource<PortalLaunchResult>? _activeCompletion;
     private string? _temporaryDownloadPath;
     private bool _downloadInProgress;
-    private bool _finalized;
+    private bool _legacyFinalized;
+    private bool _allowRealClose;
 
     public PortalWindow(PortalOptions options)
+        : this(serverMode: false)
     {
-        _options = options ?? throw new ArgumentNullException(nameof(options));
+        _legacyOptions = options ?? throw new ArgumentNullException(nameof(options));
+        Shown += async (_, _) =>
+        {
+            try
+            {
+                await PrepareAsync();
+            }
+            catch (Exception exception) when (IsExpectedPortalException(exception))
+            {
+                FailLegacyAndClose(UserFriendlyBrowserMessage(exception));
+            }
+        };
+    }
+
+    private PortalWindow(bool serverMode)
+    {
+        _serverMode = serverMode;
 
         Text = "NFe Agendamento - Consulta pela Fazenda";
         StartPosition = FormStartPosition.CenterScreen;
         MinimumSize = new Size(900, 650);
         ClientSize = new Size(1100, 800);
         Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point);
+        ShowInTaskbar = !serverMode;
 
         var header = new Panel
         {
@@ -84,7 +108,6 @@ internal sealed class PortalWindow : Form
         Controls.Add(_webView);
         Controls.Add(header);
 
-        Shown += async (_, _) => await InitializeBrowserAsync();
         FormClosing += OnFormClosing;
         FormClosed += (_, _) =>
         {
@@ -93,44 +116,94 @@ internal sealed class PortalWindow : Form
         };
     }
 
+    public static PortalWindow CreateServerWindow() => new(serverMode: true);
+
     public int ExitCode { get; private set; } = 2;
 
-    public string CertificateThumbprint => _options.CertificateThumbprint;
+    private string CurrentAccessKey => _activeRequest?.AccessKey ?? _legacyOptions?.AccessKey ?? string.Empty;
+    private string CertificateThumbprint => _activeRequest?.CertificateThumbprint ?? _legacyOptions?.CertificateThumbprint ?? string.Empty;
+
+    public Task PrepareAsync()
+    {
+        if (_browserPreparation is not null) return _browserPreparation;
+        _browserPreparation = InitializeBrowserAsync();
+        return _browserPreparation;
+    }
+
+    public async Task<PortalLaunchResult> RunAsync(
+        PortalLaunchRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!_serverMode)
+            throw new InvalidOperationException("Esta janela não está no modo persistente.");
+        ArgumentNullException.ThrowIfNull(request);
+        if (_activeCompletion is not null)
+            return PortalLaunchResult.Failed("Já existe uma operação Portal ativa nesta janela.");
+
+        await PrepareAsync();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        CleanupTemporaryDownload();
+        _downloadInProgress = false;
+        _activeRequest = request;
+        _activeCompletion = new TaskCompletionSource<PortalLaunchResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        SetStatus("Chave preenchida automaticamente. Resolva o hCaptcha manualmente e clique em Consultar.");
+
+        ShowInTaskbar = true;
+        if (!Visible) Show();
+        if (WindowState == FormWindowState.Minimized) WindowState = FormWindowState.Normal;
+        BringToFront();
+        Activate();
+
+        _webView.CoreWebView2.Navigate(PortalUrl);
+
+        using var registration = cancellationToken.Register(() =>
+        {
+            try
+            {
+                if (IsHandleCreated && !IsDisposed)
+                    BeginInvoke(new Action(() => CompleteServerOperation(
+                        PortalLaunchResult.Cancelled("Consulta pelo Portal cancelada."))));
+            }
+            catch (Exception exception) when (IsBrowserLifecycleException(exception))
+            {
+            }
+        });
+
+        return await _activeCompletion.Task;
+    }
+
+    public void Shutdown()
+    {
+        _allowRealClose = true;
+        _activeCompletion?.TrySetResult(PortalLaunchResult.Failed("Helper do Portal encerrado."));
+        Close();
+    }
 
     private async Task InitializeBrowserAsync()
     {
-        try
-        {
-            var userDataFolder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "NfeAgendamentoBridge",
-                "webview2");
-            Directory.CreateDirectory(userDataFolder);
+        if (!IsHandleCreated) CreateControl();
+        if (!_webView.IsHandleCreated) _webView.CreateControl();
 
-            var environment = await CoreWebView2Environment.CreateAsync(userDataFolder: userDataFolder);
-            await _webView.EnsureCoreWebView2Async(environment);
+        var userDataFolder = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "NfeAgendamentoBridge",
+            "webview2");
+        Directory.CreateDirectory(userDataFolder);
 
-            var core = _webView.CoreWebView2;
-            core.Settings.AreDevToolsEnabled = false;
-            core.Settings.AreDefaultContextMenusEnabled = false;
-            core.Settings.IsStatusBarEnabled = true;
-            core.NavigationStarting += CoreNavigationStarting;
-            core.NavigationCompleted += CoreNavigationCompleted;
-            core.NewWindowRequested += CoreNewWindowRequested;
-            core.ClientCertificateRequested += CoreClientCertificateRequested;
-            core.DownloadStarting += CoreDownloadStarting;
-            core.Navigate(PortalUrl);
-        }
-        catch (WebView2RuntimeNotFoundException)
-        {
-            FailAndClose("O Microsoft Edge WebView2 Runtime não está instalado neste computador.");
-        }
-        catch (Exception exception) when (
-            IsBrowserLifecycleException(exception) ||
-            exception is IOException or UnauthorizedAccessException)
-        {
-            FailAndClose(exception.Message);
-        }
+        var environment = await CoreWebView2Environment.CreateAsync(userDataFolder: userDataFolder);
+        await _webView.EnsureCoreWebView2Async(environment);
+
+        var core = _webView.CoreWebView2;
+        core.Settings.AreDevToolsEnabled = false;
+        core.Settings.AreDefaultContextMenusEnabled = false;
+        core.Settings.IsStatusBarEnabled = true;
+        core.NavigationStarting += CoreNavigationStarting;
+        core.NavigationCompleted += CoreNavigationCompleted;
+        core.NewWindowRequested += CoreNewWindowRequested;
+        core.ClientCertificateRequested += CoreClientCertificateRequested;
+        core.DownloadStarting += CoreDownloadStarting;
+        core.Navigate(PortalUrl);
     }
 
     private void CoreNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
@@ -146,13 +219,16 @@ internal sealed class PortalWindow : Form
         if (!e.IsSuccess || _webView.CoreWebView2 is null || !IsOfficialPortalUri(_webView.Source?.AbsoluteUri))
             return;
 
+        var accessKey = CurrentAccessKey;
+        if (string.IsNullOrWhiteSpace(accessKey)) return;
+
         try
         {
             var script =
                 "(() => {" +
                 "const input = document.querySelector('#ctl00_ContentPlaceHolder1_txtChaveAcessoResumo, input[id$=\"txtChaveAcessoResumo\"]');" +
                 "if (!input) return false;" +
-                $"if (!input.value) input.value = '{_options.AccessKey}';" +
+                $"input.value = '{accessKey}';" +
                 "input.dispatchEvent(new Event('input', { bubbles: true }));" +
                 "input.dispatchEvent(new Event('change', { bubbles: true }));" +
                 "input.focus();" +
@@ -193,6 +269,13 @@ internal sealed class PortalWindow : Form
             return;
         }
 
+        if (string.IsNullOrWhiteSpace(CertificateThumbprint))
+        {
+            e.Cancel = true;
+            e.Handled = true;
+            return;
+        }
+
         CoreWebView2ClientCertificate? selected = null;
         foreach (var candidate in e.MutuallyTrustedCertificates)
         {
@@ -226,6 +309,14 @@ internal sealed class PortalWindow : Form
 
     private void CoreDownloadStarting(object? sender, CoreWebView2DownloadStartingEventArgs e)
     {
+        var accessKey = CurrentAccessKey;
+        if (string.IsNullOrWhiteSpace(accessKey))
+        {
+            e.Cancel = true;
+            e.Handled = true;
+            return;
+        }
+
         if (!IsOfficialXmlDownload(e.DownloadOperation.Uri))
         {
             e.Cancel = true;
@@ -245,7 +336,7 @@ internal sealed class PortalWindow : Form
         _downloadInProgress = true;
         var directory = Path.Combine(Path.GetTempPath(), "NfeAgendamento", "portal-download");
         Directory.CreateDirectory(directory);
-        _temporaryDownloadPath = Path.Combine(directory, $"{_options.AccessKey}-{Guid.NewGuid():N}.xml");
+        _temporaryDownloadPath = Path.Combine(directory, $"{accessKey}-{Guid.NewGuid():N}.xml");
 
         e.ResultFilePath = _temporaryDownloadPath;
         e.Handled = true;
@@ -290,13 +381,24 @@ internal sealed class PortalWindow : Form
             if (info.Length <= 0 || info.Length > MaxXmlBytes)
                 throw new InvalidDataException("O XML baixado pelo Portal possui tamanho inválido.");
 
-            var xml = await File.ReadAllTextAsync(path, Encoding.UTF8);
-            ValidateDownloadedXml(xml, _options.AccessKey);
-            await WriteResultAtomicallyAsync(xml);
+            var accessKey = CurrentAccessKey;
+            if (string.IsNullOrWhiteSpace(accessKey))
+                throw new InvalidDataException("A operação atual do Portal não possui chave NF-e válida.");
 
-            _finalized = true;
+            var xml = await File.ReadAllTextAsync(path, Encoding.UTF8);
+            ValidateDownloadedXml(xml, accessKey);
+
+            if (_serverMode)
+            {
+                SetStatus("XML validado. Retornando ao site...");
+                CompleteServerOperation(PortalLaunchResult.Completed(xml));
+                return;
+            }
+
+            await WriteLegacyResultAtomicallyAsync(xml);
+            _legacyFinalized = true;
             ExitCode = 0;
-            TryDelete(_options.ErrorPath);
+            TryDelete(_legacyOptions!.ErrorPath);
             SetStatus("XML validado. Retornando ao site...");
             Close();
         }
@@ -304,12 +406,19 @@ internal sealed class PortalWindow : Form
             exception is InvalidDataException or IOException or UnauthorizedAccessException or XmlException)
         {
             SetStatus(exception.Message, error: true);
-            MessageBox.Show(
-                this,
-                exception.Message,
-                "XML não importado",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Warning);
+            if (_serverMode)
+            {
+                CompleteServerOperation(PortalLaunchResult.Failed(exception.Message));
+            }
+            else
+            {
+                MessageBox.Show(
+                    this,
+                    exception.Message,
+                    "XML não importado",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+            }
         }
         finally
         {
@@ -318,17 +427,17 @@ internal sealed class PortalWindow : Form
         }
     }
 
-    private async Task WriteResultAtomicallyAsync(string xml)
+    private async Task WriteLegacyResultAtomicallyAsync(string xml)
     {
-        var directory = Path.GetDirectoryName(_options.ResultPath)
+        var directory = Path.GetDirectoryName(_legacyOptions!.ResultPath)
             ?? throw new InvalidDataException("Caminho de retorno do Portal inválido.");
         Directory.CreateDirectory(directory);
 
-        var temporary = _options.ResultPath + $".{Guid.NewGuid():N}.tmp";
+        var temporary = _legacyOptions.ResultPath + $".{Guid.NewGuid():N}.tmp";
         try
         {
             await File.WriteAllTextAsync(temporary, xml, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-            File.Move(temporary, _options.ResultPath, overwrite: true);
+            File.Move(temporary, _legacyOptions.ResultPath, overwrite: true);
         }
         finally
         {
@@ -336,22 +445,49 @@ internal sealed class PortalWindow : Form
         }
     }
 
-    private void OnFormClosing(object? sender, FormClosingEventArgs e)
+    private void CompleteServerOperation(PortalLaunchResult result)
     {
-        if (_finalized) return;
+        if (!_serverMode) return;
+        var completion = _activeCompletion;
+        if (completion is null) return;
 
-        _finalized = true;
-        ExitCode = 2;
-        PortalArguments.TryWriteError(_options.ErrorPath, "Portal fechado pelo usuário.");
+        _activeCompletion = null;
+        _activeRequest = null;
+        _downloadInProgress = false;
+        CleanupTemporaryDownload();
+        Hide();
+        ShowInTaskbar = false;
+        completion.TrySetResult(result);
     }
 
-    private void FailAndClose(string message)
+    private void OnFormClosing(object? sender, FormClosingEventArgs e)
     {
-        if (_finalized) return;
+        if (_allowRealClose) return;
 
-        _finalized = true;
+        if (_serverMode)
+        {
+            e.Cancel = true;
+            if (_activeCompletion is not null)
+                CompleteServerOperation(PortalLaunchResult.Cancelled("Portal fechado pelo usuário."));
+            else
+                Hide();
+            return;
+        }
+
+        if (_legacyFinalized) return;
+
+        _legacyFinalized = true;
+        ExitCode = 2;
+        PortalArguments.TryWriteError(_legacyOptions!.ErrorPath, "Portal fechado pelo usuário.");
+    }
+
+    private void FailLegacyAndClose(string message)
+    {
+        if (_legacyFinalized) return;
+
+        _legacyFinalized = true;
         ExitCode = 1;
-        PortalArguments.TryWriteError(_options.ErrorPath, message);
+        PortalArguments.TryWriteError(_legacyOptions!.ErrorPath, message);
         SetStatus(message, error: true);
         MessageBox.Show(this, message, "Portal da NF-e", MessageBoxButtons.OK, MessageBoxIcon.Error);
         Close();
@@ -428,6 +564,18 @@ internal sealed class PortalWindow : Form
         if (!string.Equals(infNFe.Attribute("Id")?.Value, "NFe" + accessKey, StringComparison.Ordinal))
             throw new InvalidDataException("O XML baixado não corresponde à chave NF-e consultada.");
     }
+
+    private static string UserFriendlyBrowserMessage(Exception exception) =>
+        exception is WebView2RuntimeNotFoundException
+            ? "O Microsoft Edge WebView2 Runtime não está instalado neste computador."
+            : exception.Message;
+
+    private static bool IsExpectedPortalException(Exception exception) =>
+        exception is WebView2RuntimeNotFoundException
+        or IOException
+        or UnauthorizedAccessException
+        or COMException
+        or InvalidOperationException;
 
     private static bool IsBrowserLifecycleException(Exception exception)
     {
