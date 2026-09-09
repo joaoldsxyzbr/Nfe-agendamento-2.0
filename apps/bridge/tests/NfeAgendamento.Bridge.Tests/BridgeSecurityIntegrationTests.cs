@@ -33,7 +33,7 @@ public sealed class BridgeSecurityIntegrationTests : IAsyncDisposable
         using var client = CreateClient();
         using var request = Request(AllowedOrigin);
 
-        using var response = await client.SendAsync(request);
+        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(AllowedOrigin, response.Headers.GetValues("Access-Control-Allow-Origin").Single());
@@ -48,7 +48,7 @@ public sealed class BridgeSecurityIntegrationTests : IAsyncDisposable
         using var client = CreateClient();
         using var request = Request(origin);
 
-        using var response = await client.SendAsync(request);
+        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
@@ -60,7 +60,7 @@ public sealed class BridgeSecurityIntegrationTests : IAsyncDisposable
         using var request = Request(AllowedOrigin);
         request.Headers.Host = "192.168.0.10:17345";
 
-        using var response = await client.SendAsync(request);
+        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
