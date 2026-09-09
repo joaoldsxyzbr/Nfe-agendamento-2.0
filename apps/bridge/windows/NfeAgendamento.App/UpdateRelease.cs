@@ -22,7 +22,7 @@ public static class UpdateReleaseParser
         ArgumentException.ThrowIfNullOrWhiteSpace(json);
         ArgumentNullException.ThrowIfNull(currentVersion);
 
-        using var document = JsonDocument.Parse(json);
+        using var document = ParseDocument(json);
         var root = document.RootElement;
 
         if (root.TryGetProperty("draft", out var draft) && draft.GetBoolean())
@@ -81,6 +81,18 @@ public static class UpdateReleaseParser
             latestVersion,
             true,
             new UpdateAsset(expectedName, downloadUrl, digest, size));
+    }
+
+    private static JsonDocument ParseDocument(string json)
+    {
+        try
+        {
+            return JsonDocument.Parse(json);
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidDataException("A resposta da release do GitHub não contém JSON válido.", exception);
+        }
     }
 
     private static string RequiredString(JsonElement element, string propertyName)
