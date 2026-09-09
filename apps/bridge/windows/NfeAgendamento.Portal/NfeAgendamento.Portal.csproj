@@ -10,6 +10,7 @@
     <RootNamespace>NfeAgendamento.Portal</RootNamespace>
     <MSBuildWarningsAsErrors>$(MSBuildWarningsAsErrors);MSB3277</MSBuildWarningsAsErrors>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RestoreLockedMode>true</RestoreLockedMode>
   </PropertyGroup>
 
   <ItemGroup>
