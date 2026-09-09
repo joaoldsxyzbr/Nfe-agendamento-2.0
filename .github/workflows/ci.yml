@@ -34,6 +34,7 @@ jobs:
       - run: dotnet run --project apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeAgendamento.Bridge.Tests.csproj -c Release
       - run: dotnet build apps/bridge/src/NfeAgendamento.Bridge/NfeAgendamento.Bridge.csproj -c Release --no-restore
       - run: dotnet build apps/bridge/windows/NfeAgendamento.Portal/NfeAgendamento.Portal.csproj -c Release
+      - run: dotnet build apps/bridge/windows/NfeAgendamento.App/NfeAgendamento.App.csproj -c Release
 
   windows-package:
     needs: [web, bridge]
@@ -47,6 +48,8 @@ jobs:
         run: dotnet publish apps/bridge/src/NfeAgendamento.Bridge/NfeAgendamento.Bridge.csproj -c Release -r win-x64 --self-contained true -o artifacts/NfeAgendamentoBridge
       - name: Publish Portal helper
         run: dotnet publish apps/bridge/windows/NfeAgendamento.Portal/NfeAgendamento.Portal.csproj -c Release -r win-x64 --self-contained true -o artifacts/NfeAgendamentoBridge
+      - name: Publish tray app
+        run: dotnet publish apps/bridge/windows/NfeAgendamento.App/NfeAgendamento.App.csproj -c Release -r win-x64 --self-contained true -o artifacts/NfeAgendamentoBridge
       - name: Ensure Inno Setup
         shell: pwsh
         run: |
@@ -65,15 +68,15 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }
-          $setup = "artifacts\installer\NFeAgendamentoBridge-Setup-v0.0.4.exe"
+          $setup = "artifacts\installer\NFeAgendamentoBridge-Setup-v0.0.5.exe"
           if (!(Test-Path $setup)) {
             throw "Setup não gerado em $setup"
           }
       - name: Upload Windows installer
         uses: actions/upload-artifact@v4
         with:
-          name: NFeAgendamentoBridge-Setup-v0.0.4
-          path: artifacts/installer/NFeAgendamentoBridge-Setup-v0.0.4.exe
+          name: NFeAgendamentoBridge-Setup-v0.0.5
+          path: artifacts/installer/NFeAgendamentoBridge-Setup-v0.0.5.exe
           if-no-files-found: error
           retention-days: 14
       - name: Upload Windows package
