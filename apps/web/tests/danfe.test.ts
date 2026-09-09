@@ -45,6 +45,13 @@ describe('DANFE approved behavior', () => {
     expect(nextDanfeZoom(0.6, 100)).toBe(0.6);
   });
 
+  it('binds Ctrl+wheel directly to the DANFE scroll viewport', () => {
+    const source = readFileSync(new URL('../src/danfe/render.ts', import.meta.url), 'utf8');
+    expect(source).toContain("container.querySelector<HTMLElement>('.danfe-scroll')");
+    expect(source).toContain("scroll.addEventListener('wheel', wheel, { passive: false })");
+    expect(source).toContain("scroll.removeEventListener('wheel', wheel)");
+  });
+
   it('keeps approved A4 and compact item-column CSS', () => {
     const css = readFileSync(new URL('../src/danfe/styles.css', import.meta.url), 'utf8');
     for (const rule of ['width: 210mm', 'min-height: 277mm', 'font-family: Arial', '.products-table col.item', 'width: 8mm', '@media print']) {
