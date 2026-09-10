@@ -16,9 +16,11 @@ if (!app) {
 app.innerHTML = `
   <div class="app-shell">
     <header class="topbar">
-      <div>
-        <p class="eyebrow">NFe Agendamento 2.0</p>
-        <h1>Consultar NF-e</h1>
+      <div class="brand-heading">
+        <div class="brand-lockup">
+          <img class="brand-mark" src="/brand-mark.png" alt="" aria-hidden="true" />
+          <h1 class="brand-title"><span>NF-e</span><span>Agendamento</span></h1>
+        </div>
         <p class="subtitle">Consulta direta usando o certificado A1 deste computador.</p>
       </div>
       <div class="bridge-pill" id="bridge-status" data-state="checking" role="status" aria-live="polite">
