@@ -3,7 +3,8 @@
 **Data:** 2026-09-10  
 **Repositório:** `joaoldsxyzbr/Nfe-agendamento-2.0`  
 **Implementação:** `f8ec151c227f5d1dddd792c66eebc1ba4ed47d38`  
-**Status:** implementado e validado pelo CI; teste físico com Portal/A1 real ainda obrigatório.
+**Release:** `v0.0.7`  
+**Status:** implementado, validado pelo CI e incluído na release v0.0.7; teste físico com Portal/A1 real ainda obrigatório.
 
 ## Objetivo
 
@@ -53,12 +54,14 @@ O helper apenas observa o campo de resposta que o hCaptcha preenche **depois da 
 
 ## Alterações de código
 
-A mudança ficou restrita a:
+A mudança comportamental ficou restrita a:
 
 - `apps/bridge/windows/NfeAgendamento.Portal/PortalWindow.cs`;
 - `apps/bridge/tests/NfeAgendamento.Bridge.Tests/PortalHelperStaticTests.cs`.
 
-Não foram alterados:
+A release v0.0.7 também atualiza a versão canônica, notas de release, documentação e o atalho de download do site para o novo Setup.
+
+Não foram alterados pela automação pós-hCaptcha:
 
 - consulta `NFeDistribuicaoDFe`;
 - classificação fiscal/`consumption_limit`;
@@ -66,13 +69,12 @@ Não foram alterados:
 - DANFE;
 - tratamento Fernando Klein;
 - API HTTP do Bridge;
-- updater;
-- versão canônica;
+- política do updater;
 - workflow de release.
 
 ## Cobertura automatizada
 
-O teste estático do helper passou a exigir explicitamente:
+O teste estático do helper exige explicitamente:
 
 - observação de `h-captcha-response`;
 - uso do botão oficial de consulta hCaptcha;
@@ -81,11 +83,9 @@ O teste estático do helper passou a exigir explicitamente:
 - guarda `_acceptExpectedPortalDialog`;
 - ausência de `hcaptcha.execute` e `grecaptcha.execute`.
 
-O CI do commit de implementação foi o run `34471269508` e terminou verde nos três jobs:
+O CI do commit de implementação `f8ec151c227f5d1dddd792c66eebc1ba4ed47d38` terminou verde nos três jobs, incluindo publish do Portal helper em Windows.
 
-- `web` — testes, build e `wrangler deploy --dry-run`;
-- `bridge` — suíte .NET e build do Bridge;
-- `windows-package` — publish Bridge, **publish do Portal helper**, publish do App, geração do Setup e upload dos dois artifacts Windows.
+A release v0.0.7 é publicada somente depois que o próprio commit marcador `release: v0.0.7` também passar pelos jobs `web`, `bridge` e `windows-package`.
 
 ## Aceitação física específica
 
@@ -108,6 +108,4 @@ Em uma ocorrência natural/controlada de limite de consumo, validar no Windows:
 
 ## Observação de compatibilidade
 
-O Portal Nacional é uma página externa e pode alterar DOM/IDs/comportamento no futuro. Por isso a automação foi deliberadamente fail-closed e baseada em elementos específicos. Se os controles oficiais deixarem de ser reconhecidos, o helper deve deixar de automatizar aquela etapa em vez de ampliar seletores ou aceitar ações genéricas.
-
-Nenhuma nova release foi criada nesta mudança. Para teste anterior a uma release posterior, usar o artifact Windows produzido pelo CI do SHA efetivamente validado.
+O Portal Nacional é uma página externa e pode alterar DOM/IDs/comportamento no futuro. Por isso a automação é deliberadamente fail-closed e baseada em elementos específicos. Se os controles oficiais deixarem de ser reconhecidos, o helper deve deixar de automatizar aquela etapa em vez de ampliar seletores ou aceitar ações genéricas.
