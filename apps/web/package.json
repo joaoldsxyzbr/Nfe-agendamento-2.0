@@ -6,7 +6,10 @@
   "scripts": {
     "test": "vitest run",
     "build": "tsc --noEmit && vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "lint": "tsc --noEmit && node ../../scripts/lint-web.mjs",
+    "format": "node ../../scripts/format-web.mjs --write",
+    "format:check": "node ../../scripts/format-web.mjs --check"
   },
   "dependencies": {
     "@xmldom/xmldom": "0.9.12"
