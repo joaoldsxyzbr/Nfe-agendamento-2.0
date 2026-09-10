@@ -18,8 +18,8 @@ O cabeçalho usa um único bloco visual à esquerda: símbolo da aplicação e, 
 
 A marca atual usa azul vibrante e amarelo vibrante, com fundo transparente e símbolo composto por documento NF-e, relógio/agendamento e confirmação.
 
-- no cabeçalho do site, o símbolo transparente fica em `apps/web/public/brand-mark.png`;
-- o nome visual é renderizado como **NF-e** / **Agendamento** em duas linhas por `apps/web/src/brand.css`;
+- no cabeçalho do site, o símbolo transparente fica em `apps/web/public/brand-mark.png` e é renderizado como imagem decorativa;
+- o nome **NF-e** / **Agendamento** existe como conteúdo real dentro do `<h1>`, em duas `<span>`, preservando semântica e acessibilidade; `apps/web/src/brand.css` cuida somente da apresentação;
 - a aba do navegador usa somente o símbolo, sem o nome, em `apps/web/public/favicon.ico`;
 - App/Bridge Windows usam somente o mesmo símbolo, sem o nome, em `apps/bridge/assets/nfe-agendamento-bridge.ico`.
 
