@@ -13,7 +13,7 @@ Este checklist cobre o que o CI não consegue provar: instalação real no Windo
 - site oficial disponível exatamente em `https://nfeagendamento.joaolds.xyz.br`;
 - acesso à Internet para SEFAZ, GitHub Releases e Portal Nacional da NF-e.
 
-Versão canônica atual: **`0.0.7`**. Para validar a release pública, use `NFeAgendamentoBridge-Setup-v0.0.7.exe` e registre o SHA/tag correspondentes.
+Versão canônica atual: **`0.0.8`**. Para validar a release pública, use `NFeAgendamentoBridge-Setup-v0.0.8.exe` e registre o SHA/tag correspondentes.
 
 > O publish é self-contained: não exige instalação prévia do .NET 10. O WebView2 Runtime continua necessário somente para o fallback Portal.
 
@@ -25,7 +25,7 @@ Registre antes de começar:
 | --- | --- |
 | Data | |
 | Commit SHA | |
-| Versão canônica | `0.0.7` |
+| Versão canônica | `0.0.8` |
 | Run CI / artifact | |
 | URL do site | `https://nfeagendamento.joaolds.xyz.br` |
 | Windows | |
@@ -117,7 +117,7 @@ Resultado: ☐ aprovado
 7. Feche por botão, `Esc` e backdrop.
 8. Use `Imprimir / PDF` e confira A4/paginação.
 9. Confirme que transporte/volumes não aparece sem conteúdo útil.
-10. Confirme que o atalho de download do app aponta para `NFeAgendamentoBridge-Setup-v0.0.7.exe`.
+10. Confirme que o atalho de download do app aponta para `NFeAgendamentoBridge-Setup-v0.0.8.exe`.
 
 Resultado: ☐ aprovado
 
@@ -176,11 +176,11 @@ Resultado: ☐ aprovado
 
 ## 10. Atualizador manual
 
-1. Em uma instalação v0.0.6, clique em **Verificar atualizações**.
-2. Confirme descoberta da v0.0.7.
+1. Em uma instalação v0.0.7, clique em **Verificar atualizações**.
+2. Confirme descoberta da v0.0.8.
 3. Confirme exibição da versão e pedido de confirmação.
 4. Confirme que asset/tamanho/SHA-256 inválidos impedem execução.
-5. Após confirmação válida, confirme que o Setup v0.0.7 inicia e App/Bridge encerram para substituição.
+5. Após confirmação válida, confirme que o Setup v0.0.8 inicia e App/Bridge encerram para substituição.
 6. Após atualizar, confirme que nova verificação informa que a versão está atualizada.
 
 Detalhes: `docs/testing/bridge-updater.md`.
@@ -198,7 +198,7 @@ Resultado: ☐ aprovado
 
 ## 12. Segundo PC independente
 
-1. Instale o mesmo Setup v0.0.7 validado.
+1. Instale o mesmo Setup v0.0.8 validado.
 2. Confirme início na bandeja sem console.
 3. Use o A1 instalado nesse segundo PC.
 4. Abra o site oficial e faça consulta normal.
@@ -225,7 +225,7 @@ Uma release só deve ser declarada fisicamente validada depois de:
 - etapas 0–7 aprovadas;
 - etapa 8 aprovada em ocorrência real/controlada;
 - lifecycle/recovery aprovado;
-- atualização v0.0.6 → v0.0.7 validada;
+- atualização v0.0.7 → v0.0.8 validada;
 - segundo PC aprovado quando fizer parte da implantação;
 - divergências registradas e corrigidas.
 
