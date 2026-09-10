@@ -74,6 +74,14 @@ describe('application shell', () => {
     expect(downloadIndex).toBeGreaterThan(parseIndex);
   });
 
+  it('shows a clear message for cancelled NF-e status 653', () => {
+    const main = readFileSync(fromWeb('src/main.ts'), 'utf8');
+
+    expect(main).toContain("lookup.cStat === '653'");
+    expect(main).toContain("'NF-e cancelada'");
+    expect(main).toContain('Esta nota fiscal foi cancelada na SEFAZ e, por isso, o XML não está disponível para download.');
+    expect(main).toContain('Código SEFAZ: 653.');
+  });
   it('wires the DANFE preview, local zoom, close and browser print actions', () => {
     const main = readFileSync(fromWeb('src/main.ts'), 'utf8');
     const css = readFileSync(fromWeb('src/styles.css'), 'utf8');

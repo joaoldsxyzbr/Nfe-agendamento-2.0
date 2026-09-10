@@ -42,7 +42,17 @@ Os controles principais da consulta ficam imediatamente abaixo do campo da chave
 
 O estado inicial continua informando que nenhuma NF-e foi carregada. Depois que uma consulta é iniciada, o botão **Nova consulta** fica disponível. Ele permanece desabilitado enquanto uma operação está em andamento e, quando acionado após a conclusão, limpa a chave digitada, remove o resultado/DANFE/XML temporário, restaura o estado inicial e devolve o foco ao campo da chave.
 
-As mudanças desta etapa são exclusivamente visuais; nenhum comportamento de consulta, reset, SEFAZ, Portal, certificado ou DANFE foi alterado.
+Os refinamentos visuais descritos acima não alteram o comportamento de consulta, reset, SEFAZ, Portal, certificado ou DANFE.
+
+### Retorno de NF-e cancelada
+
+Quando a consulta direta retorna `fiscal_status` com `cStat 653`, a interface apresenta um aviso amigável em vez do título genérico **Resultado fiscal**:
+
+- título: **NF-e cancelada**;
+- mensagem: informa que a nota foi cancelada na SEFAZ e que o XML não está disponível para download;
+- o código **SEFAZ 653** permanece visível como informação técnica secundária.
+
+Os demais retornos `fiscal_status` continuam usando o tratamento genérico existente. Esse ajuste é somente de apresentação do retorno fiscal e não altera a consulta, o certificado, o XML, o DANFE ou a regra de fallback do Portal.
 
 ## Configurações
 

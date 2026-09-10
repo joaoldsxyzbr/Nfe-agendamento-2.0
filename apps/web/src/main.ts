@@ -303,6 +303,13 @@ function renderLookupFailure(lookup: NfeLookupResult): void {
       renderLookupState('SEFAZ indisponível', status);
       break;
     case 'fiscal_status':
+      if (lookup.cStat === '653') {
+        renderLookupState(
+          'NF-e cancelada',
+          'Esta nota fiscal foi cancelada na SEFAZ e, por isso, o XML não está disponível para download. Código SEFAZ: 653.',
+        );
+        break;
+      }
       renderLookupState('Resultado fiscal', status);
       break;
     default:
