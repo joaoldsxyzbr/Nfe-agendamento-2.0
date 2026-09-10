@@ -1,0 +1,20 @@
+.topbar > div:first-child > .eyebrow {
+  width: 72px;
+  height: 72px;
+  margin: -4px 0 10px;
+  overflow: hidden;
+  background: url('/brand-mark.svg') center / contain no-repeat;
+  color: transparent;
+  font-size: 0;
+  line-height: 0;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+@media (max-width: 720px) {
+  .topbar > div:first-child > .eyebrow {
+    width: 64px;
+    height: 64px;
+    margin-top: 0;
+  }
+}

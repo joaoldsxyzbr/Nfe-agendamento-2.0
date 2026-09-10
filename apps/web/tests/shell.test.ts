@@ -10,6 +10,8 @@ describe('application shell', () => {
       'vite.config.ts',
       'wrangler.jsonc',
       'public/favicon.ico',
+      'public/brand-mark.svg',
+      'src/brand.css',
       'src/main.ts',
       'src/styles.css',
     ];
@@ -22,11 +24,14 @@ describe('application shell', () => {
 
     const html = readFileSync(fromWeb('index.html'), 'utf8').toLowerCase();
     const main = readFileSync(fromWeb('src/main.ts'), 'utf8').toLowerCase();
+    const brandCss = readFileSync(fromWeb('src/brand.css'), 'utf8').toLowerCase();
     const activeSource = `${html}\n${main}`;
 
     expect(activeSource).toContain('nfe agendamento');
     expect(html).toContain('rel="icon"');
     expect(html).toContain('href="/favicon.ico"');
+    expect(html).toContain('href="/src/brand.css"');
+    expect(brandCss).toContain("url('/brand-mark.svg')");
     expect(activeSource).not.toContain('consulta em lote');
     expect(activeSource).not.toContain('pareamento');
     expect(activeSource).not.toContain('standby');
