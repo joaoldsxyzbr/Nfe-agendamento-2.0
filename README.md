@@ -11,6 +11,7 @@ Reescrita limpa do NFe Agendamento com **site estático + App/Bridge Windows loc
 - **API local:** `/api/v1`.
 - **Certificado A1:** descoberto em `CurrentUser/My`; a chave privada nunca sai do Windows/Bridge.
 - **Persistência:** somente o thumbprint selecionado em `%LOCALAPPDATA%/NfeAgendamentoBridge/settings.json`.
+- **Diagnóstico local:** log estruturado JSON Lines com rotação em `%LOCALAPPDATA%\NfeAgendamentoBridge\logs`, sem armazenar chave da NF-e, XML, PFX, senha, chave privada, mensagem ou stack trace de exceção.
 - **Fallback Portal:** helper Windows separado com WebView2, Portal Nacional fixo, hCaptcha sempre manual e processo persistente reutilizado entre consultas.
 - **Distribuição Windows:** instalador Inno Setup por usuário, sem administrador, com início automático do app na bandeja no login.
 - **Versão canônica atual:** `0.0.7` em `Directory.Build.props`.
@@ -20,6 +21,7 @@ Reescrita limpa do NFe Agendamento com **site estático + App/Bridge Windows loc
 Implementado e coberto pelos gates automatizados do projeto:
 
 - Vite/TypeScript no frontend e .NET 10 no Bridge/App/Portal;
+- TypeScript em modo `strict`, lint adicional e verificação determinística de formato no CI;
 - dependências npm fixadas por `package-lock.json`, `npm ci` e `npm audit --audit-level=high` no CI;
 - dependências NuGet em locked mode;
 - tema dark e DANFE A4 branco/fiscal;
@@ -27,6 +29,7 @@ Implementado e coberto pelos gates automatizados do projeto:
 - tratamento Fernando Klein preservando o `cProd` fiscal no XML;
 - painel de configurações para certificado A1;
 - interface de consulta simplificada com resultado integrado e ação **Nova consulta**;
+- cabeçalho com marca e nome **NF-e / Agendamento** como conteúdo semântico real no `<h1>`;
 - atalho no topo do site para baixar o Setup Windows da release atual;
 - `GET /api/v1/health`, certificados, seleção de A1, lookup NF-e e endpoints do Portal;
 - validação completa de chave NF-e de 44 dígitos;
@@ -35,6 +38,7 @@ Implementado e coberto pelos gates automatizados do projeto:
 - tratamento de `137`, `138`, `656`, HTTP 429, timeout e falhas ambíguas sem retry fiscal automático;
 - XML limitado a 10 MiB, DTD proibido, `XmlResolver = null` e validação contra a chave consultada;
 - fallback automático somente após `consumption_limit`;
+- logging local rotativo do Bridge com Event IDs estáveis para falhas fiscais e lifecycle;
 - helper `NfeAgendamento.Portal.exe` em WinForms/WebView2, persistente e reconectável por Named Pipe local;
 - uma operação Portal por PC;
 - cancelamento Portal end-to-end;
@@ -84,6 +88,7 @@ Detalhes: `docs/testing/portal-post-hcaptcha.md`.
 - origem oficial de produção: `https://nfeagendamento.joaolds.xyz.br`;
 - CORS sem wildcard;
 - chave privada/PFX/senha do A1 não são enviados ao site;
+- logs locais não persistem chave NF-e, XML, PFX, senha, chave privada nem detalhes textuais de exceções;
 - WebView2 navega apenas em HTTPS no host oficial `www.nfe.fazenda.gov.br`;
 - navegação externa e popups externos são bloqueados;
 - download fora do endpoint XML oficial é cancelado;
@@ -100,8 +105,13 @@ Dois hardenings externos continuam pendentes:
 ```bash
 npm ci
 npm audit --audit-level=high
+npm run lint:web
+npm run format:check:web
 npm run test:web
 npm run build:web
+
+# normaliza apenas finais de linha/espaços finais quando necessário
+npm run format:web
 
 dotnet run --project apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeAgendamento.Bridge.Tests.csproj -c Release
 dotnet build apps/bridge/src/NfeAgendamento.Bridge/NfeAgendamento.Bridge.csproj -c Release
@@ -164,6 +174,7 @@ Não provoque bloqueio `656` repetindo consultas artificialmente apenas para tes
 ## Documentação
 
 - arquitetura/segurança: `docs/architecture/bridge-security.md`;
+- logging local do Bridge: `docs/operations/local-logging.md`;
 - aceitação física: `docs/testing/acceptance.md`;
 - automação pós-hCaptcha: `docs/testing/portal-post-hcaptcha.md`;
 - atualizador manual: `docs/testing/bridge-updater.md`;
