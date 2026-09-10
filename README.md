@@ -4,7 +4,7 @@ Reescrita limpa do NFe Agendamento com **site estático + App/Bridge Windows loc
 
 ## Arquitetura atual
 
-- **Site:** Vite + TypeScript; concentra interface, parsing XML, DANFE e regras de apresentação.
+- **Site:** Vite + TypeScript; concentra interface, parsing XML, DANFE e regras de apresentação; usa o mesmo ícone visual do App/Bridge como favicon da aba do navegador.
 - **App Windows:** `NfeAgendamento.App.exe` em WinForms; inicia oculto, permanece na bandeja, gerencia o lifecycle do Bridge e oferece atualização manual confirmada pelo usuário.
 - **Bridge:** ASP.NET Core .NET 10 em `http://127.0.0.1:17345` somente.
 - **Controle App → Bridge:** Named Pipe local separado da API web, restrito ao usuário atual, com identidade, lease, heartbeat e shutdown controlado.

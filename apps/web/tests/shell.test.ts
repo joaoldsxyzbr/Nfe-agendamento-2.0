@@ -9,6 +9,7 @@ describe('application shell', () => {
       'index.html',
       'vite.config.ts',
       'wrangler.jsonc',
+      'public/favicon.ico',
       'src/main.ts',
       'src/styles.css',
     ];
@@ -24,6 +25,8 @@ describe('application shell', () => {
     const activeSource = `${html}\n${main}`;
 
     expect(activeSource).toContain('nfe agendamento');
+    expect(html).toContain('rel="icon"');
+    expect(html).toContain('href="/favicon.ico"');
     expect(activeSource).not.toContain('consulta em lote');
     expect(activeSource).not.toContain('pareamento');
     expect(activeSource).not.toContain('standby');
