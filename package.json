@@ -6,7 +6,10 @@
   ],
   "scripts": {
     "test:web": "npm --workspace @nfe-agendamento/web test",
-    "build:web": "npm --workspace @nfe-agendamento/web run build"
+    "build:web": "npm --workspace @nfe-agendamento/web run build",
+    "lint:web": "npm --workspace @nfe-agendamento/web run lint",
+    "format:web": "npm --workspace @nfe-agendamento/web run format",
+    "format:check:web": "npm --workspace @nfe-agendamento/web run format:check"
   },
   "overrides": {
     "sharp": "0.35.4"
