@@ -1,5 +1,7 @@
 import './settings-panel.css';
 
+const WINDOWS_SETUP_URL = 'https://github.com/joaoldsxyzbr/Nfe-agendamento-2.0/releases/download/v0.0.6/NFeAgendamentoBridge-Setup-v0.0.6.exe';
+
 window.addEventListener('DOMContentLoaded', initializeSettingsPanel, { once: true });
 
 function initializeSettingsPanel(): void {
@@ -17,9 +19,23 @@ function initializeSettingsPanel(): void {
   bridgeStatus.replaceWith(topbarActions);
   topbarActions.append(bridgeStatus);
 
+  const downloadTrigger = document.createElement('a');
+  downloadTrigger.id = 'app-download';
+  downloadTrigger.className = 'topbar-icon-action download-trigger';
+  downloadTrigger.href = WINDOWS_SETUP_URL;
+  downloadTrigger.setAttribute('aria-label', 'Baixar app para Windows');
+  downloadTrigger.title = 'Baixar app para Windows';
+  downloadTrigger.innerHTML = `
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M12 3v12" />
+      <path d="m7 10 5 5 5-5" />
+      <path d="M5 21h14" />
+    </svg>`;
+  topbarActions.append(downloadTrigger);
+
   const settingsTrigger = document.createElement('button');
   settingsTrigger.id = 'settings-trigger';
-  settingsTrigger.className = 'settings-trigger';
+  settingsTrigger.className = 'topbar-icon-action settings-trigger';
   settingsTrigger.type = 'button';
   settingsTrigger.setAttribute('aria-label', 'Abrir configurações');
   settingsTrigger.setAttribute('aria-expanded', 'false');

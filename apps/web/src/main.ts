@@ -71,12 +71,17 @@ app.innerHTML = `
         </div>
         <p id="lookup-help" class="help-text">O processamento visual acontece neste site. O Bridge local acessa o certificado A1 e consulta a SEFAZ quando necessário.</p>
       </form>
-    </section>
 
-    <section class="result-card" id="result" aria-live="polite">
-      <div class="empty-state">
-        <strong>Nenhuma NF-e carregada</strong>
-        <span>Informe uma chave para iniciar.</span>
+      <div class="lookup-result-section">
+        <div class="result-toolbar">
+          <button id="lookup-reset" class="lookup-reset" type="button" hidden>Nova consulta</button>
+        </div>
+        <div class="lookup-result" id="result" aria-live="polite">
+          <div class="empty-state">
+            <strong>Nenhuma NF-e carregada</strong>
+            <span>Informe uma chave para iniciar.</span>
+          </div>
+        </div>
       </div>
     </section>
   </div>
@@ -109,6 +114,7 @@ const certificateHelp = requireElement<HTMLElement>('#certificate-help');
 const lookupForm = requireElement<HTMLFormElement>('#lookup-form');
 const accessKeyInput = requireElement<HTMLInputElement>('#access-key');
 const lookupSubmit = requireElement<HTMLButtonElement>('#lookup-submit');
+const lookupReset = requireElement<HTMLButtonElement>('#lookup-reset');
 const resultCard = requireElement<HTMLElement>('#result');
 const danfeViewer = requireElement<HTMLElement>('#danfe-viewer');
 const danfeContent = requireElement<HTMLElement>('#danfe-content');
@@ -127,6 +133,7 @@ lookupForm.addEventListener('submit', (event) => {
   void submitLookup();
 });
 
+lookupReset.addEventListener('click', resetConsultation);
 danfeClose.addEventListener('click', closeDanfe);
 danfePrint.addEventListener('click', () => window.print());
 danfeViewer.addEventListener('click', (event) => {
@@ -303,6 +310,7 @@ function renderLookupFailure(lookup: NfeLookupResult): void {
 
 function renderLookupSuccess(parsed: ParsedNfe): void {
   resetResult();
+  lookupReset.hidden = false;
 
   const title = document.createElement('h2');
   title.textContent = `NF-e ${parsed.number || parsed.accessKey}`;
@@ -353,7 +361,23 @@ function closeDanfe(): void {
 
 function renderLookupState(titleText: string, messageText: string): void {
   resetResult();
+  lookupReset.hidden = false;
+  appendResultState(titleText, messageText);
+}
 
+function resetConsultation(): void {
+  accessKeyInput.value = '';
+  renderInitialResult();
+  accessKeyInput.focus();
+}
+
+function renderInitialResult(): void {
+  resetResult();
+  lookupReset.hidden = true;
+  appendResultState('Nenhuma NF-e carregada', 'Informe uma chave para iniciar.');
+}
+
+function appendResultState(titleText: string, messageText: string): void {
   const state = document.createElement('div');
   state.className = 'empty-state';
   const title = document.createElement('strong');
@@ -375,6 +399,7 @@ function resetResult(): void {
 
 function setLookupBusy(busy: boolean): void {
   lookupSubmit.disabled = busy;
+  lookupReset.disabled = busy;
   accessKeyInput.disabled = busy;
   lookupSubmit.textContent = busy ? 'Consultando…' : 'Consultar';
 }

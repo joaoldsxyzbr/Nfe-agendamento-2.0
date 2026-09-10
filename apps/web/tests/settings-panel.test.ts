@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest';
 const index = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const settingsModuleUrl = new URL('../src/settings-panel.ts', import.meta.url);
 const settingsStylesUrl = new URL('../src/settings-panel.css', import.meta.url);
+const versionProps = readFileSync(new URL('../../../Directory.Build.props', import.meta.url), 'utf8');
+const appVersion = versionProps.match(/<Version>([^<]+)<\/Version>/)?.[1] ?? '';
 
 function readIfExists(url: URL): string {
   return existsSync(url) ? readFileSync(url, 'utf8') : '';
@@ -14,6 +16,24 @@ describe('settings panel', () => {
     expect(index).toContain('<script type="module" src="/src/main.ts"></script>');
     expect(index).toContain('<script type="module" src="/src/settings-panel.ts"></script>');
     expect(index.indexOf('/src/settings-panel.ts')).toBeGreaterThan(index.indexOf('/src/main.ts'));
+  });
+
+  it('adds a square Windows app download shortcut beside the settings action', () => {
+    const settings = readIfExists(settingsModuleUrl);
+    const styles = readIfExists(settingsStylesUrl);
+
+    expect(appVersion).not.toBe('');
+    expect(settings).toContain("downloadTrigger.id = 'app-download'");
+    expect(settings).toContain("downloadTrigger.setAttribute('aria-label', 'Baixar app para Windows')");
+    expect(settings).toContain(
+      `https://github.com/joaoldsxyzbr/Nfe-agendamento-2.0/releases/download/v${appVersion}/NFeAgendamentoBridge-Setup-v${appVersion}.exe`,
+    );
+    expect(settings.indexOf('topbarActions.append(downloadTrigger)')).toBeLessThan(
+      settings.indexOf('topbarActions.append(settingsTrigger)'),
+    );
+    expect(styles).toContain('.topbar-icon-action');
+    expect(styles).toContain('.download-trigger');
+    expect(styles).toContain('width: 42px');
   });
 
   it('moves certificate controls behind a gear button in the top-right area', () => {

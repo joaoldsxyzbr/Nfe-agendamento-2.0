@@ -150,7 +150,7 @@ h2 { margin-bottom: 0; color: var(--text); font-size: 20px; }
   box-shadow: 0 0 0 4px rgba(255, 113, 133, 0.12);
 }
 
-.certificate-card, .lookup-card, .result-card {
+.certificate-card, .lookup-card {
   border: 1px solid var(--line);
   border-radius: 16px;
   background: linear-gradient(180deg, rgba(19, 30, 44, 0.97), rgba(14, 23, 34, 0.99));
@@ -164,7 +164,6 @@ h2 { margin-bottom: 0; color: var(--text); font-size: 20px; }
 
 .certificate-card, .lookup-card { padding: 24px; }
 .certificate-card { margin-bottom: 18px; }
-.result-card { min-height: 240px; margin-top: 18px; padding: 24px; }
 
 .section-heading {
   display: flex;
@@ -206,6 +205,33 @@ label {
 
 .help-text { margin: 10px 0 0; font-size: 13px; line-height: 1.5; }
 
+.lookup-result-section {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.result-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.lookup-reset {
+  min-height: 36px;
+  margin-bottom: 10px;
+  padding: 0 14px;
+  border-color: #344b68;
+  background: transparent;
+  color: #c8d6e7;
+  box-shadow: none;
+  font-size: 13px;
+}
+
+.lookup-reset:hover:not(:disabled) {
+  background: rgba(75, 141, 255, 0.10);
+  border-color: #4f75a3;
+}
+
 .empty-state {
   display: grid;
   place-items: center;
@@ -216,6 +242,7 @@ label {
   gap: 6px;
 }
 
+.lookup-result .empty-state { min-height: 160px; }
 .empty-state strong { color: #dce7f5; }
 
 .result-actions {
