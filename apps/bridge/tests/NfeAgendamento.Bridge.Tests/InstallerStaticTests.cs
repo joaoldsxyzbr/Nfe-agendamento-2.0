@@ -14,15 +14,25 @@ public sealed class InstallerStaticTests
         return directory.FullName;
     }
 
+    private static string CanonicalVersion(string root)
+    {
+        var propsPath = Path.Combine(root, "Directory.Build.props");
+        Assert.True(File.Exists(propsPath), "Directory.Build.props deve ser a fonte canônica da versão.");
+
+        var document = System.Xml.Linq.XDocument.Load(propsPath);
+        var version = Assert.Single(document.Descendants("Version")).Value.Trim();
+        Assert.True(System.Version.TryParse(version, out _), $"Versão canônica inválida: {version}");
+        return version;
+    }
+
     [Fact]
     public void Bridge_uses_canonical_version_and_custom_icon()
     {
         var root = RepositoryRoot();
-        var props = File.ReadAllText(Path.Combine(root, "Directory.Build.props"));
+        _ = CanonicalVersion(root);
         var project = File.ReadAllText(Path.Combine(root, "apps", "bridge", "src", "NfeAgendamento.Bridge", "NfeAgendamento.Bridge.csproj"));
         var iconPath = Path.Combine(root, "apps", "bridge", "assets", "nfe-agendamento-bridge.ico");
 
-        Assert.Contains("<Version>0.0.6</Version>", props);
         Assert.DoesNotContain("<Version>", project);
         Assert.Contains("<ApplicationIcon>..\\..\\assets\\nfe-agendamento-bridge.ico</ApplicationIcon>", project);
         Assert.True(File.Exists(iconPath));
@@ -34,9 +44,8 @@ public sealed class InstallerStaticTests
     public void Portal_helper_inherits_canonical_package_version()
     {
         var root = RepositoryRoot();
-        var props = File.ReadAllText(Path.Combine(root, "Directory.Build.props"));
+        _ = CanonicalVersion(root);
         var project = File.ReadAllText(Path.Combine(root, "apps", "bridge", "windows", "NfeAgendamento.Portal", "NfeAgendamento.Portal.csproj"));
-        Assert.Contains("<Version>0.0.6</Version>", props);
         Assert.DoesNotContain("<Version>", project);
     }
 

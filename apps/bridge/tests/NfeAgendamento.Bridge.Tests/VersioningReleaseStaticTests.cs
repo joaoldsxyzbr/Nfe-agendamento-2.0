@@ -10,8 +10,10 @@ public sealed class VersioningReleaseStaticTests
         var root = RepositoryRoot();
         var propsPath = Path.Combine(root, "Directory.Build.props");
         Assert.True(File.Exists(propsPath), "Directory.Build.props deve ser a fonte canônica da versão.");
-        var props = File.ReadAllText(propsPath);
-        Assert.Contains("<Version>0.0.6</Version>", props);
+
+        var document = System.Xml.Linq.XDocument.Load(propsPath);
+        var version = Assert.Single(document.Descendants("Version")).Value.Trim();
+        Assert.True(System.Version.TryParse(version, out _), $"Versão canônica inválida: {version}");
 
         var projectPaths = new[]
         {
@@ -29,21 +31,17 @@ public sealed class VersioningReleaseStaticTests
         }
 
         var installer = File.ReadAllText(Path.Combine(root, "apps", "bridge", "installer", "NfeAgendamentoBridge.iss"));
-        Assert.DoesNotContain("0.0.6", installer);
+        Assert.DoesNotContain(version, installer);
         Assert.Contains("#ifndef MyAppVersion", installer);
         Assert.Contains("OutputBaseFilename=NFeAgendamentoBridge-Setup-v{#MyAppVersion}", installer);
 
         var ci = File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"));
         Assert.Contains("Directory.Build.props", ci);
-        Assert.DoesNotContain("NFeAgendamentoBridge-Setup-v0.0.6", ci);
+        Assert.DoesNotContain($"NFeAgendamentoBridge-Setup-v{version}", ci);
 
-        Assert.True(File.Exists(Path.Combine(root, ".github", "workflows", "release.yml")));
-        for (var patch = 1; patch <= 6; patch++)
-        {
-            Assert.False(
-                File.Exists(Path.Combine(root, ".github", "workflows", $"release-v0.0.{patch}.yml")),
-                $"Workflow histórico release-v0.0.{patch}.yml deve ser removido.");
-        }
+        var workflowsDirectory = Path.Combine(root, ".github", "workflows");
+        Assert.True(File.Exists(Path.Combine(workflowsDirectory, "release.yml")));
+        Assert.Empty(Directory.GetFiles(workflowsDirectory, "release-v*.yml", SearchOption.TopDirectoryOnly));
     }
 
     private static string RepositoryRoot()
