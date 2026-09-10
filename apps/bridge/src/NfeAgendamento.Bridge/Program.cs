@@ -23,6 +23,12 @@ using var bridgeInstance = singleInstance;
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseUrls(BridgeConstants.ListenUrl);
 
+if (isRealEntry)
+{
+    builder.Logging.AddProvider(
+        new LocalJsonFileLoggerProvider(LocalJsonFileLoggerOptions.CreateDefault()));
+}
+
 if (isManaged)
 {
     var processPath = Path.GetFullPath(Environment.ProcessPath ?? typeof(Program).Assembly.Location);
@@ -50,7 +56,8 @@ builder.Services.AddScoped<NfeLookupService>(services =>
 {
     var transport = services.GetRequiredService<INfeDistributionTransport>();
     var certificates = services.GetRequiredService<CertificateService>();
-    return new NfeLookupService(transport, certificates.GetSelectedCertificate);
+    var logger = services.GetRequiredService<ILogger<NfeLookupService>>();
+    return new NfeLookupService(transport, certificates.GetSelectedCertificate, logger);
 });
 builder.Services.AddSingleton<IPortalWindowLauncher, ProcessPortalWindowLauncher>();
 builder.Services.AddSingleton<PortalFallbackService>(services =>
@@ -93,6 +100,18 @@ builder.Services
     });
 
 var app = builder.Build();
+
+if (isRealEntry)
+{
+    var lifecycleLogger = app.Services
+        .GetRequiredService<ILoggerFactory>()
+        .CreateLogger("NfeAgendamento.Bridge.Lifecycle");
+
+    app.Lifetime.ApplicationStarted.Register(() =>
+        lifecycleLogger.LogInformation(new EventId(2001, "BridgeStarted"), "Bridge local iniciado."));
+    app.Lifetime.ApplicationStopping.Register(() =>
+        lifecycleLogger.LogInformation(new EventId(2002, "BridgeStopping"), "Bridge local encerrando."));
+}
 
 app.UseCors("BridgeWeb");
 app.Use(async (context, next) =>
