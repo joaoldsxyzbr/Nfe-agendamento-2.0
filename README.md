@@ -14,7 +14,7 @@ Reescrita limpa do NFe Agendamento com **site estático + App/Bridge Windows loc
 - **Diagnóstico local:** log estruturado JSON Lines com rotação em `%LOCALAPPDATA%\NfeAgendamentoBridge\logs`, sem armazenar chave da NF-e, XML, PFX, senha, chave privada, mensagem ou stack trace de exceção.
 - **Fallback Portal:** helper Windows separado com WebView2, Portal Nacional fixo, hCaptcha sempre manual e processo persistente reutilizado entre consultas.
 - **Distribuição Windows:** instalador Inno Setup por usuário, sem administrador, com início automático do app na bandeja no login.
-- **Versão canônica atual:** `0.0.7` em `Directory.Build.props`.
+- **Versão canônica atual:** `0.0.8` em `Directory.Build.props`.
 
 ## Estado funcional — 10/09/2026
 
@@ -133,12 +133,12 @@ O CI também executa `npx wrangler deploy --dry-run`.
 
 ## Distribuição Windows
 
-Release pública atual: **v0.0.7**.
+Release pública atual: **v0.0.8**.
 
 Asset principal:
 
 ```text
-NFeAgendamentoBridge-Setup-v0.0.7.exe
+NFeAgendamentoBridge-Setup-v0.0.8.exe
 ```
 
 O instalador:
@@ -151,7 +151,7 @@ O instalador:
 - preserva `%LOCALAPPDATA%\NfeAgendamentoBridge`, onde fica a seleção local do certificado;
 - não instala atualizações silenciosamente.
 
-Quem estiver na v0.0.6 pode usar **Verificar atualizações** no app da bandeja para instalar a v0.0.7 após confirmação.
+Quem estiver na v0.0.7 pode usar **Verificar atualizações** no app da bandeja para instalar a v0.0.8 após confirmação.
 
 O Microsoft Edge WebView2 Runtime é necessário somente para o fallback pelo Portal Nacional.
 
@@ -179,4 +179,4 @@ Não provoque bloqueio `656` repetindo consultas artificialmente apenas para tes
 - automação pós-hCaptcha: `docs/testing/portal-post-hcaptcha.md`;
 - atualizador manual: `docs/testing/bridge-updater.md`;
 - layout DANFE: `docs/testing/danfe-layout.md`;
-- notas da release atual: `docs/releases/v0.0.7.md`.
+- notas da release atual: `docs/releases/v0.0.8.md`.
