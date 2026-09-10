@@ -86,7 +86,7 @@ select:disabled { background: #0b121c; color: var(--muted-2); }
 .app-shell {
   width: min(1120px, calc(100% - 32px));
   margin: 0 auto;
-  padding: 34px 0 56px;
+  padding: 28px 0 48px;
 }
 
 .topbar {
@@ -94,7 +94,7 @@ select:disabled { background: #0b121c; color: var(--muted-2); }
   align-items: flex-start;
   justify-content: space-between;
   gap: 24px;
-  margin-bottom: 24px;
+  margin-bottom: 18px;
 }
 
 .eyebrow {
@@ -183,7 +183,13 @@ h2 { margin-bottom: 0; color: var(--text); font-size: 20px; }
   background: linear-gradient(90deg, var(--yellow), var(--blue));
 }
 
-.key-hint, .certificate-state {
+.key-hint {
+  color: rgba(255, 224, 138, 0.78);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.certificate-state {
   color: var(--yellow-soft);
   font-size: 12px;
   font-weight: 700;
@@ -205,9 +211,15 @@ label {
 
 .help-text { margin: 10px 0 0; font-size: 13px; line-height: 1.5; }
 
+#lookup-help {
+  color: #a9b9cb;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
 .lookup-result-section {
-  margin-top: 20px;
-  padding-top: 18px;
+  margin-top: 16px;
+  padding-top: 14px;
   border-top: 1px solid var(--line-soft);
 }
 
@@ -242,7 +254,7 @@ label {
   gap: 6px;
 }
 
-.lookup-result .empty-state { min-height: 160px; }
+.lookup-result .empty-state { min-height: 104px; }
 .empty-state strong { color: #dce7f5; }
 
 .result-actions {
@@ -350,7 +362,7 @@ label {
 }
 
 @media (max-width: 720px) {
-  .app-shell { width: min(100% - 20px, 1120px); padding-top: 22px; }
+  .app-shell { width: min(100% - 20px, 1120px); padding-top: 20px; }
   .topbar, .section-heading { align-items: flex-start; flex-direction: column; }
   .lookup-row, .certificate-row { grid-template-columns: 1fr; }
   button { width: 100%; }

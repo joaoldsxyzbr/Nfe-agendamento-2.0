@@ -1,18 +1,18 @@
 .topbar > div:first-child {
   display: grid;
-  grid-template-columns: 92px minmax(0, auto);
+  grid-template-columns: 84px minmax(0, auto);
   grid-template-areas:
     "logo title"
     "subtitle subtitle";
   align-items: center;
   justify-content: start;
-  column-gap: 22px;
+  column-gap: 18px;
 }
 
 .topbar > div:first-child > .eyebrow {
   grid-area: logo;
-  width: 92px;
-  height: 92px;
+  width: 84px;
+  height: 84px;
   margin: 0;
   overflow: hidden;
   background: url('/brand-mark.png') center / contain no-repeat;
@@ -26,7 +26,7 @@
 .topbar > div:first-child > h1 {
   grid-area: title;
   margin: 0;
-  padding-left: 22px;
+  padding-left: 18px;
   border-left: 1px solid rgba(143, 161, 183, 0.55);
   font-size: 0;
   line-height: 1;
@@ -35,7 +35,7 @@
 .topbar > div:first-child > h1::before,
 .topbar > div:first-child > h1::after {
   display: block;
-  font-size: clamp(28px, 3.2vw, 42px);
+  font-size: clamp(27px, 3vw, 40px);
   font-weight: 800;
   letter-spacing: -0.03em;
 }
@@ -47,32 +47,37 @@
 
 .topbar > div:first-child > h1::after {
   content: 'Agendamento';
-  margin-top: 5px;
+  margin-top: 4px;
   color: var(--yellow);
 }
 
 .topbar > div:first-child > .subtitle {
   grid-area: subtitle;
-  margin: 14px 0 0;
+  margin: 10px 0 0;
+  line-height: 1.45;
 }
 
 @media (max-width: 720px) {
   .topbar > div:first-child {
-    grid-template-columns: 72px minmax(0, auto);
-    column-gap: 16px;
+    grid-template-columns: 64px minmax(0, auto);
+    column-gap: 14px;
   }
 
   .topbar > div:first-child > .eyebrow {
-    width: 72px;
-    height: 72px;
+    width: 64px;
+    height: 64px;
   }
 
   .topbar > div:first-child > h1 {
-    padding-left: 16px;
+    padding-left: 14px;
   }
 
   .topbar > div:first-child > h1::before,
   .topbar > div:first-child > h1::after {
-    font-size: clamp(25px, 8vw, 34px);
+    font-size: clamp(24px, 8vw, 32px);
+  }
+
+  .topbar > div:first-child > .subtitle {
+    margin-top: 8px;
   }
 }

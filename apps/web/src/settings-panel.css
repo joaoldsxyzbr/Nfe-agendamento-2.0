@@ -3,6 +3,7 @@
   align-items: center;
   gap: 10px;
   flex: 0 0 auto;
+  margin-top: 18px;
 }
 
 .topbar-icon-action {
@@ -144,6 +145,7 @@
 @media (max-width: 720px) {
   .topbar-actions {
     width: 100%;
+    margin-top: 0;
     justify-content: flex-end;
   }
 

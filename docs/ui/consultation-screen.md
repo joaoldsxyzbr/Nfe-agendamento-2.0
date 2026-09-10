@@ -12,15 +12,27 @@ A área de ações do canto superior direito contém, nesta ordem:
 
 O atalho de download aponta diretamente para o Setup da versão canônica atualmente publicada (`v0.0.7`). O teste `apps/web/tests/settings-panel.test.ts` cruza a URL do Setup com `Directory.Build.props`, para que um futuro bump de versão não deixe o link silenciosamente desatualizado.
 
+O cabeçalho usa um único bloco visual à esquerda: símbolo da aplicação e, ao lado, o nome quebrado em duas linhas, **NF-e** e **Agendamento**, separados por uma divisória vertical discreta. A frase de apoio fica logo abaixo do conjunto. O grupo de ações da direita é alinhado visualmente ao centro desse bloco de marca em desktop.
+
 ## Identidade visual
 
 A marca atual usa azul vibrante e amarelo vibrante, com fundo transparente e símbolo composto por documento NF-e, relógio/agendamento e confirmação.
 
-- o cabeçalho principal usa o símbolo transparente em `apps/web/public/brand-mark.png` à esquerda;
-- ao lado do símbolo, o nome visual aparece em duas linhas: **NF-e** e **Agendamento**, com separador vertical discreto;
-- a frase **Consulta direta usando o certificado A1 deste computador.** permanece abaixo do bloco de marca;
+- no cabeçalho do site, o símbolo transparente fica em `apps/web/public/brand-mark.png`;
+- o nome visual é renderizado como **NF-e** / **Agendamento** em duas linhas por `apps/web/src/brand.css`;
 - a aba do navegador usa somente o símbolo, sem o nome, em `apps/web/public/favicon.ico`;
 - App/Bridge Windows usam somente o mesmo símbolo, sem o nome, em `apps/bridge/assets/nfe-agendamento-bridge.ico`.
+
+## Refinamentos visuais
+
+A tela foi compactada sem alterar comportamento funcional:
+
+- o conjunto logo + nome foi levemente reduzido e aproximado, diminuindo o espaço ocioso no topo;
+- a distância entre o cabeçalho e o card principal foi reduzida;
+- o estado vazio do resultado ocupa menos altura, e o card cresce naturalmente quando houver conteúdo;
+- o indicador **44 dígitos** ganhou menor peso visual por ser informação secundária;
+- o texto auxiliar sobre processamento/Bridge recebeu contraste e legibilidade um pouco maiores;
+- as ações do canto superior direito foram reposicionadas para ficar visualmente alinhadas com a marca em telas desktop.
 
 ## Consulta e resultado
 
@@ -30,11 +42,11 @@ Os controles principais da consulta ficam imediatamente abaixo do campo da chave
 
 O estado inicial continua informando que nenhuma NF-e foi carregada. Depois que uma consulta é iniciada, o botão **Nova consulta** fica disponível. Ele permanece desabilitado enquanto uma operação está em andamento e, quando acionado após a conclusão, limpa a chave digitada, remove o resultado/DANFE/XML temporário, restaura o estado inicial e devolve o foco ao campo da chave.
 
-A mudança de posicionamento reutiliza os mesmos botões e os mesmos event listeners já existentes; nenhum comportamento de consulta, reset, SEFAZ, Portal, certificado ou DANFE foi alterado.
+As mudanças desta etapa são exclusivamente visuais; nenhum comportamento de consulta, reset, SEFAZ, Portal, certificado ou DANFE foi alterado.
 
 ## Configurações
 
-A seleção do certificado A1 continua fora da tela principal e é movida para o painel aberto pela engrenagem. Nenhum comportamento fiscal, endpoint do Bridge ou fluxo SEFAZ/Portal foi alterado por esta mudança de interface.
+A seleção do certificado A1 continua fora da tela principal e fica no painel aberto pela engrenagem. Nenhum comportamento fiscal, endpoint do Bridge ou fluxo SEFAZ/Portal foi alterado por esta mudança de interface.
 
 ## Arquivos relacionados
 
