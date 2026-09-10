@@ -17,6 +17,7 @@ Manter a legibilidade e organização visual do NFe Agendamento, aproximando a d
 - `vTotTrib` exibido como **V. tot. trib.** quando a tag existir;
 - grade de totais adaptada para acomodar os campos adicionais sem aumentar desnecessariamente a altura;
 - área de **Dados adicionais** ampliada para melhorar a leitura das informações complementares;
+- composição de embalagem exibida abaixo da descrição do item quando `uCom/qCom` e `uTrib/qTrib` permitem determinar uma relação inteira, por exemplo **CX C/ 20 UN**;
 - bloco de transportador/volumes continua sendo omitido quando não houver informação útil e permanece compacto quando utilizado.
 
 ## Comportamentos que não podem regredir
@@ -29,6 +30,7 @@ Manter a legibilidade e organização visual do NFe Agendamento, aproximando a d
 - `Ctrl + scroll` aplica zoom somente ao DANFE no preview;
 - impressão/PDF não utiliza o zoom de tela;
 - paginação deve manter os itens na mesma folha quando houver espaço suficiente;
+- informação de embalagem só aparece quando a própria NF-e fornece unidades comercial/tributável e quantidades suficientes para calcular uma relação inteira maior que 1;
 - nenhum campo fiscal é inventado: os dados adicionais de totalização só aparecem quando as respectivas tags existem no XML.
 
 ## Testes automatizados
@@ -41,6 +43,7 @@ Os contratos principais ficam em `apps/web/tests/danfe.test.ts`, incluindo:
 - tratamento Fernando Klein;
 - texto de autenticidade e telefone do emitente;
 - `vICMSUFDest` e `vTotTrib` quando presentes;
+- composição de embalagem derivada de `uCom/qCom` e `uTrib/qTrib`;
 - limites do zoom;
 - regras estruturais de A4 e compactação do CSS.
 

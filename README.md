@@ -26,6 +26,7 @@ Implementado e coberto pelos gates automatizados do projeto:
 - dependências NuGet em locked mode;
 - tema dark e DANFE A4 branco/fiscal;
 - preview DANFE em modal com `Ctrl + scroll`, impressão/PDF e download XML;
+- DANFE mostra a composição da embalagem (ex.: `CX C/ 20 UN`) quando ela pode ser determinada diretamente por `uCom/qCom` e `uTrib/qTrib` da NF-e;
 - tratamento Fernando Klein preservando o `cProd` fiscal no XML;
 - painel de configurações para certificado A1;
 - interface de consulta simplificada com resultado integrado e ação **Nova consulta**;

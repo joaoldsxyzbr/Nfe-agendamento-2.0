@@ -28,6 +28,20 @@ describe('DANFE approved behavior', () => {
     expect(html).toContain('Fone/Fax: 48999999999');
   });
 
+  it('shows package composition from commercial and tributary quantities', async () => {
+    const { renderDanfeHtml } = await import('../src/danfe/render');
+    const xml = fullXml.replace(
+      '<uCom>UN</uCom><qCom>2.0000</qCom><vUnCom>10.5000</vUnCom>',
+      '<uCom>CX</uCom><qCom>2.0000</qCom><vUnCom>10.5000</vUnCom><uTrib>UN</uTrib><qTrib>40.0000</qTrib><vUnTrib>0.5250</vUnTrib>',
+    );
+    const parsed = parseNfeXml(xml, KEY);
+    const html = renderDanfeHtml(parsed);
+
+    expect(parsed.products[0].tributaryUnit).toBe('UN');
+    expect(parsed.products[0].tributaryQuantity).toBe(40);
+    expect(html).toContain('CX C/ 20 UN');
+  });
+
   it('renders destination ICMS and total tax when present in ICMSTot', async () => {
     const { renderDanfeHtml } = await import('../src/danfe/render');
     const xml = fullXml.replace('<vFCPUFDest>0.15</vFCPUFDest>', '<vFCPUFDest>0.15</vFCPUFDest><vICMSUFDest>1.23</vICMSUFDest><vTotTrib>4.56</vTotTrib>');

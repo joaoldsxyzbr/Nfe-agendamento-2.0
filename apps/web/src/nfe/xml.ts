@@ -47,6 +47,8 @@ export type ParsedNfeProduct = {
   unit: string;
   quantity: number;
   unitPrice: number;
+  tributaryUnit: string;
+  tributaryQuantity: number;
   totalPrice: number;
   discount: number;
   tax: ParsedNfeProductTax;
@@ -305,6 +307,8 @@ function parseProduct(det: Element): ParsedNfeProduct {
     unit: text(product, 'uCom'),
     quantity: number(product, 'qCom'),
     unitPrice: number(product, 'vUnCom'),
+    tributaryUnit: text(product, 'uTrib'),
+    tributaryQuantity: number(product, 'qTrib'),
     totalPrice: number(product, 'vProd'),
     discount: number(product, 'vDesc'),
     tax: parseProductTax(det),

@@ -64,6 +64,7 @@
 .numeric { text-align: right; white-space: nowrap; }
 .source-product-code { display: block; }
 .internal-product-code { display: block; margin-top: 1px; font-size: .95em; font-weight: 700; }
+.package-detail { display: block; margin-top: 1px; font-size: 6.4px; font-weight: 700; }
 .tax-detail { display: block; margin-top: 1px; font-size: 6.2px; }
 .additional-grid { display: grid; grid-template-columns: 2fr 1fr; min-height: 88px; flex-shrink: 0; }
 .additional-grid > div { padding: 3px 4px; }

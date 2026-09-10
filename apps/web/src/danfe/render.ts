@@ -276,7 +276,8 @@ function buildProductsTable(nfe: ParsedNfe, products: readonly ParsedNfeProduct[
   const rows = products.map((product) => {
     const mapping = resolveFernandoKleinProduct({ emitterTaxId: nfe.issuer.taxId, xProd: product.description, cProd: product.code });
     const code = `<span class="source-product-code">${escapeHtml(mapping.sourceCode)}</span>${mapping.internalCode ? `<small class="internal-product-code">Int.: ${escapeHtml(mapping.internalCode)}</small>` : ''}`;
-    const description = `${escapeHtml(product.description)}${product.tax.taxNote ? `<small class="tax-detail">${escapeHtml(product.tax.taxNote)}</small>` : ''}`;
+    const packageLabel = productPackageLabel(product);
+    const description = `${escapeHtml(product.description)}${packageLabel ? `<small class="package-detail">${escapeHtml(packageLabel)}</small>` : ''}${product.tax.taxNote ? `<small class="tax-detail">${escapeHtml(product.tax.taxNote)}</small>` : ''}`;
     return `<tr>
       <td class="center item-col">${product.itemNumber}</td><td class="code-col">${code}</td><td class="description">${description}</td>
       <td class="center">${escapeHtml(product.ncm)}</td><td class="center">${escapeHtml(product.tax.cst)}</td><td class="center">${escapeHtml(product.cfop)}</td><td class="center">${escapeHtml(product.unit)}</td>
@@ -331,8 +332,22 @@ function paginateProductsByAvailableSpace(products: readonly ParsedNfeProduct[],
 
 function estimateProductHeight(product: ParsedNfeProduct): number {
   const descriptionLines = Math.max(1, Math.ceil(product.description.length / 52));
+  const packageLines = productPackageLabel(product) ? 1 : 0;
   const taxLines = product.tax.taxNote ? Math.max(1, Math.ceil(product.tax.taxNote.length / 58)) : 0;
-  return 3.4 + (descriptionLines - 1) * 1.8 + taxLines * 1.7;
+  return 3.4 + (descriptionLines - 1) * 1.8 + packageLines * 1.7 + taxLines * 1.7;
+}
+
+function productPackageLabel(product: ParsedNfeProduct): string {
+  const commercialUnit = product.unit.trim().toUpperCase();
+  const tributaryUnit = product.tributaryUnit.trim().toUpperCase();
+  if (!commercialUnit || !tributaryUnit || commercialUnit === tributaryUnit) return '';
+  if (product.quantity <= 0 || product.tributaryQuantity <= 0) return '';
+
+  const unitsPerPackage = product.tributaryQuantity / product.quantity;
+  const rounded = Math.round(unitsPerPackage);
+  if (rounded <= 1 || Math.abs(unitsPerPackage - rounded) > 1e-6) return '';
+
+  return `${commercialUnit} C/ ${rounded} ${tributaryUnit}`;
 }
 
 function estimateAdditionalPenaltyMm(text: string): number {
