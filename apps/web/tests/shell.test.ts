@@ -10,7 +10,7 @@ describe('application shell', () => {
       'vite.config.ts',
       'wrangler.jsonc',
       'public/favicon.ico',
-      'public/brand-mark.svg',
+      'public/brand-mark.png',
       'src/brand.css',
       'src/main.ts',
       'src/styles.css',
@@ -31,7 +31,7 @@ describe('application shell', () => {
     expect(html).toContain('rel="icon"');
     expect(html).toContain('href="/favicon.ico"');
     expect(html).toContain('href="/src/brand.css"');
-    expect(brandCss).toContain("url('/brand-mark.svg')");
+    expect(brandCss).toContain("url('/brand-mark.png')");
     expect(activeSource).not.toContain('consulta em lote');
     expect(activeSource).not.toContain('pareamento');
     expect(activeSource).not.toContain('standby');

@@ -16,7 +16,7 @@ O atalho de download aponta diretamente para o Setup da versão canônica atualm
 
 A marca atual usa azul vibrante e amarelo vibrante, com fundo transparente e símbolo composto por documento NF-e, relógio/agendamento e confirmação.
 
-- no cabeçalho do site, o texto visual **NFe Agendamento 2.0** foi substituído pelo símbolo em `apps/web/public/brand-mark.svg`;
+- no cabeçalho do site, o texto visual **NFe Agendamento 2.0** foi substituído pelo símbolo transparente em `apps/web/public/brand-mark.png`;
 - o texto continua no DOM como conteúdo acessível e é ocultado apenas visualmente por `apps/web/src/brand.css`;
 - a aba do navegador usa somente o símbolo, sem o nome, em `apps/web/public/favicon.ico`;
 - App/Bridge Windows usam somente o mesmo símbolo, sem o nome, em `apps/bridge/assets/nfe-agendamento-bridge.ico`.
@@ -38,7 +38,7 @@ A seleção do certificado A1 continua fora da tela principal e é movida para o
 ## Arquivos relacionados
 
 - `apps/web/index.html`
-- `apps/web/public/brand-mark.svg`
+- `apps/web/public/brand-mark.png`
 - `apps/web/public/favicon.ico`
 - `apps/web/src/brand.css`
 - `apps/web/src/main.ts`
