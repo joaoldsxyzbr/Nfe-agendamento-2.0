@@ -31,7 +31,11 @@ describe('application shell', () => {
     expect(html).toContain('rel="icon"');
     expect(html).toContain('href="/favicon.ico"');
     expect(html).toContain('href="/src/brand.css"');
-    expect(brandCss).toContain("url('/brand-mark.png')");
+    expect(main).toContain('class="brand-mark" src="/brand-mark.png"');
+    expect(main).toContain('<h1 class="brand-title"><span>nf-e</span><span>agendamento</span></h1>');
+    expect(main).toContain('aria-hidden="true"');
+    expect(brandCss).not.toContain("content: 'nf-e'");
+    expect(brandCss).not.toContain("content: 'agendamento'");
     expect(activeSource).not.toContain('consulta em lote');
     expect(activeSource).not.toContain('pareamento');
     expect(activeSource).not.toContain('standby');
