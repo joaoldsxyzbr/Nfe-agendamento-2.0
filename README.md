@@ -38,7 +38,7 @@ Implementado e coberto pelos gates automatizados do projeto:
 - categorias normalizadas `success`, `fiscal_status`, `consumption_limit`, `certificate_error`, `transport_unavailable` e `technical_error`;
 - tratamento de `137`, `138`, `656`, HTTP 429, timeout e falhas ambíguas sem retry fiscal automático;
 - XML limitado a 10 MiB, DTD proibido, `XmlResolver = null` e validação contra a chave consultada;
-- fallback automático somente após `consumption_limit`;
+- fallback automático após `consumption_limit` ou retorno SEFAZ `217` (`fiscal_status`), sem repetir a consulta fiscal direta;
 - logging local rotativo do Bridge com Event IDs estáveis para falhas fiscais e lifecycle;
 - helper `NfeAgendamento.Portal.exe` em WinForms/WebView2, persistente e reconectável por Named Pipe local;
 - uma operação Portal por PC;
@@ -64,6 +64,7 @@ Site
     → consulta direta SEFAZ
       → sucesso: XML → site/DANFE
       → consumption_limit: Portal Nacional
+      → fiscal_status + cStat 217: Portal Nacional
 ```
 
 Durante o fallback Portal:

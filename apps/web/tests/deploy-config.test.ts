@@ -32,8 +32,8 @@ describe('Cloudflare deploy configuration', () => {
     const ci = await readFile(ciUrl, 'utf8');
     expect(ci).toContain('- run: npm audit --audit-level=high');
 
-    const bridgeJob = ci.match(/\n  bridge:\n([\s\S]*?)\n  windows-package:/)?.[1] ?? '';
-    const windowsJob = ci.match(/\n  windows-package:\n([\s\S]*)$/)?.[1] ?? '';
+    const bridgeJob = ci.match(/\r?\n  bridge:\r?\n([\s\S]*?)\r?\n  windows-package:/)?.[1] ?? '';
+    const windowsJob = ci.match(/\r?\n  windows-package:\r?\n([\s\S]*)$/)?.[1] ?? '';
     expect(bridgeJob).not.toContain('apps/bridge/windows/NfeAgendamento.Portal');
     expect(bridgeJob).not.toContain('apps/bridge/windows/NfeAgendamento.App');
     expect(windowsJob).toContain('runs-on: windows-latest');
@@ -52,10 +52,11 @@ describe('Cloudflare deploy configuration', () => {
     expect(headers).toContain('Permissions-Policy: camera=(), microphone=(), geolocation=()');
   });
 
-  it('does not advertise Portal before a SEFAZ consumption limit occurs', async () => {
+  it('does not advertise Portal before an eligible SEFAZ fallback result occurs', async () => {
     const main = await readFile(mainUrl, 'utf8');
     const normalHelp = main.match(/<p id="lookup-help"[^>]*>(.*?)<\/p>/s)?.[1] ?? '';
     expect(normalHelp).not.toContain('Portal');
     expect(main).toContain("lookup.category === 'consumption_limit'");
+    expect(main).toContain("lookup.category === 'fiscal_status' && lookup.cStat === '217'");
   });
 });

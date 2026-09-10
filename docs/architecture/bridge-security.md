@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-O Bridge existe somente para operações que o navegador não consegue executar diretamente: acesso ao certificado A1/chave privada do Windows, transporte autenticado para a SEFAZ e abertura controlada do Portal Nacional da NF-e quando houver limite de consumo.
+O Bridge existe somente para operações que o navegador não consegue executar diretamente: acesso ao certificado A1/chave privada do Windows, transporte autenticado para a SEFAZ e abertura controlada do Portal Nacional da NF-e quando o fluxo direto precisar de fallback (`consumption_limit` ou `cStat 217`).
 
 Ele **não é um servidor de rede** e não deve ser exposto na LAN ou na Internet.
 
@@ -212,7 +212,7 @@ Estados `completed`, `failed` e `cancelled` permanecem disponíveis por **2 minu
 - hCaptcha é sempre resolvido manualmente pelo usuário;
 - não existe `hcaptcha.execute`, `grecaptcha.execute` ou mecanismo equivalente de bypass.
 
-O fluxo normal do site não anuncia o Portal. O fallback só é exibido quando a resposta SEFAZ é classificada como `consumption_limit`.
+O fluxo normal do site não anuncia o Portal. O fallback é exibido somente quando a resposta SEFAZ é `consumption_limit` ou quando chega como `fiscal_status` com `cStat 217`; outros estados fiscais continuam sem abrir o Portal.
 
 ## Supply chain e gates de build
 

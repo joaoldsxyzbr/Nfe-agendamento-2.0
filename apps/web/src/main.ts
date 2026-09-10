@@ -213,7 +213,10 @@ async function submitLookup(): Promise<void> {
       return;
     }
 
-    if (lookup.category === 'consumption_limit') {
+    if (
+      lookup.category === 'consumption_limit'
+      || (lookup.category === 'fiscal_status' && lookup.cStat === '217')
+    ) {
       await runPortalFallback(validation.value, lookup);
       return;
     }
@@ -230,7 +233,7 @@ async function submitLookup(): Promise<void> {
 }
 
 async function runPortalFallback(accessKey: string, lookup: NfeLookupResult): Promise<void> {
-  const sefazMessage = lookup.message ?? 'A SEFAZ informou limite de consumo para esta consulta.';
+  const sefazMessage = lookup.message ?? 'A consulta direta da SEFAZ não retornou o XML e será tentada pelo Portal Nacional.';
   const sefazStatus = lookup.cStat ? `Status SEFAZ ${lookup.cStat}. ${sefazMessage}` : sefazMessage;
 
   renderLookupState(

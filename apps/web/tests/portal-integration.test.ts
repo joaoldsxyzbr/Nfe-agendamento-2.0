@@ -4,18 +4,20 @@ import { describe, expect, it } from 'vitest';
 const main = readFileSync(new URL('../src/main.ts', import.meta.url), 'utf8');
 
 describe('portal fallback integration', () => {
-  it('uses Portal only after a consumption limit and reuses the validated XML pipeline', () => {
+  it('uses Portal after a consumption limit or SEFAZ 217 and reuses the validated XML pipeline', () => {
     expect(main).toContain("import { PortalFallbackController } from './portal/fallback';");
     expect(main).toContain('new PortalFallbackController()');
 
     const limitIndex = main.indexOf("lookup.category === 'consumption_limit'");
+    const status217Index = main.indexOf("lookup.category === 'fiscal_status' && lookup.cStat === '217'");
     const startIndex = main.indexOf('portalFallback.start(', limitIndex);
     const waitIndex = main.indexOf('portalFallback.waitForResult(', startIndex);
     const parseIndex = main.indexOf('parseNfeXml(portalStatus.xml', waitIndex);
     const successIndex = main.indexOf('renderLookupSuccess(parsed)', parseIndex);
 
     expect(limitIndex).toBeGreaterThan(-1);
-    expect(startIndex).toBeGreaterThan(limitIndex);
+    expect(status217Index).toBeGreaterThan(limitIndex);
+    expect(startIndex).toBeGreaterThan(status217Index);
     expect(waitIndex).toBeGreaterThan(startIndex);
     expect(parseIndex).toBeGreaterThan(waitIndex);
     expect(successIndex).toBeGreaterThan(parseIndex);

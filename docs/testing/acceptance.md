@@ -132,29 +132,30 @@ Quando houver casos reais/controlados, confirme:
 
 Resultado: ☐ aprovado
 
-## 8. WebView2 Runtime e fallback 656 / Portal
+## 8. WebView2 Runtime e fallback 656/217 / Portal
 
-Antes do cenário de limite:
+Antes do cenário de fallback:
 
 1. Com Runtime instalado, confirme `webView2Available=true` sem abrir janela durante health.
 2. Sem Runtime, confirme `webView2Available=false` sem abrir janela apenas para detectar ausência.
 
-Somente quando houver limite natural/controlado:
+Quando houver `consumption_limit` natural/controlado ou uma chave conhecida que retorne `cStat 217` na consulta direta:
 
 3. `consumption_limit` deve iniciar fallback sem repetir `NFeDistribuicaoDFe`.
-4. Confirme abertura do Portal somente após o limite.
-5. Confirme chave pré-preenchida.
-6. Resolva **somente o hCaptcha manualmente**.
-7. Não clique em **Consultar/Continuar**; confirme que a consulta avança sozinha após a resposta válida do hCaptcha.
-8. Não clique em **Download do Documento**; confirme que o helper aciona o download oficial automaticamente.
-9. Se aparecer `Alert`/`Confirm` associado ao download, confirme que é aceito sem intervenção.
-10. Confirme uso automático do mesmo A1 selecionado.
-11. Confirme retorno do XML ao Bridge/site usando o mesmo parser/DANFE.
-12. Confirme que o XML corresponde à chave.
-13. Repita uma segunda ocorrência controlada e confirme reutilização do helper/WebView2.
-14. Feche a janela antes do fim e confirme `Consulta pelo Portal cancelada`.
-15. Inicie nova ocorrência após cancelamento e confirme recuperação normal.
-16. Recarregue/feche a página durante uma operação e confirme que ela não fica presa indefinidamente.
+4. `fiscal_status` com `cStat 217` também deve iniciar o mesmo fallback, sem repetir `NFeDistribuicaoDFe`.
+5. Outros `fiscal_status` não devem abrir o Portal automaticamente.
+6. Confirme chave pré-preenchida.
+7. Resolva **somente o hCaptcha manualmente**.
+8. Não clique em **Consultar/Continuar**; confirme que a consulta avança sozinha após a resposta válida do hCaptcha.
+9. Não clique em **Download do Documento**; confirme que o helper aciona o download oficial automaticamente.
+10. Se aparecer `Alert`/`Confirm` associado ao download, confirme que é aceito sem intervenção.
+11. Confirme uso automático do mesmo A1 selecionado.
+12. Confirme retorno do XML ao Bridge/site usando o mesmo parser/DANFE.
+13. Confirme que o XML corresponde à chave.
+14. Repita uma segunda ocorrência controlada e confirme reutilização do helper/WebView2.
+15. Feche a janela antes do fim e confirme `Consulta pelo Portal cancelada`.
+16. Inicie nova ocorrência após cancelamento e confirme recuperação normal.
+17. Recarregue/feche a página durante uma operação e confirme que ela não fica presa indefinidamente.
 
 Resultado: ☐ aprovado
 

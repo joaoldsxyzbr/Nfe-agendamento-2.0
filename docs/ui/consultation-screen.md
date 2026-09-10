@@ -52,7 +52,7 @@ Quando a consulta direta retorna `fiscal_status` com `cStat 653`, a interface ap
 - mensagem: informa que a nota foi cancelada na SEFAZ e que o XML não está disponível para download;
 - o código **SEFAZ 653** permanece visível como informação técnica secundária.
 
-Os demais retornos `fiscal_status` continuam usando o tratamento genérico existente. Esse ajuste é somente de apresentação do retorno fiscal e não altera a consulta, o certificado, o XML, o DANFE ou a regra de fallback do Portal.
+O retorno `fiscal_status` com `cStat 217` é a exceção operacional: ele aciona o fallback pelo Portal Nacional porque a consulta direta pode não disponibilizar o XML mesmo quando o documento é obtido pelo Portal. Os demais `fiscal_status` continuam usando o tratamento genérico existente. O aviso específico de `653` continua sendo somente de apresentação.
 
 ## Configurações
 
