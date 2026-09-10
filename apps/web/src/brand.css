@@ -1,7 +1,19 @@
+.topbar > div:first-child {
+  display: grid;
+  grid-template-columns: 92px minmax(0, auto);
+  grid-template-areas:
+    "logo title"
+    "subtitle subtitle";
+  align-items: center;
+  justify-content: start;
+  column-gap: 22px;
+}
+
 .topbar > div:first-child > .eyebrow {
-  width: 72px;
-  height: 72px;
-  margin: -4px 0 10px;
+  grid-area: logo;
+  width: 92px;
+  height: 92px;
+  margin: 0;
   overflow: hidden;
   background: url('/brand-mark.png') center / contain no-repeat;
   color: transparent;
@@ -11,10 +23,56 @@
   text-transform: none;
 }
 
+.topbar > div:first-child > h1 {
+  grid-area: title;
+  margin: 0;
+  padding-left: 22px;
+  border-left: 1px solid rgba(143, 161, 183, 0.55);
+  font-size: 0;
+  line-height: 1;
+}
+
+.topbar > div:first-child > h1::before,
+.topbar > div:first-child > h1::after {
+  display: block;
+  font-size: clamp(28px, 3.2vw, 42px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.topbar > div:first-child > h1::before {
+  content: 'NF-e';
+  color: var(--text);
+}
+
+.topbar > div:first-child > h1::after {
+  content: 'Agendamento';
+  margin-top: 5px;
+  color: var(--yellow);
+}
+
+.topbar > div:first-child > .subtitle {
+  grid-area: subtitle;
+  margin: 14px 0 0;
+}
+
 @media (max-width: 720px) {
+  .topbar > div:first-child {
+    grid-template-columns: 72px minmax(0, auto);
+    column-gap: 16px;
+  }
+
   .topbar > div:first-child > .eyebrow {
-    width: 64px;
-    height: 64px;
-    margin-top: 0;
+    width: 72px;
+    height: 72px;
+  }
+
+  .topbar > div:first-child > h1 {
+    padding-left: 16px;
+  }
+
+  .topbar > div:first-child > h1::before,
+  .topbar > div:first-child > h1::after {
+    font-size: clamp(25px, 8vw, 34px);
   }
 }
