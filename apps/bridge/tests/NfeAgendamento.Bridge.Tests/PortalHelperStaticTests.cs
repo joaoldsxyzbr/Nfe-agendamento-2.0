@@ -35,4 +35,21 @@ public sealed class PortalHelperStaticTests
         Assert.DoesNotContain("hcaptcha.execute", window, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("grecaptcha.execute", window, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public void Windows_helper_only_auto_advances_after_manual_captcha_and_scoped_download_action()
+    {
+        var window = RepositoryFile("apps", "bridge", "windows", "NfeAgendamento.Portal", "PortalWindow.cs");
+
+        Assert.Contains("h-captcha-response", window);
+        Assert.Contains("ctl00_ContentPlaceHolder1_btnConsultarHCaptcha", window);
+        Assert.Contains("download do documento", window, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("/portal/downloadnfe.aspx", window, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ScriptDialogOpening", window);
+        Assert.Contains("CoreWebView2ScriptDialogKind.Confirm", window);
+        Assert.Contains("CoreWebView2ScriptDialogKind.Alert", window);
+        Assert.Contains("_acceptExpectedPortalDialog", window);
+        Assert.DoesNotContain("hcaptcha.execute", window, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("grecaptcha.execute", window, StringComparison.OrdinalIgnoreCase);
+    }
 }

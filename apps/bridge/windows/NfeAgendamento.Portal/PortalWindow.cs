@@ -27,6 +27,7 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
     private TaskCompletionSource<PortalLaunchResult>? _activeCompletion;
     private string? _temporaryDownloadPath;
     private bool _downloadInProgress;
+    private bool _acceptExpectedPortalDialog;
     private bool _legacyFinalized;
     private bool _allowRealClose;
 
@@ -79,7 +80,7 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
         _status = new Label
         {
             AutoEllipsis = true,
-            Text = "A chave será preenchida automaticamente. Resolva o hCaptcha manualmente e clique em Consultar.",
+            Text = "A chave será preenchida automaticamente. Resolva o hCaptcha; depois disso o fluxo continua sozinho.",
             Location = new Point(17, 41),
             Size = new Size(940, 24),
             ForeColor = Color.FromArgb(65, 72, 82),
@@ -145,9 +146,10 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
 
         CleanupTemporaryDownload();
         _downloadInProgress = false;
+        _acceptExpectedPortalDialog = false;
         _activeRequest = request;
         _activeCompletion = new TaskCompletionSource<PortalLaunchResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-        SetStatus("Chave preenchida automaticamente. Resolva o hCaptcha manualmente e clique em Consultar.");
+        SetStatus("Chave preenchida automaticamente. Resolva o hCaptcha; depois disso o restante é automático.");
 
         ShowInTaskbar = true;
         if (!Visible) Show();
@@ -201,6 +203,7 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
         core.NavigationStarting += CoreNavigationStarting;
         core.NavigationCompleted += CoreNavigationCompleted;
         core.NewWindowRequested += CoreNewWindowRequested;
+        core.ScriptDialogOpening += CoreScriptDialogOpening;
         core.ClientCertificateRequested += CoreClientCertificateRequested;
         core.DownloadStarting += CoreDownloadStarting;
         core.Navigate(PortalUrl);
@@ -208,6 +211,7 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
 
     private void CoreNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
     {
+        _acceptExpectedPortalDialog = false;
         if (IsAllowedTopLevelUri(e.Uri)) return;
 
         e.Cancel = true;
@@ -224,20 +228,166 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
 
         try
         {
-            var script =
-                "(() => {" +
-                "const input = document.querySelector('#ctl00_ContentPlaceHolder1_txtChaveAcessoResumo, input[id$=\"txtChaveAcessoResumo\"]');" +
-                "if (!input) return false;" +
-                $"input.value = '{accessKey}';" +
-                "input.dispatchEvent(new Event('input', { bubbles: true }));" +
-                "input.dispatchEvent(new Event('change', { bubbles: true }));" +
-                "input.focus();" +
-                "return true;" +
-                "})();";
-            await _webView.CoreWebView2.ExecuteScriptAsync(script);
+            await FillAccessKeyAsync(accessKey);
+
+            if (await TryClickOfficialDownloadAsync())
+                return;
+
+            if (IsOfficialConsultPage(_webView.Source?.AbsoluteUri))
+            {
+                await InstallManualCaptchaAutoContinueAsync(accessKey);
+                return;
+            }
+
+            for (var attempt = 0; attempt < 12; attempt++)
+            {
+                await Task.Delay(250);
+                if (!string.Equals(CurrentAccessKey, accessKey, StringComparison.Ordinal) || _downloadInProgress)
+                    return;
+                if (await TryClickOfficialDownloadAsync())
+                    return;
+            }
         }
         catch (Exception exception) when (IsBrowserLifecycleException(exception))
         {
+        }
+    }
+
+    private Task FillAccessKeyAsync(string accessKey)
+    {
+        var script = $$"""
+            (() => {
+                const input = document.querySelector('#ctl00_ContentPlaceHolder1_txtChaveAcessoResumo, input[id$="txtChaveAcessoResumo"]');
+                if (!input) return false;
+                input.value = '{{accessKey}}';
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+                input.focus();
+                return true;
+            })();
+            """;
+        return _webView.CoreWebView2.ExecuteScriptAsync(script);
+    }
+
+    private Task InstallManualCaptchaAutoContinueAsync(string accessKey)
+    {
+        var script = $$"""
+            (() => {
+                const expectedKey = '{{accessKey}}';
+                const findKeyInput = () => document.querySelector('#ctl00_ContentPlaceHolder1_txtChaveAcessoResumo, input[id$="txtChaveAcessoResumo"]');
+                const findContinueButton = () => document.querySelector('#ctl00_ContentPlaceHolder1_btnConsultarHCaptcha, #ctl00_ContentPlaceHolder1_btnConsultar');
+                const input = findKeyInput();
+                const button = findContinueButton();
+                if (!input || !button) return false;
+
+                const writeKey = () => {
+                    const currentInput = findKeyInput();
+                    if (!currentInput) return false;
+                    if (currentInput.value !== expectedKey) {
+                        currentInput.value = expectedKey;
+                        currentInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        currentInput.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                    return true;
+                };
+
+                writeKey();
+                if (window.__nfeAgendamentoCaptchaWatcher === true) return true;
+                window.__nfeAgendamentoCaptchaWatcher = true;
+
+                const tryContinue = () => {
+                    const response = document.getElementsByName('h-captcha-response')[0];
+                    if (!response || !String(response.value || '').trim()) return false;
+                    const currentButton = findContinueButton();
+                    if (!currentButton || currentButton.disabled || !writeKey()) return false;
+                    window.__nfeAgendamentoCaptchaWatcher = false;
+                    currentButton.click();
+                    return true;
+                };
+
+                if (tryContinue()) return true;
+
+                const timer = window.setInterval(() => {
+                    if (window.__nfeAgendamentoCaptchaWatcher !== true || tryContinue())
+                        window.clearInterval(timer);
+                }, 250);
+
+                window.addEventListener('pagehide', () => {
+                    window.__nfeAgendamentoCaptchaWatcher = false;
+                    window.clearInterval(timer);
+                }, { once: true });
+
+                return true;
+            })();
+            """;
+        return _webView.CoreWebView2.ExecuteScriptAsync(script);
+    }
+
+    private async Task<bool> TryClickOfficialDownloadAsync()
+    {
+        if (_downloadInProgress || string.IsNullOrWhiteSpace(CurrentAccessKey))
+            return false;
+
+        const string probeScript = """
+            (() => {
+                const normalize = (value) => String(value || '').replace(/\s+/g, ' ').trim().toLocaleLowerCase('pt-BR');
+                const controls = Array.from(document.querySelectorAll('a[href], button, input[type="button"], input[type="submit"]'));
+                const direct = controls.find((element) => {
+                    if (element.tagName !== 'A' || !element.href) return false;
+                    try {
+                        const target = new URL(element.href, location.href);
+                        return target.protocol === 'https:' &&
+                            target.hostname.toLowerCase() === 'www.nfe.fazenda.gov.br' &&
+                            target.pathname.toLowerCase() === '/portal/downloadnfe.aspx';
+                    } catch {
+                        return false;
+                    }
+                });
+                if (direct) return true;
+                return controls.some((element) => normalize(element.value || element.textContent) === 'download do documento');
+            })();
+            """;
+
+        var available = await _webView.CoreWebView2.ExecuteScriptAsync(probeScript);
+        if (!string.Equals(available, "true", StringComparison.Ordinal))
+            return false;
+
+        const string clickScript = """
+            (() => {
+                const normalize = (value) => String(value || '').replace(/\s+/g, ' ').trim().toLocaleLowerCase('pt-BR');
+                const controls = Array.from(document.querySelectorAll('a[href], button, input[type="button"], input[type="submit"]'));
+                let target = controls.find((element) => {
+                    if (element.tagName !== 'A' || !element.href) return false;
+                    try {
+                        const uri = new URL(element.href, location.href);
+                        return uri.protocol === 'https:' &&
+                            uri.hostname.toLowerCase() === 'www.nfe.fazenda.gov.br' &&
+                            uri.pathname.toLowerCase() === '/portal/downloadnfe.aspx';
+                    } catch {
+                        return false;
+                    }
+                });
+                target ??= controls.find((element) => normalize(element.value || element.textContent) === 'download do documento');
+                if (!target || target.dataset.nfeAgendamentoAutoDownload === '1') return false;
+                target.dataset.nfeAgendamentoAutoDownload = '1';
+                target.click();
+                return true;
+            })();
+            """;
+
+        _acceptExpectedPortalDialog = true;
+        try
+        {
+            var clicked = await _webView.CoreWebView2.ExecuteScriptAsync(clickScript);
+            if (!string.Equals(clicked, "true", StringComparison.Ordinal))
+                return false;
+
+            SetStatus("Consulta concluída. Solicitando o XML oficial automaticamente...");
+            return true;
+        }
+        finally
+        {
+            _acceptExpectedPortalDialog = false;
         }
     }
 
@@ -257,6 +407,22 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
         catch (Exception exception) when (IsBrowserLifecycleException(exception))
         {
         }
+    }
+
+    private void CoreScriptDialogOpening(object? sender, CoreWebView2ScriptDialogOpeningEventArgs e)
+    {
+        if (!_acceptExpectedPortalDialog ||
+            string.IsNullOrWhiteSpace(CurrentAccessKey) ||
+            !IsOfficialPortalUri(_webView.Source?.AbsoluteUri))
+            return;
+
+        if (e.Kind != CoreWebView2ScriptDialogKind.Confirm &&
+            e.Kind != CoreWebView2ScriptDialogKind.Alert)
+            return;
+
+        _acceptExpectedPortalDialog = false;
+        e.Accept();
+        SetStatus("Confirmação do Portal aceita. Aguardando o certificado e o XML oficial...");
     }
 
     private void CoreClientCertificateRequested(object? sender, CoreWebView2ClientCertificateRequestedEventArgs e)
@@ -309,6 +475,7 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
 
     private void CoreDownloadStarting(object? sender, CoreWebView2DownloadStartingEventArgs e)
     {
+        _acceptExpectedPortalDialog = false;
         var accessKey = CurrentAccessKey;
         if (string.IsNullOrWhiteSpace(accessKey))
         {
@@ -454,6 +621,7 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
         _activeCompletion = null;
         _activeRequest = null;
         _downloadInProgress = false;
+        _acceptExpectedPortalDialog = false;
         CleanupTemporaryDownload();
         Hide();
         ShowInTaskbar = false;
@@ -523,6 +691,7 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
             core.NavigationStarting -= CoreNavigationStarting;
             core.NavigationCompleted -= CoreNavigationCompleted;
             core.NewWindowRequested -= CoreNewWindowRequested;
+            core.ScriptDialogOpening -= CoreScriptDialogOpening;
             core.ClientCertificateRequested -= CoreClientCertificateRequested;
             core.DownloadStarting -= CoreDownloadStarting;
         }
@@ -591,6 +760,12 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
         Uri.TryCreate(uri, UriKind.Absolute, out var parsed) &&
         string.Equals(parsed.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) &&
         IsOfficialHost(parsed.Host);
+
+    private static bool IsOfficialConsultPage(string? uri) =>
+        Uri.TryCreate(uri, UriKind.Absolute, out var parsed) &&
+        string.Equals(parsed.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) &&
+        IsOfficialHost(parsed.Host) &&
+        string.Equals(parsed.AbsolutePath, "/portal/consultaRecaptcha.aspx", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsOfficialXmlDownload(string? uri) =>
         Uri.TryCreate(uri, UriKind.Absolute, out var parsed) &&
