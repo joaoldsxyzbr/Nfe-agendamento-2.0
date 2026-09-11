@@ -131,7 +131,8 @@ public sealed class InstallerStaticTests
         var globalJson = File.ReadAllText(globalJsonPath);
         Assert.Contains("\"version\": \"10.0.401\"", globalJson);
         Assert.Contains("\"rollForward\": \"latestPatch\"", globalJson);
-        Assert.Contains("actions/setup-dotnet@v6", ci);
+        Assert.Contains("actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68", ci);
+        Assert.DoesNotContain("actions/setup-dotnet@v6", ci);
         Assert.DoesNotContain("dotnet-version:", ci);
     }
 
@@ -156,8 +157,10 @@ public sealed class InstallerStaticTests
         Assert.Contains("--target \"$validated_sha\"", workflow);
         Assert.Contains("gh release create \"$tag\"", workflow);
         Assert.Contains("--notes-file", workflow);
-        Assert.Contains("uses: actions/checkout@v7", workflow);
-        Assert.Contains("uses: actions/download-artifact@v8", workflow);
+        Assert.Contains("uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", workflow);
+        Assert.Contains("uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c", workflow);
+        Assert.DoesNotContain("uses: actions/checkout@v7", workflow);
+        Assert.DoesNotContain("uses: actions/download-artifact@v8", workflow);
     }
 
     [Fact]
