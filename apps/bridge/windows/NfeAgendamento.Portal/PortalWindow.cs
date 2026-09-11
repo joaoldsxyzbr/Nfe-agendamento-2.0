@@ -11,14 +11,13 @@ namespace NfeAgendamento.Portal;
 
 internal sealed class PortalWindow : Form, IPortalServerOperationRunner
 {
-    private const string OfficialHost = "www.nfe.fazenda.gov.br";
-    private const string PortalUrl = "https://www.nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx?tipoConsulta=resumo&tipoConteudo=7PhJ+gAVw2g%3D";
+    private const string PortalUrl = PortalSecurityPolicy.PortalUrl;
     private const long MaxXmlBytes = 10L * 1024 * 1024;
     private const int DownloadProbeAttempts = 2400;
     private const int RpcEDisconnected = unchecked((int)0x80010108);
     private const int RoEClosed = unchecked((int)0x80000013);
     private const int EAbort = unchecked((int)0x80004004);
-    private static readonly TimeSpan ExpectedPortalDialogWindow = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan ExpectedPortalDialogWindow = PortalSecurityPolicy.ExpectedDialogWindow;
 
     private readonly PortalOptions? _legacyOptions;
     private readonly bool _serverMode;
@@ -412,19 +411,19 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
 
     private void CoreScriptDialogOpening(object? sender, CoreWebView2ScriptDialogOpeningEventArgs e)
     {
-        if (!_acceptExpectedPortalDialog ||
-            DateTime.UtcNow > _expectedPortalDialogDeadlineUtc ||
-            string.IsNullOrWhiteSpace(CurrentAccessKey) ||
-            !IsOfficialPortalUri(e.Uri))
+        if (!PortalSecurityPolicy.IsExpectedDialogContext(
+                _acceptExpectedPortalDialog,
+                DateTime.UtcNow,
+                _expectedPortalDialogDeadlineUtc,
+                CurrentAccessKey,
+                e.Uri))
             return;
 
         if (e.Kind != CoreWebView2ScriptDialogKind.Confirm &&
             e.Kind != CoreWebView2ScriptDialogKind.Alert)
             return;
 
-        var message = e.Message ?? string.Empty;
-        if (!message.Contains("download", StringComparison.OrdinalIgnoreCase) ||
-            !message.Contains("certificado digital", StringComparison.OrdinalIgnoreCase))
+        if (!PortalSecurityPolicy.IsExpectedDownloadConfirmation(e.Message))
             return;
 
         _acceptExpectedPortalDialog = false;
@@ -512,7 +511,7 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
         _downloadInProgress = true;
         var directory = Path.Combine(Path.GetTempPath(), "NfeAgendamento", "portal-download");
         Directory.CreateDirectory(directory);
-        _temporaryDownloadPath = Path.Combine(directory, $"{accessKey}-{Guid.NewGuid():N}.xml");
+        _temporaryDownloadPath = PortalSecurityPolicy.CreateTemporaryDownloadPath(directory);
 
         e.ResultFilePath = _temporaryDownloadPath;
         e.Handled = true;
@@ -764,27 +763,19 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
     }
 
     private static bool IsAllowedTopLevelUri(string? uri) =>
-        string.Equals(uri, "about:blank", StringComparison.OrdinalIgnoreCase) || IsOfficialPortalUri(uri);
+        PortalSecurityPolicy.IsAllowedTopLevelUri(uri);
 
     private static bool IsOfficialPortalUri(string? uri) =>
-        Uri.TryCreate(uri, UriKind.Absolute, out var parsed) &&
-        string.Equals(parsed.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) &&
-        IsOfficialHost(parsed.Host);
+        PortalSecurityPolicy.IsOfficialPortalUri(uri);
 
     private static bool IsOfficialConsultPage(string? uri) =>
-        Uri.TryCreate(uri, UriKind.Absolute, out var parsed) &&
-        string.Equals(parsed.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) &&
-        IsOfficialHost(parsed.Host) &&
-        string.Equals(parsed.AbsolutePath, "/portal/consultaRecaptcha.aspx", StringComparison.OrdinalIgnoreCase);
+        PortalSecurityPolicy.IsOfficialConsultPage(uri);
 
     private static bool IsOfficialXmlDownload(string? uri) =>
-        Uri.TryCreate(uri, UriKind.Absolute, out var parsed) &&
-        string.Equals(parsed.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) &&
-        IsOfficialHost(parsed.Host) &&
-        string.Equals(parsed.AbsolutePath, "/portal/downloadNFe.aspx", StringComparison.OrdinalIgnoreCase);
+        PortalSecurityPolicy.IsOfficialXmlDownload(uri);
 
     private static bool IsOfficialHost(string? host) =>
-        string.Equals(host, OfficialHost, StringComparison.OrdinalIgnoreCase);
+        PortalSecurityPolicy.IsOfficialHost(host);
 
     private static void TryDelete(string path)
     {

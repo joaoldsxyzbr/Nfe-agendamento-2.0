@@ -6,41 +6,54 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   web:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '24'
+          cache: npm
       - run: npm ci
       - run: npm audit --audit-level=high
       - run: npm run lint:web
       - run: npm run format:check:web
       - run: npm run test:web
       - run: npm run build:web
-      - run: npx wrangler deploy --dry-run
+      - run: ./node_modules/.bin/wrangler deploy --dry-run
 
   bridge:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
       - run: bash apps/bridge/tests/bootstrap.sh
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
       - run: dotnet run --project apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeAgendamento.Bridge.Tests.csproj -c Release
       - run: dotnet build apps/bridge/src/NfeAgendamento.Bridge/NfeAgendamento.Bridge.csproj -c Release --no-restore
 
   windows-package:
     needs: [web, bridge]
-    runs-on: windows-latest
+    runs-on: windows-2025
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
       - name: Resolve application version
         id: version
         shell: pwsh
@@ -57,14 +70,32 @@ jobs:
         run: dotnet publish apps/bridge/windows/NfeAgendamento.Portal/NfeAgendamento.Portal.csproj -c Release -r win-x64 --self-contained true -o artifacts/NfeAgendamentoBridge
       - name: Publish tray app
         run: dotnet publish apps/bridge/windows/NfeAgendamento.App/NfeAgendamento.App.csproj -c Release -r win-x64 --self-contained true -o artifacts/NfeAgendamentoBridge
-      - name: Ensure Inno Setup
+      - name: Sign packaged executables when Authenticode is configured
+        shell: pwsh
+        env:
+          CODE_SIGNING_PFX_BASE64: ${{ secrets.CODE_SIGNING_PFX_BASE64 }}
+          CODE_SIGNING_PFX_PASSWORD: ${{ secrets.CODE_SIGNING_PFX_PASSWORD }}
+        run: |
+          ./scripts/sign-windows-artifacts.ps1 "artifacts/NfeAgendamentoBridge/NfeAgendamento.App.exe" "artifacts/NfeAgendamentoBridge/NfeAgendamento.Bridge.exe" "artifacts/NfeAgendamentoBridge/NfeAgendamento.Portal.exe"
+      - name: Install pinned Inno Setup
         shell: pwsh
         run: |
-          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
-          if (!(Test-Path $iscc)) {
-            choco install innosetup --no-progress -y
+          $expectedVersion = "6.7.1"
+          choco install innosetup --version=$expectedVersion --allow-downgrade --force --no-progress --yes --require-checksums --source="https://community.chocolatey.org/api/v2/"
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
           }
-          if (!(Test-Path $iscc)) {
+
+          $installedPackage = @(choco list innosetup --exact --limit-output)
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+          if ($installedPackage.Count -ne 1 -or $installedPackage[0] -ne "innosetup|$expectedVersion") {
+            throw "Pacote Inno Setup inesperado: '$($installedPackage -join ', ')'; esperado innosetup|$expectedVersion"
+          }
+
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (!(Test-Path $iscc -PathType Leaf)) {
             throw "Inno Setup 6 não encontrado em $iscc"
           }
       - name: Build installer
@@ -80,15 +111,23 @@ jobs:
           if (!(Test-Path $setup)) {
             throw "Setup não gerado em $setup"
           }
+      - name: Sign installer when Authenticode is configured
+        shell: pwsh
+        env:
+          CODE_SIGNING_PFX_BASE64: ${{ secrets.CODE_SIGNING_PFX_BASE64 }}
+          CODE_SIGNING_PFX_PASSWORD: ${{ secrets.CODE_SIGNING_PFX_PASSWORD }}
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          ./scripts/sign-windows-artifacts.ps1 "artifacts/installer/NFeAgendamentoBridge-Setup-v$version.exe"
       - name: Upload Windows installer
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: NFeAgendamentoBridge-Setup-v${{ steps.version.outputs.version }}
           path: artifacts/installer/NFeAgendamentoBridge-Setup-v${{ steps.version.outputs.version }}.exe
           if-no-files-found: error
           retention-days: 14
       - name: Upload Windows package
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: NfeAgendamentoBridge-win-x64
           path: artifacts/NfeAgendamentoBridge

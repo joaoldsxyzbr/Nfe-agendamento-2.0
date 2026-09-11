@@ -15,12 +15,14 @@ jobs:
       ${{ github.event.workflow_run.conclusion == 'success' &&
           github.event.workflow_run.head_branch == 'main' &&
           startsWith(github.event.workflow_run.head_commit.message, 'release: v') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - name: Checkout validated commit
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
 
       - name: Resolve and validate version
         id: version
@@ -51,7 +53,7 @@ jobs:
           echo "notes=$notes" >> "$GITHUB_OUTPUT"
 
       - name: Download validated installer
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: NFeAgendamentoBridge-Setup-v${{ steps.version.outputs.version }}
           path: release/installer
@@ -59,7 +61,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download validated portable package
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: NfeAgendamentoBridge-win-x64
           path: release/package
