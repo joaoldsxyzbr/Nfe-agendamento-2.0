@@ -14,6 +14,7 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
     private const string OfficialHost = "www.nfe.fazenda.gov.br";
     private const string PortalUrl = "https://www.nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx?tipoConsulta=resumo&tipoConteudo=7PhJ+gAVw2g%3D";
     private const long MaxXmlBytes = 10L * 1024 * 1024;
+    private const int DownloadProbeAttempts = 2400;
     private const int RpcEDisconnected = unchecked((int)0x80010108);
     private const int RoEClosed = unchecked((int)0x80000013);
     private const int EAbort = unchecked((int)0x80004004);
@@ -211,7 +212,6 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
 
     private void CoreNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
     {
-        _acceptExpectedPortalDialog = false;
         if (IsAllowedTopLevelUri(e.Uri)) return;
 
         e.Cancel = true;
@@ -234,12 +234,9 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
                 return;
 
             if (IsOfficialConsultPage(_webView.Source?.AbsoluteUri))
-            {
                 await InstallManualCaptchaAutoContinueAsync(accessKey);
-                return;
-            }
 
-            for (var attempt = 0; attempt < 12; attempt++)
+            for (var attempt = 0; attempt < DownloadProbeAttempts; attempt++)
             {
                 await Task.Delay(250);
                 if (!string.Equals(CurrentAccessKey, accessKey, StringComparison.Ordinal) || _downloadInProgress)
@@ -331,6 +328,7 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
         const string probeScript = """
             (() => {
                 const normalize = (value) => String(value || '').replace(/\s+/g, ' ').trim().toLocaleLowerCase('pt-BR');
+                const isDownloadLabel = (element) => normalize(element.value || element.textContent).startsWith('download do documento');
                 const controls = Array.from(document.querySelectorAll('a[href], button, input[type="button"], input[type="submit"]'));
                 const direct = controls.find((element) => {
                     if (element.tagName !== 'A' || !element.href) return false;
@@ -344,7 +342,7 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
                     }
                 });
                 if (direct) return true;
-                return controls.some((element) => normalize(element.value || element.textContent) === 'download do documento');
+                return controls.some(isDownloadLabel);
             })();
             """;
 
@@ -355,6 +353,7 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
         const string clickScript = """
             (() => {
                 const normalize = (value) => String(value || '').replace(/\s+/g, ' ').trim().toLocaleLowerCase('pt-BR');
+                const isDownloadLabel = (element) => normalize(element.value || element.textContent).startsWith('download do documento');
                 const controls = Array.from(document.querySelectorAll('a[href], button, input[type="button"], input[type="submit"]'));
                 let target = controls.find((element) => {
                     if (element.tagName !== 'A' || !element.href) return false;
@@ -367,7 +366,7 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
                         return false;
                     }
                 });
-                target ??= controls.find((element) => normalize(element.value || element.textContent) === 'download do documento');
+                target ??= controls.find(isDownloadLabel);
                 if (!target || target.dataset.nfeAgendamentoAutoDownload === '1') return false;
                 target.dataset.nfeAgendamentoAutoDownload = '1';
                 target.click();
@@ -383,6 +382,7 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
                 return false;
 
             SetStatus("Consulta concluída. Solicitando o XML oficial automaticamente...");
+            await Task.Delay(1500);
             return true;
         }
         finally
