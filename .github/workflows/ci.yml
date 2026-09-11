@@ -76,10 +76,7 @@ jobs:
           CODE_SIGNING_PFX_BASE64: ${{ secrets.CODE_SIGNING_PFX_BASE64 }}
           CODE_SIGNING_PFX_PASSWORD: ${{ secrets.CODE_SIGNING_PFX_PASSWORD }}
         run: |
-          ./scripts/sign-windows-artifacts.ps1 \
-            "artifacts/NfeAgendamentoBridge/NfeAgendamento.App.exe" \
-            "artifacts/NfeAgendamentoBridge/NfeAgendamento.Bridge.exe" \
-            "artifacts/NfeAgendamentoBridge/NfeAgendamento.Portal.exe"
+          ./scripts/sign-windows-artifacts.ps1 "artifacts/NfeAgendamentoBridge/NfeAgendamento.App.exe" "artifacts/NfeAgendamentoBridge/NfeAgendamento.Bridge.exe" "artifacts/NfeAgendamentoBridge/NfeAgendamento.Portal.exe"
       - name: Install pinned Inno Setup
         shell: pwsh
         run: |
