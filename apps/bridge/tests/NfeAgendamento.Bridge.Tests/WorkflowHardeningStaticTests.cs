@@ -31,6 +31,9 @@ public sealed class WorkflowHardeningStaticTests
         Assert.Contains("$expectedVersion = \"6.7.1\"", ci);
         Assert.Contains("--require-checksums", ci);
         Assert.Contains("https://community.chocolatey.org/api/v2/", ci);
+        Assert.Contains("choco list innosetup --exact --limit-output", ci);
+        Assert.Contains("innosetup|$expectedVersion", ci);
+        Assert.DoesNotContain("VersionInfo.ProductVersion", ci);
         Assert.Contains("scripts/sign-windows-artifacts.ps1", ci);
     }
 
