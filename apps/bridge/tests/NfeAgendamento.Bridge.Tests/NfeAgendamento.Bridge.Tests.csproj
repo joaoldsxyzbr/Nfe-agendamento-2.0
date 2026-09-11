@@ -21,5 +21,6 @@
     <Compile Include="../../windows/NfeAgendamento.App/BridgeRestartPolicy.cs" Link="AppRuntime/BridgeRestartPolicy.cs" />
     <Compile Include="../../windows/NfeAgendamento.App/UpdateRelease.cs" Link="Updater/UpdateRelease.cs" />
     <Compile Include="../../windows/NfeAgendamento.App/UpdateService.cs" Link="Updater/UpdateService.cs" />
+    <Compile Include="../../windows/NfeAgendamento.Portal/PortalSecurityPolicy.cs" Link="Portal/PortalSecurityPolicy.cs" />
   </ItemGroup>
 </Project>
