@@ -28,7 +28,7 @@ describe('Cloudflare deploy configuration', () => {
     expect(ci).not.toContain('- run: npm install');
   });
 
-  it('blocks high npm advisories and builds desktop artifacts on Windows', async () => {
+  it('blocks high npm advisories and builds desktop artifacts on a pinned Windows runner', async () => {
     const ci = await readFile(ciUrl, 'utf8');
     expect(ci).toContain('- run: npm audit --audit-level=high');
 
@@ -36,7 +36,8 @@ describe('Cloudflare deploy configuration', () => {
     const windowsJob = ci.match(/\r?\n  windows-package:\r?\n([\s\S]*)$/)?.[1] ?? '';
     expect(bridgeJob).not.toContain('apps/bridge/windows/NfeAgendamento.Portal');
     expect(bridgeJob).not.toContain('apps/bridge/windows/NfeAgendamento.App');
-    expect(windowsJob).toContain('runs-on: windows-latest');
+    expect(windowsJob).toContain('runs-on: windows-2025');
+    expect(windowsJob).not.toContain('runs-on: windows-latest');
     expect(windowsJob).toContain('NfeAgendamento.Portal.csproj');
     expect(windowsJob).toContain('NfeAgendamento.App.csproj');
   });
