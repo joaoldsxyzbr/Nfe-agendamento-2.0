@@ -14,9 +14,9 @@ Reescrita limpa do NFe Agendamento com **site estático + App/Bridge Windows loc
 - **Diagnóstico local:** log estruturado JSON Lines com rotação em `%LOCALAPPDATA%\NfeAgendamentoBridge\logs`, sem armazenar chave da NF-e, XML, PFX, senha, chave privada, mensagem ou stack trace de exceção.
 - **Fallback Portal:** helper Windows separado com WebView2, Portal Nacional fixo, hCaptcha sempre manual e processo persistente reutilizado entre consultas.
 - **Distribuição Windows:** instalador Inno Setup por usuário, sem administrador, com início automático do app na bandeja no login.
-- **Versão canônica atual:** `0.0.8` em `Directory.Build.props`.
+- **Versão canônica atual:** `0.0.9` em `Directory.Build.props`.
 
-## Estado funcional — 10/09/2026
+## Estado funcional — 11/09/2026
 
 Implementado e coberto pelos gates automatizados do projeto:
 
@@ -39,6 +39,8 @@ Implementado e coberto pelos gates automatizados do projeto:
 - tratamento de `137`, `138`, `656`, HTTP 429, timeout e falhas ambíguas sem retry fiscal automático;
 - XML limitado a 10 MiB, DTD proibido, `XmlResolver = null` e validação contra a chave consultada;
 - fallback automático após `consumption_limit` ou retorno SEFAZ `217` (`fiscal_status`), sem repetir a consulta fiscal direta;
+- helper Portal continua observando o resultado após o hCaptcha e reconhece `Download do Documento` mesmo quando o Portal acrescenta sufixos visuais como `*`;
+- clique em **Download do Documento** e confirmação `Alert`/`Confirm` associada ao download são tratados automaticamente; o único passo humano nominal é resolver o hCaptcha;
 - logging local rotativo do Bridge com Event IDs estáveis para falhas fiscais e lifecycle;
 - helper `NfeAgendamento.Portal.exe` em WinForms/WebView2, persistente e reconectável por Named Pipe local;
 - uma operação Portal por PC;
@@ -72,12 +74,13 @@ Durante o fallback Portal:
 1. o helper abre a página oficial e preenche a chave automaticamente;
 2. o usuário resolve **manualmente** o hCaptcha;
 3. somente depois de existir resposta válida em `h-captcha-response`, o helper aciona a consulta oficial;
-4. ao reconhecer **Download do Documento**, o helper aciona o download oficial;
-5. `Alert`/`Confirm` só pode ser aceito durante esse clique controlado;
-6. o A1 previamente selecionado é escolhido pelo thumbprint;
-7. somente `/portal/downloadNFe.aspx` é aceito como download XML;
-8. o XML é validado e devolvido ao Bridge/site;
-9. a janela volta ao estado ocioso.
+4. o helper continua monitorando a página de resultado por até 10 minutos e reconhece o controle **Download do Documento** mesmo com sufixos como `*`;
+5. o helper aciona o download oficial automaticamente;
+6. `Alert`/`Confirm` associado ao clique controlado é aceito automaticamente dentro de uma janela curta e restrita;
+7. o A1 previamente selecionado é escolhido pelo thumbprint;
+8. somente `/portal/downloadNFe.aspx` é aceito como download XML;
+9. o XML é validado e devolvido ao Bridge/site;
+10. a janela volta ao estado ocioso.
 
 O helper **não resolve nem contorna captcha**. Continuam ausentes `hcaptcha.execute`, `grecaptcha.execute`, serviços externos de resolução, fabricação de token e clique sintético dentro do desafio.
 
@@ -135,12 +138,12 @@ O CI também executa `npx wrangler deploy --dry-run`.
 
 ## Distribuição Windows
 
-Release pública atual: **v0.0.8**.
+Release pública atual: **v0.0.9**.
 
 Asset principal:
 
 ```text
-NFeAgendamentoBridge-Setup-v0.0.8.exe
+NFeAgendamentoBridge-Setup-v0.0.9.exe
 ```
 
 O instalador:
@@ -153,7 +156,7 @@ O instalador:
 - preserva `%LOCALAPPDATA%\NfeAgendamentoBridge`, onde fica a seleção local do certificado;
 - não instala atualizações silenciosamente.
 
-Quem estiver na v0.0.7 pode usar **Verificar atualizações** no app da bandeja para instalar a v0.0.8 após confirmação.
+Quem estiver na v0.0.8 pode usar **Verificar atualizações** no app da bandeja para instalar a v0.0.9 após confirmação.
 
 O Microsoft Edge WebView2 Runtime é necessário somente para o fallback pelo Portal Nacional.
 
@@ -181,4 +184,4 @@ Não provoque bloqueio `656` repetindo consultas artificialmente apenas para tes
 - automação pós-hCaptcha: `docs/testing/portal-post-hcaptcha.md`;
 - atualizador manual: `docs/testing/bridge-updater.md`;
 - layout DANFE: `docs/testing/danfe-layout.md`;
-- notas da release atual: `docs/releases/v0.0.8.md`.
+- notas da release atual: `docs/releases/v0.0.9.md`.
