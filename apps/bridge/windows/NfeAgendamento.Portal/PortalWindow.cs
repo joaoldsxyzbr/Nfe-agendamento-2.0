@@ -203,6 +203,7 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
         var core = _webView.CoreWebView2;
         core.Settings.AreDevToolsEnabled = false;
         core.Settings.AreDefaultContextMenusEnabled = false;
+        core.Settings.AreDefaultScriptDialogsEnabled = false;
         core.Settings.IsStatusBarEnabled = true;
         core.NavigationStarting += CoreNavigationStarting;
         core.NavigationCompleted += CoreNavigationCompleted;
