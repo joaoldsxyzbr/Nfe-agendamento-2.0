@@ -43,12 +43,14 @@ public sealed class PortalHelperStaticTests
 
         Assert.Contains("h-captcha-response", window);
         Assert.Contains("ctl00_ContentPlaceHolder1_btnConsultarHCaptcha", window);
-        Assert.Contains("download do documento", window, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("startsWith('download do documento')", window, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("DownloadProbeAttempts", window);
         Assert.Contains("/portal/downloadnfe.aspx", window, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("ScriptDialogOpening", window);
         Assert.Contains("CoreWebView2ScriptDialogKind.Confirm", window);
         Assert.Contains("CoreWebView2ScriptDialogKind.Alert", window);
         Assert.Contains("_acceptExpectedPortalDialog", window);
+        Assert.Contains("Task.Delay(1500)", window);
         Assert.DoesNotContain("hcaptcha.execute", window, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("grecaptcha.execute", window, StringComparison.OrdinalIgnoreCase);
     }
