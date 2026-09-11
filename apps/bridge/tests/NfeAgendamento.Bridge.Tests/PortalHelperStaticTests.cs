@@ -50,7 +50,12 @@ public sealed class PortalHelperStaticTests
         Assert.Contains("CoreWebView2ScriptDialogKind.Confirm", window);
         Assert.Contains("CoreWebView2ScriptDialogKind.Alert", window);
         Assert.Contains("_acceptExpectedPortalDialog", window);
-        Assert.Contains("Task.Delay(1500)", window);
+        Assert.Contains("ExpectedPortalDialogWindow", window);
+        Assert.Contains("DateTime.UtcNow.Add(ExpectedPortalDialogWindow)", window);
+        Assert.Contains("IsOfficialPortalUri(e.Uri)", window);
+        Assert.Contains("message.Contains(\"download\"", window, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("message.Contains(\"certificado digital\"", window, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Task.Delay(1500)", window);
         Assert.DoesNotContain("hcaptcha.execute", window, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("grecaptcha.execute", window, StringComparison.OrdinalIgnoreCase);
     }
