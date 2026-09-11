@@ -14,7 +14,7 @@ Reescrita limpa do NFe Agendamento com **site estático + App/Bridge Windows loc
 - **Diagnóstico local:** log estruturado JSON Lines com rotação em `%LOCALAPPDATA%\NfeAgendamentoBridge\logs`, sem armazenar chave da NF-e, XML, PFX, senha, chave privada, mensagem ou stack trace de exceção.
 - **Fallback Portal:** helper Windows separado com WebView2, Portal Nacional fixo, hCaptcha sempre manual e processo persistente reutilizado entre consultas.
 - **Distribuição Windows:** instalador Inno Setup por usuário, sem administrador, com início automático do app na bandeja no login.
-- **Versão canônica atual:** `0.0.10` em `Directory.Build.props`.
+- **Versão canônica atual:** `0.0.11` em `Directory.Build.props`.
 
 ## Estado funcional — 11/09/2026
 
@@ -40,7 +40,9 @@ Implementado e coberto pelos gates automatizados do projeto:
 - XML limitado a 10 MiB, DTD proibido, `XmlResolver = null` e validação contra a chave consultada;
 - fallback automático após `consumption_limit` ou retorno SEFAZ `217` (`fiscal_status`), sem repetir a consulta fiscal direta;
 - helper Portal continua observando o resultado após o hCaptcha e reconhece `Download do Documento` mesmo quando o Portal acrescenta sufixos visuais como `*`;
-- clique em **Download do Documento** é automático e a confirmação de certificado digital do Portal fica elegível por até 60 segundos, com validação de origem e conteúdo da mensagem antes do aceite;
+- clique em **Download do Documento** é automático;
+- `AreDefaultScriptDialogsEnabled` fica desativado no WebView2 para que `ScriptDialogOpening` realmente intercepte o `Alert`/`Confirm` do Portal;
+- a confirmação de certificado digital do Portal fica elegível por até 60 segundos, com validação de origem e conteúdo da mensagem antes do aceite;
 - o único passo humano nominal do fallback é resolver o hCaptcha;
 - logging local rotativo do Bridge com Event IDs estáveis para falhas fiscais e lifecycle;
 - helper `NfeAgendamento.Portal.exe` em WinForms/WebView2, persistente e reconectável por Named Pipe local;
@@ -77,11 +79,12 @@ Durante o fallback Portal:
 3. somente depois de existir resposta válida em `h-captcha-response`, o helper aciona a consulta oficial;
 4. o helper continua monitorando a página de resultado por até 10 minutos e reconhece o controle **Download do Documento** mesmo com sufixos como `*`;
 5. o helper aciona o download oficial automaticamente;
-6. a confirmação de certificado digital associada ao clique controlado é aceita automaticamente, por até 60 segundos após o clique, somente quando o evento vem do host oficial e a mensagem contém `download` e `certificado digital`;
-7. o A1 previamente selecionado é escolhido pelo thumbprint;
-8. somente `/portal/downloadNFe.aspx` é aceito como download XML;
-9. o XML é validado e devolvido ao Bridge/site;
-10. a janela volta ao estado ocioso.
+6. o WebView2 intercepta os diálogos JavaScript do Portal via `ScriptDialogOpening`, com os diálogos padrão desativados conforme exigido pela API;
+7. a confirmação de certificado digital associada ao clique controlado é aceita automaticamente, por até 60 segundos após o clique, somente quando o evento vem do host oficial e a mensagem contém `download` e `certificado digital`;
+8. o A1 previamente selecionado é escolhido pelo thumbprint;
+9. somente `/portal/downloadNFe.aspx` é aceito como download XML;
+10. o XML é validado e devolvido ao Bridge/site;
+11. a janela volta ao estado ocioso.
 
 O helper **não resolve nem contorna captcha**. Continuam ausentes `hcaptcha.execute`, `grecaptcha.execute`, serviços externos de resolução, fabricação de token e clique sintético dentro do desafio.
 
@@ -139,12 +142,12 @@ O CI também executa `npx wrangler deploy --dry-run`.
 
 ## Distribuição Windows
 
-Release pública atual: **v0.0.10**.
+Release pública atual: **v0.0.11**.
 
 Asset principal:
 
 ```text
-NFeAgendamentoBridge-Setup-v0.0.10.exe
+NFeAgendamentoBridge-Setup-v0.0.11.exe
 ```
 
 O instalador:
@@ -157,7 +160,7 @@ O instalador:
 - preserva `%LOCALAPPDATA%\NfeAgendamentoBridge`, onde fica a seleção local do certificado;
 - não instala atualizações silenciosamente.
 
-Quem estiver na v0.0.9 pode usar **Verificar atualizações** no app da bandeja para instalar a v0.0.10 após confirmação.
+Quem estiver na v0.0.10 pode usar **Verificar atualizações** no app da bandeja para instalar a v0.0.11 após confirmação.
 
 O Microsoft Edge WebView2 Runtime é necessário somente para o fallback pelo Portal Nacional.
 
@@ -185,4 +188,4 @@ Não provoque bloqueio `656` repetindo consultas artificialmente apenas para tes
 - automação pós-hCaptcha: `docs/testing/portal-post-hcaptcha.md`;
 - atualizador manual: `docs/testing/bridge-updater.md`;
 - layout DANFE: `docs/testing/danfe-layout.md`;
-- notas da release atual: `docs/releases/v0.0.10.md`.
+- notas da release atual: `docs/releases/v0.0.11.md`.
