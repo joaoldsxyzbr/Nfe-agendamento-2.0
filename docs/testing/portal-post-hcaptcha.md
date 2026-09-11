@@ -2,8 +2,8 @@
 
 **Data:** 2026-09-11  
 **Repositório:** `joaoldsxyzbr/Nfe-agendamento-2.0`  
-**Versão alvo:** `v0.0.9`  
-**Status:** automação ajustada; validação física com Portal/A1 real continua obrigatória.
+**Versão alvo:** `v0.0.10`  
+**Status:** confirmação de download corrigida; validação física com Portal/A1 real continua obrigatória.
 
 ## Objetivo
 
@@ -18,7 +18,7 @@ Experiência esperada quando o fallback é elegível (`consumption_limit` ou `fi
 5. o helper continua observando a página de resultado, inclusive quando o Portal atualiza o DOM sem uma navegação completa;
 6. o controle **Download do Documento** é reconhecido mesmo quando o texto visível contém sufixos como `*`;
 7. o helper aciona o download oficial automaticamente;
-8. a confirmação `Alert`/`Confirm` associada ao clique controlado é aceita automaticamente;
+8. a confirmação do Portal informando que é necessário certificado digital é aceita automaticamente;
 9. o certificado A1 já selecionado continua sendo escolhido pelo thumbprint;
 10. o XML oficial continua sendo interceptado, limitado, validado contra a chave e devolvido ao Bridge/site;
 11. a janela volta ao estado ocioso ao concluir.
@@ -27,16 +27,17 @@ Na prática, o único passo humano desejado no fallback é resolver o hCaptcha.
 
 ## Causa da falha corrigida
 
-A automação anterior dependia de duas condições frágeis:
+Na v0.0.9 o clique em **Download do Documento** já era automático, porém a autorização para aceitar o diálogo JavaScript ficava armada por apenas cerca de 1,5 segundo. O Portal pode exibir a confirmação somente depois desse intervalo, após processamento assíncrono da própria página.
 
-- procurava o rótulo do botão por igualdade exata com `Download do Documento`, enquanto a interface oficial pode apresentar `Download do documento*`;
-- após instalar o observador do hCaptcha, o helper podia parar de procurar o botão de download cedo demais quando o resultado era atualizado dinamicamente na mesma página.
+Além disso, a validação do diálogo usava a URL atual do WebView em vez da URL reportada pelo próprio evento `ScriptDialogOpening`, o que podia ficar inconsistente durante uma transição da página.
 
-A v0.0.9 corrige os dois pontos:
+A v0.0.10 corrige esses pontos:
 
-- o rótulo passa a ser reconhecido por prefixo estrito `download do documento`, ainda limitado aos controles clicáveis da página oficial;
-- o helper mantém uma sondagem de curta frequência por até 10 minutos enquanto a mesma operação/chave continuar ativa;
-- a janela de aceitação de diálogo permanece ativa por um curto período após o clique automático para cobrir `Confirm`/`Alert` disparado de forma ligeiramente assíncrona.
+- a autorização de confirmação permanece válida por até 60 segundos após o clique automático;
+- a autorização é encerrada assim que o diálogo esperado é aceito, o download começa ou a operação termina;
+- a origem do diálogo é validada pela URL do próprio evento `ScriptDialogOpening`;
+- somente `Alert`/`Confirm` do host oficial contendo simultaneamente os termos `download` e `certificado digital` são aceitos automaticamente;
+- não existe aceite genérico de diálogos do Portal.
 
 ## Limites de automação
 
@@ -58,7 +59,7 @@ O helper apenas observa o campo de resposta que o hCaptcha preenche **depois da 
 - a página de consulta reconhecida continua restrita a `/portal/consultaRecaptcha.aspx`;
 - a continuação usa somente os IDs oficiais conhecidos `btnConsultarHCaptcha` / `btnConsultar`;
 - o download automático reconhece somente o endpoint oficial `/portal/downloadNFe.aspx` ou um controle clicável cujo rótulo normalizado comece com `Download do Documento` dentro da página oficial;
-- diálogos JavaScript não são aceitos genericamente: `Alert`/`Confirm` só podem ser aceitos enquanto o helper executa o clique de download previamente reconhecido;
+- diálogos JavaScript não são aceitos genericamente: a confirmação automática exige origem oficial, janela temporal armada pelo clique de download e mensagem compatível com a exigência de certificado digital;
 - navegação e popups externos continuam bloqueados;
 - certificado continua selecionado somente pelo thumbprint já escolhido e somente para o host oficial;
 - download fora do endpoint XML oficial continua cancelado;
@@ -93,8 +94,9 @@ O teste estático do helper exige explicitamente:
 - monitoramento prolongado do resultado (`DownloadProbeAttempts`);
 - escopo do endpoint oficial de download;
 - presença de `ScriptDialogOpening` com `Confirm`/`Alert`;
-- guarda `_acceptExpectedPortalDialog`;
-- janela curta pós-clique antes de desarmar a guarda;
+- guarda `_acceptExpectedPortalDialog` com janela temporal explícita;
+- validação da URL do próprio evento;
+- filtro de mensagem exigindo `download` e `certificado digital`;
 - ausência de `hcaptcha.execute` e `grecaptcha.execute`.
 
 ## Aceitação física específica
@@ -106,7 +108,7 @@ Em uma ocorrência real/controlada de fallback, validar no Windows:
 3. resolver somente o hCaptcha, sem clicar manualmente em **Consultar/Continuar**;
 4. confirmar que a consulta avança sozinha após a resposta do captcha;
 5. **não clicar** em **Download do Documento** e confirmar que o helper aciona esse passo sozinho;
-6. **não clicar** em **OK** em `Alert`/`Confirm` associado ao download e confirmar que ele é aceito automaticamente;
+6. quando surgir a confirmação informando que é necessário possuir certificado digital, **não clicar em OK** e confirmar que o helper a aceita automaticamente;
 7. confirmar que o mesmo A1 selecionado é usado;
 8. confirmar captura e validação do XML correto;
 9. confirmar retorno ao site e renderização pelo pipeline atual;
