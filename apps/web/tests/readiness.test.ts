@@ -66,11 +66,12 @@ describe('final readiness', () => {
 
   it('builds one Windows acceptance artifact with Bridge and Portal helper together', () => {
     expect(ci).toContain('windows-package:');
-    expect(ci).toContain('runs-on: windows-latest');
+    expect(ci).toContain('runs-on: windows-2025');
+    expect(ci).not.toContain('runs-on: windows-latest');
     expect(ci).toContain('NfeAgendamento.Bridge.csproj');
     expect(ci).toContain('NfeAgendamento.Portal.csproj');
     expect(ci).toContain('artifacts/NfeAgendamentoBridge');
-    expect(ci).toContain('actions/upload-artifact@v7');
+    expect(ci).toContain('actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a');
     expect(ci).toContain('name: NfeAgendamentoBridge-win-x64');
   });
 });
