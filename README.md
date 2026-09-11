@@ -24,6 +24,10 @@ Implementado e coberto pelos gates automatizados do projeto:
 - TypeScript em modo `strict`, lint adicional e verificação determinística de formato no CI;
 - dependências npm fixadas por `package-lock.json`, `npm ci` e `npm audit --audit-level=high` no CI;
 - dependências NuGet em locked mode;
+- GitHub Actions do CI/release fixadas por SHA imutável, checkout sem persistência de credencial e permissões mínimas;
+- runners com versão explícita e timeout por job;
+- Inno Setup do empacotamento fixado em `6.7.1`, com checksums obrigatórios e validação da versão instalada;
+- pipeline preparado para Authenticode opcional, sem armazenar PFX/senha no repositório;
 - tema dark e DANFE A4 branco/fiscal;
 - preview DANFE em modal com `Ctrl + scroll`, impressão/PDF e download XML;
 - DANFE mostra a composição da embalagem (ex.: `CX C/ 20 UN`) quando ela pode ser determinada diretamente por `uCom/qCom` e `uTrib/qTrib` da NF-e;
@@ -43,6 +47,8 @@ Implementado e coberto pelos gates automatizados do projeto:
 - clique em **Download do Documento** é automático;
 - `AreDefaultScriptDialogsEnabled` fica desativado no WebView2 para que `ScriptDialogOpening` realmente intercepte o `Alert`/`Confirm` do Portal;
 - a confirmação de certificado digital do Portal fica elegível por até 60 segundos, com validação de origem e conteúdo da mensagem antes do aceite;
+- decisões de segurança do Portal centralizadas em política pura com testes comportamentais de host, HTTPS, paths, diálogo e temporários;
+- XML temporário do Portal usa nome aleatório e não expõe a chave NF-e no nome do arquivo;
 - o único passo humano nominal do fallback é resolver o hCaptcha;
 - logging local rotativo do Bridge com Event IDs estáveis para falhas fiscais e lifecycle;
 - helper `NfeAgendamento.Portal.exe` em WinForms/WebView2, persistente e reconectável por Named Pipe local;
@@ -83,8 +89,9 @@ Durante o fallback Portal:
 7. a confirmação de certificado digital associada ao clique controlado é aceita automaticamente, por até 60 segundos após o clique, somente quando o evento vem do host oficial e a mensagem contém `download` e `certificado digital`;
 8. o A1 previamente selecionado é escolhido pelo thumbprint;
 9. somente `/portal/downloadNFe.aspx` é aceito como download XML;
-10. o XML é validado e devolvido ao Bridge/site;
-11. a janela volta ao estado ocioso.
+10. o download usa arquivo temporário com nome aleatório, sem incluir a chave NF-e no path;
+11. o XML é validado contra a chave consultada e devolvido ao Bridge/site;
+12. a janela volta ao estado ocioso.
 
 O helper **não resolve nem contorna captcha**. Continuam ausentes `hcaptcha.execute`, `grecaptcha.execute`, serviços externos de resolução, fabricação de token e clique sintético dentro do desafio.
 
@@ -102,12 +109,13 @@ Detalhes: `docs/testing/portal-post-hcaptcha.md`.
 - navegação externa e popups externos são bloqueados;
 - download fora do endpoint XML oficial é cancelado;
 - IPC do helper e controle App → Bridge usam Named Pipe local restrito ao usuário atual;
+- cadeia de build do GitHub Actions usa referências imutáveis para Actions e ferramenta de instalador versionada;
 - não existem Central, pareamento, servidor LAN, mDNS ou pasta compartilhada nesta arquitetura.
 
-Dois hardenings externos continuam pendentes:
+Dois controles externos permanecem dependentes de configuração fora do código:
 
-- **Authenticode:** App/Bridge/Portal/Setup não têm publisher assinado enquanto não houver certificado de code signing disponível ao pipeline;
-- **proteção da `main`:** branch protection/rulesets dependem de configuração administrativa do GitHub.
+- **Authenticode:** o pipeline está pronto para assinar App/Bridge/Portal/Setup com SHA-256 quando `CODE_SIGNING_PFX_BASE64` e `CODE_SIGNING_PFX_PASSWORD` forem configurados; sem certificado real de code signing, os artifacts permanecem sem publisher assinado;
+- **proteção da `main`:** em 11/09/2026 não há ruleset moderno configurado; a integração do GitHub usada no projeto não possui permissão administrativa de escrita para criá-lo. A configuração exata recomendada está em `docs/operations/repository-hardening.md`.
 
 ## Desenvolvimento
 
@@ -138,7 +146,7 @@ O deploy do site usa a configuração da raiz:
 npx wrangler deploy
 ```
 
-O CI também executa `npx wrangler deploy --dry-run`.
+O CI executa o Wrangler instalado pelo lockfile com `./node_modules/.bin/wrangler deploy --dry-run`, sem fallback de download durante o job.
 
 ## Distribuição Windows
 
@@ -183,6 +191,7 @@ Não provoque bloqueio `656` repetindo consultas artificialmente apenas para tes
 ## Documentação
 
 - arquitetura/segurança: `docs/architecture/bridge-security.md`;
+- hardening do repositório/distribuição: `docs/operations/repository-hardening.md`;
 - logging local do Bridge: `docs/operations/local-logging.md`;
 - aceitação física: `docs/testing/acceptance.md`;
 - automação pós-hCaptcha: `docs/testing/portal-post-hcaptcha.md`;
