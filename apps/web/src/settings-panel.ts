@@ -1,6 +1,6 @@
 import './settings-panel.css';
 
-const WINDOWS_SETUP_URL = 'https://github.com/joaoldsxyzbr/Nfe-agendamento-2.0/releases/download/v0.0.10/NFeAgendamentoBridge-Setup-v0.0.10.exe';
+const WINDOWS_SETUP_URL = 'https://github.com/joaoldsxyzbr/Nfe-agendamento-2.0/releases/download/v0.0.11/NFeAgendamentoBridge-Setup-v0.0.11.exe';
 
 window.addEventListener('DOMContentLoaded', initializeSettingsPanel, { once: true });
 
