@@ -18,6 +18,7 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
     private const int RpcEDisconnected = unchecked((int)0x80010108);
     private const int RoEClosed = unchecked((int)0x80000013);
     private const int EAbort = unchecked((int)0x80004004);
+    private static readonly TimeSpan ExpectedPortalDialogWindow = TimeSpan.FromSeconds(60);
 
     private readonly PortalOptions? _legacyOptions;
     private readonly bool _serverMode;
@@ -29,6 +30,7 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
     private string? _temporaryDownloadPath;
     private bool _downloadInProgress;
     private bool _acceptExpectedPortalDialog;
+    private DateTime _expectedPortalDialogDeadlineUtc;
     private bool _legacyFinalized;
     private bool _allowRealClose;
 
@@ -148,6 +150,7 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
         CleanupTemporaryDownload();
         _downloadInProgress = false;
         _acceptExpectedPortalDialog = false;
+        _expectedPortalDialogDeadlineUtc = default;
         _activeRequest = request;
         _activeCompletion = new TaskCompletionSource<PortalLaunchResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         SetStatus("Chave preenchida automaticamente. Resolva o hCaptcha; depois disso o restante é automático.");
@@ -375,20 +378,17 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
             """;
 
         _acceptExpectedPortalDialog = true;
-        try
-        {
-            var clicked = await _webView.CoreWebView2.ExecuteScriptAsync(clickScript);
-            if (!string.Equals(clicked, "true", StringComparison.Ordinal))
-                return false;
-
-            SetStatus("Consulta concluída. Solicitando o XML oficial automaticamente...");
-            await Task.Delay(1500);
-            return true;
-        }
-        finally
+        _expectedPortalDialogDeadlineUtc = DateTime.UtcNow.Add(ExpectedPortalDialogWindow);
+        var clicked = await _webView.CoreWebView2.ExecuteScriptAsync(clickScript);
+        if (!string.Equals(clicked, "true", StringComparison.Ordinal))
         {
             _acceptExpectedPortalDialog = false;
+            _expectedPortalDialogDeadlineUtc = default;
+            return false;
         }
+
+        SetStatus("Consulta concluída. Solicitando o XML oficial automaticamente...");
+        return true;
     }
 
     private void CoreNewWindowRequested(object? sender, CoreWebView2NewWindowRequestedEventArgs e)
@@ -412,15 +412,22 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
     private void CoreScriptDialogOpening(object? sender, CoreWebView2ScriptDialogOpeningEventArgs e)
     {
         if (!_acceptExpectedPortalDialog ||
+            DateTime.UtcNow > _expectedPortalDialogDeadlineUtc ||
             string.IsNullOrWhiteSpace(CurrentAccessKey) ||
-            !IsOfficialPortalUri(_webView.Source?.AbsoluteUri))
+            !IsOfficialPortalUri(e.Uri))
             return;
 
         if (e.Kind != CoreWebView2ScriptDialogKind.Confirm &&
             e.Kind != CoreWebView2ScriptDialogKind.Alert)
             return;
 
+        var message = e.Message ?? string.Empty;
+        if (!message.Contains("download", StringComparison.OrdinalIgnoreCase) ||
+            !message.Contains("certificado digital", StringComparison.OrdinalIgnoreCase))
+            return;
+
         _acceptExpectedPortalDialog = false;
+        _expectedPortalDialogDeadlineUtc = default;
         e.Accept();
         SetStatus("Confirmação do Portal aceita. Aguardando o certificado e o XML oficial...");
     }
@@ -476,6 +483,7 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
     private void CoreDownloadStarting(object? sender, CoreWebView2DownloadStartingEventArgs e)
     {
         _acceptExpectedPortalDialog = false;
+        _expectedPortalDialogDeadlineUtc = default;
         var accessKey = CurrentAccessKey;
         if (string.IsNullOrWhiteSpace(accessKey))
         {
@@ -622,6 +630,7 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
         _activeRequest = null;
         _downloadInProgress = false;
         _acceptExpectedPortalDialog = false;
+        _expectedPortalDialogDeadlineUtc = default;
         CleanupTemporaryDownload();
         Hide();
         ShowInTaskbar = false;
