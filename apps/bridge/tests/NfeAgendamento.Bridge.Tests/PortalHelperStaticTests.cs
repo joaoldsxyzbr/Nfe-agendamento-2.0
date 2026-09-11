@@ -47,6 +47,7 @@ public sealed class PortalHelperStaticTests
         Assert.Contains("DownloadProbeAttempts", window);
         Assert.Contains("/portal/downloadnfe.aspx", window, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("ScriptDialogOpening", window);
+        Assert.Contains("AreDefaultScriptDialogsEnabled = false", window);
         Assert.Contains("CoreWebView2ScriptDialogKind.Confirm", window);
         Assert.Contains("CoreWebView2ScriptDialogKind.Alert", window);
         Assert.Contains("_acceptExpectedPortalDialog", window);
