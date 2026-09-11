@@ -13,7 +13,7 @@ Este checklist cobre o que o CI não consegue provar: instalação real no Windo
 - site oficial disponível exatamente em `https://nfeagendamento.joaolds.xyz.br`;
 - acesso à Internet para SEFAZ, GitHub Releases e Portal Nacional da NF-e.
 
-Versão canônica atual: **`0.0.10`**. Para validar a release pública, use `NFeAgendamentoBridge-Setup-v0.0.10.exe` e registre o SHA/tag correspondentes.
+Versão canônica atual: **`0.0.11`**. Para validar a release pública, use `NFeAgendamentoBridge-Setup-v0.0.11.exe` e registre o SHA/tag correspondentes.
 
 > O publish é self-contained: não exige instalação prévia do .NET 10. O WebView2 Runtime continua necessário somente para o fallback Portal.
 
@@ -25,7 +25,7 @@ Registre antes de começar:
 | --- | --- |
 | Data | |
 | Commit SHA | |
-| Versão canônica | `0.0.10` |
+| Versão canônica | `0.0.11` |
 | Run CI / artifact | |
 | URL do site | `https://nfeagendamento.joaolds.xyz.br` |
 | Windows | |
@@ -117,7 +117,7 @@ Resultado: ☐ aprovado
 7. Feche por botão, `Esc` e backdrop.
 8. Use `Imprimir / PDF` e confira A4/paginação.
 9. Confirme que transporte/volumes não aparece sem conteúdo útil.
-10. Confirme que o atalho de download do app aponta para `NFeAgendamentoBridge-Setup-v0.0.10.exe`.
+10. Confirme que o atalho de download do app aponta para `NFeAgendamentoBridge-Setup-v0.0.11.exe`.
 
 Resultado: ☐ aprovado
 
@@ -148,7 +148,7 @@ Quando houver `consumption_limit` natural/controlado ou uma chave conhecida que 
 7. Resolva **somente o hCaptcha manualmente**.
 8. Não clique em **Consultar/Continuar**; confirme que a consulta avança sozinha após a resposta válida do hCaptcha.
 9. Não clique em **Download do Documento**; confirme que o helper reconhece também o rótulo com sufixo `*` e aciona o download oficial automaticamente.
-10. Quando aparecer a confirmação dizendo que é necessário possuir certificado digital, **não clique em OK**; confirme que o helper aceita automaticamente mesmo quando o diálogo surgir alguns segundos depois do clique de download.
+10. A confirmação JavaScript informando que é necessário possuir certificado digital **não deve ficar visível aguardando OK**; o helper deve interceptá-la via `ScriptDialogOpening` e aceitá-la automaticamente.
 11. Confirme uso automático do mesmo A1 selecionado.
 12. Confirme retorno do XML ao Bridge/site usando o mesmo parser/DANFE.
 13. Confirme que o XML corresponde à chave.
@@ -170,6 +170,7 @@ Durante o teste do Portal:
 - download fora de `/portal/downloadNFe.aspx` bloqueado;
 - hCaptcha continua exclusivamente manual;
 - não existem `hcaptcha.execute`, `grecaptcha.execute`, serviço de resolução ou fabricação de token;
+- `AreDefaultScriptDialogsEnabled` deve permanecer desativado no helper para que `ScriptDialogOpening` receba os diálogos JavaScript;
 - diálogos JavaScript não são aceitos genericamente: o aceite automático exige origem oficial, janela temporal armada pelo clique de download e mensagem contendo `download` e `certificado digital`;
 - pacote contém WebView2 Core + WinForms e não depende de `Microsoft.Web.WebView2.Wpf.dll`.
 
@@ -177,11 +178,11 @@ Resultado: ☐ aprovado
 
 ## 10. Atualizador manual
 
-1. Em uma instalação v0.0.9, clique em **Verificar atualizações**.
-2. Confirme descoberta da v0.0.10.
+1. Em uma instalação v0.0.10, clique em **Verificar atualizações**.
+2. Confirme descoberta da v0.0.11.
 3. Confirme exibição da versão e pedido de confirmação.
 4. Confirme que asset/tamanho/SHA-256 inválidos impedem execução.
-5. Após confirmação válida, confirme que o Setup v0.0.10 inicia e App/Bridge encerram para substituição.
+5. Após confirmação válida, confirme que o Setup v0.0.11 inicia e App/Bridge encerram para substituição.
 6. Após atualizar, confirme que nova verificação informa que a versão está atualizada.
 
 Detalhes: `docs/testing/bridge-updater.md`.
@@ -199,7 +200,7 @@ Resultado: ☐ aprovado
 
 ## 12. Segundo PC independente
 
-1. Instale o mesmo Setup v0.0.10 validado.
+1. Instale o mesmo Setup v0.0.11 validado.
 2. Confirme início na bandeja sem console.
 3. Use o A1 instalado nesse segundo PC.
 4. Abra o site oficial e faça consulta normal.
@@ -226,7 +227,7 @@ Uma release só deve ser declarada fisicamente validada depois de:
 - etapas 0–7 aprovadas;
 - etapa 8 aprovada em ocorrência real/controlada;
 - lifecycle/recovery aprovado;
-- atualização v0.0.9 → v0.0.10 validada;
+- atualização v0.0.10 → v0.0.11 validada;
 - segundo PC aprovado quando fizer parte da implantação;
 - divergências registradas e corrigidas.
 
