@@ -2,8 +2,8 @@
 
 **Data:** 2026-09-11  
 **Repositório:** `joaoldsxyzbr/Nfe-agendamento-2.0`  
-**Versão alvo:** `v0.0.10`  
-**Status:** confirmação de download corrigida; validação física com Portal/A1 real continua obrigatória.
+**Versão alvo:** `v0.0.11`  
+**Status:** interceptação do diálogo JavaScript corrigida; validação física com Portal/A1 real continua obrigatória.
 
 ## Objetivo
 
@@ -18,7 +18,7 @@ Experiência esperada quando o fallback é elegível (`consumption_limit` ou `fi
 5. o helper continua observando a página de resultado, inclusive quando o Portal atualiza o DOM sem uma navegação completa;
 6. o controle **Download do Documento** é reconhecido mesmo quando o texto visível contém sufixos como `*`;
 7. o helper aciona o download oficial automaticamente;
-8. a confirmação do Portal informando que é necessário certificado digital é aceita automaticamente;
+8. a confirmação JavaScript do Portal informando que é necessário certificado digital é interceptada e aceita automaticamente;
 9. o certificado A1 já selecionado continua sendo escolhido pelo thumbprint;
 10. o XML oficial continua sendo interceptado, limitado, validado contra a chave e devolvido ao Bridge/site;
 11. a janela volta ao estado ocioso ao concluir.
@@ -27,16 +27,17 @@ Na prática, o único passo humano desejado no fallback é resolver o hCaptcha.
 
 ## Causa da falha corrigida
 
-Na v0.0.9 o clique em **Download do Documento** já era automático, porém a autorização para aceitar o diálogo JavaScript ficava armada por apenas cerca de 1,5 segundo. O Portal pode exibir a confirmação somente depois desse intervalo, após processamento assíncrono da própria página.
+A v0.0.10 continha um handler `ScriptDialogOpening` correto em intenção, com validação por origem, tipo, mensagem e janela temporal. Porém o WebView2 continuava com `AreDefaultScriptDialogsEnabled` no valor padrão (`true`).
 
-Além disso, a validação do diálogo usava a URL atual do WebView em vez da URL reportada pelo próprio evento `ScriptDialogOpening`, o que podia ficar inconsistente durante uma transição da página.
+Segundo a API do WebView2, `ScriptDialogOpening` só é disparado quando os diálogos JavaScript padrão estão desativados. Por isso o `Alert`/`Confirm` oficial continuava aparecendo na tela e o handler nunca recebia o evento para executar `Accept()`.
 
-A v0.0.10 corrige esses pontos:
+A v0.0.11 corrige a causa real:
 
-- a autorização de confirmação permanece válida por até 60 segundos após o clique automático;
-- a autorização é encerrada assim que o diálogo esperado é aceito, o download começa ou a operação termina;
-- a origem do diálogo é validada pela URL do próprio evento `ScriptDialogOpening`;
+- `core.Settings.AreDefaultScriptDialogsEnabled = false` é configurado na inicialização do WebView2;
+- `ScriptDialogOpening` passa efetivamente a receber os diálogos JavaScript do Portal;
 - somente `Alert`/`Confirm` do host oficial contendo simultaneamente os termos `download` e `certificado digital` são aceitos automaticamente;
+- a autorização continua limitada a até 60 segundos após o clique automático em **Download do Documento**;
+- a autorização é encerrada assim que o diálogo esperado é aceito, o download começa ou a operação termina;
 - não existe aceite genérico de diálogos do Portal.
 
 ## Limites de automação
@@ -59,6 +60,7 @@ O helper apenas observa o campo de resposta que o hCaptcha preenche **depois da 
 - a página de consulta reconhecida continua restrita a `/portal/consultaRecaptcha.aspx`;
 - a continuação usa somente os IDs oficiais conhecidos `btnConsultarHCaptcha` / `btnConsultar`;
 - o download automático reconhece somente o endpoint oficial `/portal/downloadNFe.aspx` ou um controle clicável cujo rótulo normalizado comece com `Download do Documento` dentro da página oficial;
+- os diálogos padrão do WebView2 ficam desativados para permitir a interceptação pelo `ScriptDialogOpening`;
 - diálogos JavaScript não são aceitos genericamente: a confirmação automática exige origem oficial, janela temporal armada pelo clique de download e mensagem compatível com a exigência de certificado digital;
 - navegação e popups externos continuam bloqueados;
 - certificado continua selecionado somente pelo thumbprint já escolhido e somente para o host oficial;
@@ -94,6 +96,7 @@ O teste estático do helper exige explicitamente:
 - monitoramento prolongado do resultado (`DownloadProbeAttempts`);
 - escopo do endpoint oficial de download;
 - presença de `ScriptDialogOpening` com `Confirm`/`Alert`;
+- `AreDefaultScriptDialogsEnabled = false`, pré-condição exigida pelo WebView2 para disparar `ScriptDialogOpening`;
 - guarda `_acceptExpectedPortalDialog` com janela temporal explícita;
 - validação da URL do próprio evento;
 - filtro de mensagem exigindo `download` e `certificado digital`;
@@ -108,7 +111,7 @@ Em uma ocorrência real/controlada de fallback, validar no Windows:
 3. resolver somente o hCaptcha, sem clicar manualmente em **Consultar/Continuar**;
 4. confirmar que a consulta avança sozinha após a resposta do captcha;
 5. **não clicar** em **Download do Documento** e confirmar que o helper aciona esse passo sozinho;
-6. quando surgir a confirmação informando que é necessário possuir certificado digital, **não clicar em OK** e confirmar que o helper a aceita automaticamente;
+6. confirmar que a caixa `www.nfe.fazenda.gov.br diz ... Clique em Ok para iniciar o download` não permanece visível aguardando ação manual;
 7. confirmar que o mesmo A1 selecionado é usado;
 8. confirmar captura e validação do XML correto;
 9. confirmar retorno ao site e renderização pelo pipeline atual;
