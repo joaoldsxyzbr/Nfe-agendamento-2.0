@@ -1,4 +1,9 @@
 const FERNANDO_KLEIN_TAX_ID = '06727793905';
+const ADDITIONAL_SUPPLIER_TAX_ID = '64943356915';
+const INTERNAL_CODE_SUPPLIER_TAX_IDS = new Set<string>([
+  FERNANDO_KLEIN_TAX_ID,
+  ADDITIONAL_SUPPLIER_TAX_ID,
+]);
 
 export type FernandoKleinCatalogItem = Readonly<{
   internalCode: string;
@@ -43,6 +48,7 @@ export const FERNANDO_KLEIN_CATALOG: readonly FernandoKleinCatalogItem[] = Objec
   Object.freeze({ internalCode: '104111', name: 'RUCULA', aliases: Object.freeze(['RUCULA']) }),
   Object.freeze({ internalCode: '104112', name: 'RADITE', aliases: Object.freeze(['RADITE']) }),
   Object.freeze({ internalCode: '104105', name: 'SALSINHA', aliases: Object.freeze(['SALSA', 'SALSINHA']) }),
+  Object.freeze({ internalCode: '104144', name: 'ALECRIM', aliases: Object.freeze(['ALECRIM']) }),
 ]);
 
 export function normalizeFernandoKleinTaxId(value: unknown): string {
@@ -99,7 +105,7 @@ export function validateFernandoKleinCatalog(
 const FERNANDO_KLEIN_ALIAS_INDEX = buildAliasIndex(FERNANDO_KLEIN_CATALOG);
 
 export function isFernandoKleinEmitter(emitterTaxId: unknown): boolean {
-  return normalizeFernandoKleinTaxId(emitterTaxId) === FERNANDO_KLEIN_TAX_ID;
+  return INTERNAL_CODE_SUPPLIER_TAX_IDS.has(normalizeFernandoKleinTaxId(emitterTaxId));
 }
 
 export function resolveFernandoKleinProduct(input: FernandoKleinProductInput): ProductPresentation {

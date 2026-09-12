@@ -20,10 +20,10 @@ function parseProducts(xml: string): Array<{ cProd: string; xProd: string }> {
 }
 
 describe('Fernando Klein product mapping', () => {
-  it('keeps the official 17-product catalog valid', async () => {
+  it('keeps the shared 18-product catalog valid', async () => {
     const mapping = await import('../src/nfe/product-mapping');
 
-    expect(mapping.FERNANDO_KLEIN_CATALOG).toHaveLength(17);
+    expect(mapping.FERNANDO_KLEIN_CATALOG).toHaveLength(18);
     expect(mapping.validateFernandoKleinCatalog()).toBe(true);
   });
 
@@ -44,6 +44,34 @@ describe('Fernando Klein product mapping', () => {
       sourceCode: 'FK999',
       internalCode: '',
     });
+  });
+
+  it('applies the full shared catalog to the additional supplier', async () => {
+    const { resolveFernandoKleinProduct } = await import('../src/nfe/product-mapping');
+    const resolve = (xProd: string) => resolveFernandoKleinProduct({
+      emitterTaxId: '649.433.569-15',
+      xProd,
+      cProd: 'SRC',
+    });
+
+    expect(resolve('ALFACE').internalCode).toBe('73457');
+    expect(resolve('RÚCULA').internalCode).toBe('104111');
+    expect(resolve('ALECRIM').internalCode).toBe('104144');
+  });
+
+  it('maps alecrim for every configured supplier', async () => {
+    const { resolveFernandoKleinProduct } = await import('../src/nfe/product-mapping');
+
+    for (const emitterTaxId of ['067.277.939-05', '64943356915']) {
+      expect(resolveFernandoKleinProduct({
+        emitterTaxId,
+        xProd: 'ALECRIM',
+        cProd: 'SRC-ALECRIM',
+      })).toEqual({
+        sourceCode: 'SRC-ALECRIM',
+        internalCode: '104144',
+      });
+    }
   });
 
   it('summarizes unknown products without guessing', async () => {
