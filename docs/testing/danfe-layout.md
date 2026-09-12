@@ -34,6 +34,21 @@ Aliases específicos de descrição também são normalizados sem alterar o XML 
 
 A identificação do fornecedor é feita pelo CPF/CNPJ normalizado do emitente. Emitentes não configurados não recebem código interno.
 
+## Quantidade interna — Souza Cruz
+
+Para o emitente **Souza Cruz**, identificado pelo CNPJ configurado no código, a quantidade fiscal do item continua sendo exibida exatamente como veio na NF-e e recebe abaixo uma quantidade operacional em unidades.
+
+A regra é **quantidade fiscal × 50**:
+
+- `0,2` → `Int.: 10 UN`;
+- `0,4` → `Int.: 20 UN`;
+- `0,6` → `Int.: 30 UN`;
+- `1,0` → `Int.: 50 UN`.
+
+Essa conversão é exclusivamente de apresentação. O XML, `qCom`, valor unitário, valor total e demais campos fiscais não são alterados.
+
+Para evitar inferências incorretas, a quantidade interna só é mostrada quando o emitente é Souza Cruz, a quantidade fiscal é positiva e o resultado de `quantidade × 50` é um número inteiro. Caso contrário, somente a quantidade fiscal é apresentada.
+
 ## Comportamentos que não podem regredir
 
 - fonte Arial/Helvetica legível;
@@ -43,6 +58,8 @@ A identificação do fornecedor é feita pelo CPF/CNPJ normalizado do emitente. 
 - fornecedores configurados mostram `Int.` apenas na apresentação e não alteram o XML original;
 - o catálogo de códigos internos só se aplica aos emitentes explicitamente configurados;
 - `COUVE FOLHA` deve ser apresentada com o código interno da `COUVE`, `104107`;
+- Souza Cruz mantém a quantidade fiscal visível e mostra a quantidade interna apenas como complemento;
+- a conversão Souza Cruz não se aplica a outros emitentes nem a quantidades cujo resultado não seja inteiro;
 - `Ctrl + scroll` aplica zoom somente ao DANFE no preview;
 - impressão/PDF não utiliza o zoom de tela;
 - paginação deve manter os itens na mesma folha quando houver espaço suficiente;
@@ -51,7 +68,7 @@ A identificação do fornecedor é feita pelo CPF/CNPJ normalizado do emitente. 
 
 ## Testes automatizados
 
-Os contratos principais ficam em `apps/web/tests/danfe.test.ts` e `apps/web/tests/product-mapping.test.ts`, incluindo:
+Os contratos principais ficam em `apps/web/tests/danfe.test.ts`, `apps/web/tests/product-mapping.test.ts`, `apps/web/tests/supplier-quantity.test.ts` e `apps/web/tests/supplier-quantity-render.test.ts`, incluindo:
 
 - presença dos blocos fiscais;
 - coluna Item antes do código do produto;
@@ -61,6 +78,10 @@ Os contratos principais ficam em `apps/web/tests/danfe.test.ts` e `apps/web/test
 - `ALECRIM` mapeado para `104144`;
 - `COUVE FOLHA` mapeado para `104107` nos dois fornecedores configurados;
 - preservação do `cProd` original;
+- Souza Cruz: `0,2 → 10 UN`, `0,4 → 20 UN` e `1,0 → 50 UN`;
+- ausência da conversão Souza Cruz em outros emitentes;
+- recusa de conversões inválidas ou não inteiras;
+- preservação da quantidade fiscal e do XML original no DANFE;
 - texto de autenticidade e telefone do emitente;
 - `vICMSUFDest` e `vTotTrib` quando presentes;
 - composição de embalagem derivada de `uCom/qCom` e `uTrib/qTrib`;
@@ -77,4 +98,5 @@ Ao validar em navegador/Windows real:
 4. conferir uma NF-e com e sem transportador;
 5. conferir uma NF-e que contenha `vICMSUFDest` e/ou `vTotTrib`;
 6. imprimir/salvar em PDF A4 e confirmar que não há corte de campos nem criação desnecessária de página adicional;
-7. validar uma NF-e de cada fornecedor configurado e confirmar `cProd` + `Int.` corretamente, incluindo `ALECRIM → 104144` e `COUVE FOLHA → 104107`.
+7. validar uma NF-e de cada fornecedor configurado e confirmar `cProd` + `Int.` corretamente, incluindo `ALECRIM → 104144` e `COUVE FOLHA → 104107`;
+8. validar uma NF-e Souza Cruz e confirmar que a quantidade fiscal continua visível e a linha `Int.: <unidades> UN` aparece somente quando a conversão for válida.
