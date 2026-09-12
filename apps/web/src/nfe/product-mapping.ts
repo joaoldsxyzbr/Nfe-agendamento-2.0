@@ -40,7 +40,7 @@ export const FERNANDO_KLEIN_CATALOG: readonly FernandoKleinCatalogItem[] = Objec
   Object.freeze({ internalCode: '104108', name: 'BROCOLIS', aliases: Object.freeze(['BROCOLIS']) }),
   Object.freeze({ internalCode: '104106', name: 'CEBOLINHA', aliases: Object.freeze(['CEBOLA', 'CEBOLINHA']) }),
   Object.freeze({ internalCode: '104113', name: 'COENTRO', aliases: Object.freeze(['COENTRO']) }),
-  Object.freeze({ internalCode: '104107', name: 'COUVE', aliases: Object.freeze(['COUVE']) }),
+  Object.freeze({ internalCode: '104107', name: 'COUVE', aliases: Object.freeze(['COUVE', 'COUVE FOLHA']) }),
   Object.freeze({ internalCode: '104104', name: 'CHICORIA', aliases: Object.freeze(['CHICORIA']) }),
   Object.freeze({ internalCode: '104110', name: 'ESPINAFRE', aliases: Object.freeze(['ESPINAFRE']) }),
   Object.freeze({ internalCode: '104115', name: 'HORTELA', aliases: Object.freeze(['HORTELA']) }),
