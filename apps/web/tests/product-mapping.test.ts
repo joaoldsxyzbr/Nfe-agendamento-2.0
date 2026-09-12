@@ -74,6 +74,21 @@ describe('Fernando Klein product mapping', () => {
     }
   });
 
+  it('maps COUVE FOLHA as COUVE for every configured supplier', async () => {
+    const { resolveFernandoKleinProduct } = await import('../src/nfe/product-mapping');
+
+    for (const emitterTaxId of ['067.277.939-05', '64943356915']) {
+      expect(resolveFernandoKleinProduct({
+        emitterTaxId,
+        xProd: 'COUVE FOLHA',
+        cProd: 'SRC-COUVE',
+      })).toEqual({
+        sourceCode: 'SRC-COUVE',
+        internalCode: '104107',
+      });
+    }
+  });
+
   it('summarizes unknown products without guessing', async () => {
     const { summarizeFernandoKleinProducts } = await import('../src/nfe/product-mapping');
     const emitterCpf = tag(tag(fixture, 'emit'), 'CPF');
@@ -101,6 +116,8 @@ describe('Fernando Klein product mapping', () => {
     }
     expect(resolve('CEBOLA').internalCode).toBe('104106');
     expect(resolve('CEBOLINHA').internalCode).toBe('104106');
+    expect(resolve('COUVE').internalCode).toBe('104107');
+    expect(resolve('COUVE FOLHA').internalCode).toBe('104107');
     expect(resolve('SALSA').internalCode).toBe('104105');
     expect(resolve('SALSINHA').internalCode).toBe('104105');
   });
