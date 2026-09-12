@@ -1,4 +1,5 @@
 import { resolveFernandoKleinProduct } from '../nfe/product-mapping';
+import { resolveSupplierInternalQuantity } from '../nfe/supplier-quantity';
 import type { ParsedNfe, ParsedNfeParty, ParsedNfeProduct } from '../nfe/xml';
 
 const DANFE_ZOOM_MIN = 0.6;
@@ -278,10 +279,12 @@ function buildProductsTable(nfe: ParsedNfe, products: readonly ParsedNfeProduct[
     const code = `<span class="source-product-code">${escapeHtml(mapping.sourceCode)}</span>${mapping.internalCode ? `<small class="internal-product-code">Int.: ${escapeHtml(mapping.internalCode)}</small>` : ''}`;
     const packageLabel = productPackageLabel(product);
     const description = `${escapeHtml(product.description)}${packageLabel ? `<small class="package-detail">${escapeHtml(packageLabel)}</small>` : ''}${product.tax.taxNote ? `<small class="tax-detail">${escapeHtml(product.tax.taxNote)}</small>` : ''}`;
+    const internalQuantity = resolveSupplierInternalQuantity({ emitterTaxId: nfe.issuer.taxId, quantity: product.quantity });
+    const quantity = `<span class="source-product-quantity">${decimal(product.quantity, 4, 4)}</span>${internalQuantity !== null ? `<small class="internal-product-code internal-quantity">Int.: ${internalQuantity} UN</small>` : ''}`;
     return `<tr>
       <td class="center item-col">${product.itemNumber}</td><td class="code-col">${code}</td><td class="description">${description}</td>
       <td class="center">${escapeHtml(product.ncm)}</td><td class="center">${escapeHtml(product.tax.cst)}</td><td class="center">${escapeHtml(product.cfop)}</td><td class="center">${escapeHtml(product.unit)}</td>
-      <td class="numeric">${decimal(product.quantity, 4, 4)}</td><td class="numeric">${decimal(product.unitPrice, 4, 4)}</td><td class="numeric">${moneyFiscal(product.totalPrice)}</td><td class="numeric">${moneyFiscal(product.discount)}</td>
+      <td class="numeric">${quantity}</td><td class="numeric">${decimal(product.unitPrice, 4, 4)}</td><td class="numeric">${moneyFiscal(product.totalPrice)}</td><td class="numeric">${moneyFiscal(product.discount)}</td>
       <td class="numeric">${moneyFiscal(product.tax.icmsBase)}</td><td class="numeric">${moneyFiscal(product.tax.icms)}</td><td class="numeric">${moneyFiscal(product.tax.ipi)}</td><td class="numeric">${decimal(product.tax.icmsRate)}</td><td class="numeric">${decimal(product.tax.ipiRate)}</td>
     </tr>`;
   }).join('');
