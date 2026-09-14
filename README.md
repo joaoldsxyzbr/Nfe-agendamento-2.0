@@ -10,16 +10,16 @@ Reescrita limpa do NFe Agendamento com **site estático + App/Bridge Windows loc
 - **Controle App → Bridge:** Named Pipe local separado da API web, restrito ao usuário atual, com identidade, lease, heartbeat e shutdown controlado.
 - **API local:** `/api/v1`.
 - **Certificado A1:** descoberto em `CurrentUser/My`; a chave privada nunca sai do Windows/Bridge.
-- **Persistência:** somente o thumbprint selecionado em `%LOCALAPPDATA%/NfeAgendamentoBridge/settings.json`.
+- **Persistência local:** thumbprint selecionado em `%LOCALAPPDATA%/NfeAgendamentoBridge/settings.json` e metadados não sensíveis de proteção fiscal em `fiscal-usage.json`; XMLs e chaves NF-e não são persistidos pelo Bridge.
 - **Diagnóstico local:** log estruturado JSON Lines com rotação em `%LOCALAPPDATA%\NfeAgendamentoBridge\logs`, sem armazenar chave da NF-e, XML, PFX, senha, chave privada, mensagem ou stack trace de exceção; a interface também mostra um resumo de saúde do computador nas Configurações.
 - **Regras por fornecedor:** catálogo declarativo centralizado em `apps/web/src/nfe/supplier-rules.ts`, sem condicionais de fornecedor espalhadas no renderizador do DANFE.
 - **Fallback Portal:** helper Windows separado com WebView2, Portal Nacional fixo, hCaptcha sempre manual e processo persistente reutilizado entre consultas.
 - **Distribuição Windows:** instalador Inno Setup por usuário, sem administrador, com início automático do app na bandeja no login.
-- **Versão canônica atual:** `0.0.12` em `Directory.Build.props`.
+- **Versão canônica publicada:** `0.0.12` em `Directory.Build.props`.
 
 ## Estado funcional — 14/09/2026
 
-Implementado e coberto pelos gates automatizados do projeto:
+Implementado na `main` e coberto pelos gates automatizados aplicáveis do projeto:
 
 - Vite/TypeScript no frontend e .NET 10 no Bridge/App/Portal;
 - TypeScript em modo `strict`, lint adicional e verificação determinística de formato no CI;
@@ -37,7 +37,12 @@ Implementado e coberto pelos gates automatizados do projeto:
 - regras de fornecedores centralizadas em configuração declarativa validada, com catálogo compartilhado e conversão de quantidade fora do renderizador;
 - painel de configurações para certificado A1;
 - painel de diagnóstico local com conexão do Bridge, versão, certificado selecionado, disponibilidade do WebView2, horário da última verificação e último erro da verificação;
-- interface de consulta simplificada com resultado integrado e ação **Nova consulta**;
+- interface de consulta única com resultado integrado e ação **Nova consulta**;
+- modo **Lote** na mesma tela, com até 10 NF-e, validação/deduplicação, processamento sequencial e todas as chaves visíveis em linhas individuais;
+- cada NF-e concluída no lote libera imediatamente **Visualizar DANFE** e **Baixar XML**, com indicação da origem `SEFAZ` ou `Portal`;
+- lote híbrido **SEFAZ → Portal**: `217` usa Portal apenas naquela NF-e; `656`/429/`consumption_limit` muda a rota restante para Portal sem nova tentativa fiscal;
+- ações gerais do lote para cancelar, baixar somente XMLs concluídos em ZIP e imprimir somente DANFEs concluídos;
+- `FiscalUsageGuard` local com gate serial, janela de uma hora, proteção após limite e persistência por hash SHA-256 do CNPJ;
 - cabeçalho com marca e nome **NF-e / Agendamento** como conteúdo semântico real no `<h1>`;
 - atalho no topo do site para baixar o Setup Windows da release atual;
 - `GET /api/v1/health`, certificados, seleção de A1, lookup NF-e e endpoints do Portal;
@@ -69,11 +74,11 @@ Implementado e coberto pelos gates automatizados do projeto:
 - CI com jobs `web`, `bridge` e `windows-package`;
 - release criada somente a partir dos artifacts do mesmo CI verde do commit marcador `release: v<versão>`.
 
-A consulta em lote não faz parte desta release. O desenho aprovado/proposto fica em `docs/superpowers/specs/2026-09-14-batch-query-design.md`: v1 sequencial, até 10 NF-e, sem retry automático contra a SEFAZ e com fluxo híbrido **SEFAZ → Portal**. Ao ocorrer `217`, apenas aquela NF-e usa o Portal; ao ocorrer `656`/429/`consumption_limit`, o Bridge registra cooldown e o restante do lote segue pelo Portal, uma chave por vez. A interface planejada mantém todas as chaves visíveis e libera **Visualizar DANFE** e **Baixar XML** individualmente assim que cada NF-e conclui.
+A **release pública v0.0.12 não contém a consulta em lote**. A funcionalidade está implementada na `main` pós-v0.0.12 e deve passar pela validação física de `docs/testing/batch-query.md` antes de entrar na próxima release. O desenho/contrato atual está em `docs/superpowers/specs/2026-09-14-batch-query-design.md`.
 
 ## Fallback pelo Portal Nacional
 
-Fluxo nominal:
+Fluxo nominal da consulta única:
 
 ```text
 Site
@@ -99,6 +104,8 @@ Durante o fallback Portal:
 11. o XML é validado contra a chave consultada e devolvido ao Bridge/site;
 12. a janela volta ao estado ocioso.
 
+No lote, o mesmo mecanismo é reutilizado de forma sequencial; o hCaptcha permanece manual para cada operação.
+
 O helper **não resolve nem contorna captcha**. Continuam ausentes `hcaptcha.execute`, `grecaptcha.execute`, serviços externos de resolução, fabricação de token e clique sintético dentro do desafio.
 
 Detalhes: `docs/testing/portal-post-hcaptcha.md`.
@@ -111,6 +118,7 @@ Detalhes: `docs/testing/portal-post-hcaptcha.md`.
 - CORS sem wildcard;
 - chave privada/PFX/senha do A1 não são enviados ao site;
 - logs locais não persistem chave NF-e, XML, PFX, senha, chave privada nem detalhes textuais de exceções;
+- proteção fiscal persiste somente hash do CNPJ, timestamps UTC e prazo de bloqueio; não persiste chaves NF-e/XML;
 - WebView2 navega apenas em HTTPS no host oficial `www.nfe.fazenda.gov.br`;
 - navegação externa e popups externos são bloqueados;
 - download fora do endpoint XML oficial é cancelado;
@@ -121,7 +129,7 @@ Detalhes: `docs/testing/portal-post-hcaptcha.md`.
 Dois controles externos permanecem dependentes de configuração fora do código:
 
 - **Authenticode:** o pipeline está pronto para assinar App/Bridge/Portal/Setup com SHA-256 quando `CODE_SIGNING_PFX_BASE64` e `CODE_SIGNING_PFX_PASSWORD` forem configurados; sem certificado real de code signing, os artifacts permanecem sem publisher assinado;
-- **proteção da `main`:** verificado novamente em 14/09/2026: não há ruleset moderno configurado. A integração do GitHub usada no projeto não possui permissão administrativa de escrita para criá-lo. A configuração exata recomendada está em `docs/operations/repository-hardening.md`.
+- **proteção da `main`:** verificado em 14/09/2026: não há ruleset moderno configurado. A integração usada pelo projeto não possui permissão administrativa de escrita para criá-lo. A configuração recomendada está em `docs/operations/repository-hardening.md`.
 
 ## Desenvolvimento
 
@@ -171,7 +179,7 @@ O instalador:
 - mantém App + Bridge + helper Portal lado a lado;
 - cria atalho no Menu Iniciar;
 - registra início automático do App no login;
-- preserva `%LOCALAPPDATA%\NfeAgendamentoBridge`, onde fica a seleção local do certificado;
+- preserva `%LOCALAPPDATA%\NfeAgendamentoBridge`, onde ficam as configurações locais não sensíveis;
 - não instala atualizações silenciosamente.
 
 Quem estiver na v0.0.11 pode usar **Verificar atualizações** no app da bandeja para instalar a v0.0.12 após confirmação.
@@ -190,20 +198,22 @@ O Microsoft Edge WebView2 Runtime é necessário somente para o fallback pelo Po
 
 O CI valida código, builds e empacotamento, mas não consegue provar a interação externa real com Portal Nacional, hCaptcha, certificado A1 e SEFAZ.
 
-Antes de declarar a release fisicamente validada, executar `docs/testing/acceptance.md`. Para o fluxo pós-hCaptcha, usar também `docs/testing/portal-post-hcaptcha.md`.
+Antes de declarar a próxima release fisicamente validada, executar `docs/testing/acceptance.md`, `docs/testing/batch-query.md` e, para o fluxo pós-hCaptcha, `docs/testing/portal-post-hcaptcha.md`.
 
 Não provoque bloqueio `656` repetindo consultas artificialmente apenas para testar o fallback.
 
 ## Documentação
 
-- arquitetura/segurança: `docs/architecture/bridge-security.md`;
+- arquitetura/segurança geral: `docs/architecture/bridge-security.md`;
+- proteção fiscal local: `docs/architecture/fiscal-usage-guard.md`;
 - regras declarativas de fornecedores: `docs/architecture/supplier-rules.md`;
-- desenho da consulta em lote: `docs/superpowers/specs/2026-09-14-batch-query-design.md`;
+- desenho/implementação da consulta em lote: `docs/superpowers/specs/2026-09-14-batch-query-design.md`;
 - hardening do repositório/distribuição: `docs/operations/repository-hardening.md`;
 - logging local do Bridge: `docs/operations/local-logging.md`;
-- aceitação física: `docs/testing/acceptance.md`;
+- aceitação física geral: `docs/testing/acceptance.md`;
+- aceitação física do lote: `docs/testing/batch-query.md`;
 - automação pós-hCaptcha: `docs/testing/portal-post-hcaptcha.md`;
 - atualizador manual: `docs/testing/bridge-updater.md`;
 - layout DANFE: `docs/testing/danfe-layout.md`;
 - tela de consulta/configurações: `docs/ui/consultation-screen.md`;
-- notas da release atual: `docs/releases/v0.0.12.md`.
+- notas da release pública atual: `docs/releases/v0.0.12.md`.
