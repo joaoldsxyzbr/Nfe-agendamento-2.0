@@ -69,7 +69,7 @@ Implementado e coberto pelos gates automatizados do projeto:
 - CI com jobs `web`, `bridge` e `windows-package`;
 - release criada somente a partir dos artifacts do mesmo CI verde do commit marcador `release: v<versão>`.
 
-A consulta em lote não faz parte desta release. O desenho aprovado/proposto fica em `docs/superpowers/specs/2026-09-14-batch-query-design.md`: v1 sequencial e conservadora, sem retry automático, com parada imediata em `656`/429/`consumption_limit` e sem `distNSU` até existir uma estratégia segura de coordenação entre PCs.
+A consulta em lote não faz parte desta release. O desenho aprovado/proposto fica em `docs/superpowers/specs/2026-09-14-batch-query-design.md`: v1 sequencial, até 10 NF-e, sem retry automático contra a SEFAZ e com fluxo híbrido **SEFAZ → Portal**. Ao ocorrer `217`, apenas aquela NF-e usa o Portal; ao ocorrer `656`/429/`consumption_limit`, o Bridge registra cooldown e o restante do lote segue pelo Portal, uma chave por vez. A interface planejada mantém todas as chaves visíveis e libera **Visualizar DANFE** e **Baixar XML** individualmente assim que cada NF-e conclui.
 
 ## Fallback pelo Portal Nacional
 
