@@ -38,7 +38,7 @@ Implementado na `main` e coberto pelos gates automatizados aplicáveis do projet
 - painel de configurações para certificado A1;
 - painel de diagnóstico local com conexão do Bridge, versão, certificado selecionado, disponibilidade do WebView2, horário da última verificação e último erro da verificação;
 - interface de consulta única com resultado integrado e ação **Nova consulta**;
-- modo **Lote** na mesma tela, com até 10 NF-e, validação/deduplicação, processamento sequencial e todas as chaves visíveis em linhas individuais;
+- modo **Lote** na mesma tela, sem limite rígido de quantidade, com validação/deduplicação, processamento sequencial e todas as chaves visíveis em linhas individuais;
 - cada NF-e concluída no lote libera imediatamente **Visualizar DANFE** e **Baixar XML**, com indicação da origem `SEFAZ` ou `Portal`;
 - lote híbrido **SEFAZ → Portal**: `217` usa Portal apenas naquela NF-e; `656`/429/`consumption_limit` muda a rota restante para Portal sem nova tentativa fiscal;
 - ações gerais do lote para cancelar, baixar somente XMLs concluídos em ZIP e imprimir somente DANFEs concluídos;
@@ -74,7 +74,7 @@ Implementado na `main` e coberto pelos gates automatizados aplicáveis do projet
 - CI com jobs `web`, `bridge` e `windows-package`;
 - release criada somente a partir dos artifacts do mesmo CI verde do commit marcador `release: v<versão>`.
 
-A **release pública v0.0.13 inclui a consulta em lote**. A publicação automatizada valida código, testes, build e empacotamento, mas não substitui a validação física com certificado A1/SEFAZ/Portal. Para essa validação, usar `docs/testing/acceptance.md` e `docs/testing/batch-query.md`. O desenho/contrato implementado está em `docs/superpowers/specs/2026-09-14-batch-query-design.md`.
+A **release pública v0.0.13 inclui a consulta em lote**. A `main` posterior à publicação remove o teto rígido de 10 chaves da interface; o processamento continua sequencial e, quando a proteção fiscal entra em ação, o restante segue pelo Portal com hCaptcha manual por operação. O Portal não é tratado como serviço oficialmente ilimitado. A publicação automatizada valida código, testes, build e empacotamento, mas não substitui a validação física com certificado A1/SEFAZ/Portal. Para essa validação, usar `docs/testing/acceptance.md` e `docs/testing/batch-query.md`. O desenho/contrato implementado está em `docs/superpowers/specs/2026-09-14-batch-query-design.md`.
 
 ## Fallback pelo Portal Nacional
 
@@ -198,7 +198,7 @@ O Microsoft Edge WebView2 Runtime é necessário somente para o fallback pelo Po
 
 O CI valida código, builds e empacotamento, mas não consegue provar a interação externa real com Portal Nacional, hCaptcha, certificado A1 e SEFAZ.
 
-Antes de declarar a v0.0.13 fisicamente validada, executar `docs/testing/acceptance.md`, `docs/testing/batch-query.md` e, para o fluxo pós-hCaptcha, `docs/testing/portal-post-hcaptcha.md`.
+Antes de declarar o comportamento atual fisicamente validado, executar `docs/testing/acceptance.md`, `docs/testing/batch-query.md` e, para o fluxo pós-hCaptcha, `docs/testing/portal-post-hcaptcha.md`.
 
 Não provoque bloqueio `656` repetindo consultas artificialmente apenas para testar o fallback.
 
