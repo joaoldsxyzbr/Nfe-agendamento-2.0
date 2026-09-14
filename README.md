@@ -15,7 +15,7 @@ Reescrita limpa do NFe Agendamento com **site estático + App/Bridge Windows loc
 - **Regras por fornecedor:** catálogo declarativo centralizado em `apps/web/src/nfe/supplier-rules.ts`, sem condicionais de fornecedor espalhadas no renderizador do DANFE.
 - **Fallback Portal:** helper Windows separado com WebView2, Portal Nacional fixo, hCaptcha sempre manual e processo persistente reutilizado entre consultas.
 - **Distribuição Windows:** instalador Inno Setup por usuário, sem administrador, com início automático do app na bandeja no login.
-- **Versão canônica publicada:** `0.0.12` em `Directory.Build.props`.
+- **Versão canônica publicada:** `0.0.13` em `Directory.Build.props`.
 
 ## Estado funcional — 14/09/2026
 
@@ -74,7 +74,7 @@ Implementado na `main` e coberto pelos gates automatizados aplicáveis do projet
 - CI com jobs `web`, `bridge` e `windows-package`;
 - release criada somente a partir dos artifacts do mesmo CI verde do commit marcador `release: v<versão>`.
 
-A **release pública v0.0.12 não contém a consulta em lote**. A funcionalidade está implementada na `main` pós-v0.0.12 e deve passar pela validação física de `docs/testing/batch-query.md` antes de entrar na próxima release. O desenho/contrato atual está em `docs/superpowers/specs/2026-09-14-batch-query-design.md`.
+A **release pública v0.0.13 inclui a consulta em lote**. A publicação automatizada valida código, testes, build e empacotamento, mas não substitui a validação física com certificado A1/SEFAZ/Portal. Para essa validação, usar `docs/testing/acceptance.md` e `docs/testing/batch-query.md`. O desenho/contrato implementado está em `docs/superpowers/specs/2026-09-14-batch-query-design.md`.
 
 ## Fallback pelo Portal Nacional
 
@@ -164,12 +164,12 @@ O CI executa o Wrangler instalado pelo lockfile com `./node_modules/.bin/wrangle
 
 ## Distribuição Windows
 
-Release pública atual: **v0.0.12**.
+Release pública atual: **v0.0.13**.
 
 Asset principal:
 
 ```text
-NFeAgendamentoBridge-Setup-v0.0.12.exe
+NFeAgendamentoBridge-Setup-v0.0.13.exe
 ```
 
 O instalador:
@@ -182,7 +182,7 @@ O instalador:
 - preserva `%LOCALAPPDATA%\NfeAgendamentoBridge`, onde ficam as configurações locais não sensíveis;
 - não instala atualizações silenciosamente.
 
-Quem estiver na v0.0.11 pode usar **Verificar atualizações** no app da bandeja para instalar a v0.0.12 após confirmação.
+Quem estiver na v0.0.12 pode usar **Verificar atualizações** no app da bandeja para instalar a v0.0.13 após confirmação.
 
 O Microsoft Edge WebView2 Runtime é necessário somente para o fallback pelo Portal Nacional.
 
@@ -198,7 +198,7 @@ O Microsoft Edge WebView2 Runtime é necessário somente para o fallback pelo Po
 
 O CI valida código, builds e empacotamento, mas não consegue provar a interação externa real com Portal Nacional, hCaptcha, certificado A1 e SEFAZ.
 
-Antes de declarar a próxima release fisicamente validada, executar `docs/testing/acceptance.md`, `docs/testing/batch-query.md` e, para o fluxo pós-hCaptcha, `docs/testing/portal-post-hcaptcha.md`.
+Antes de declarar a v0.0.13 fisicamente validada, executar `docs/testing/acceptance.md`, `docs/testing/batch-query.md` e, para o fluxo pós-hCaptcha, `docs/testing/portal-post-hcaptcha.md`.
 
 Não provoque bloqueio `656` repetindo consultas artificialmente apenas para testar o fallback.
 
@@ -216,4 +216,4 @@ Não provoque bloqueio `656` repetindo consultas artificialmente apenas para tes
 - atualizador manual: `docs/testing/bridge-updater.md`;
 - layout DANFE: `docs/testing/danfe-layout.md`;
 - tela de consulta/configurações: `docs/ui/consultation-screen.md`;
-- notas da release pública atual: `docs/releases/v0.0.12.md`.
+- notas da release pública atual: `docs/releases/v0.0.13.md`.
