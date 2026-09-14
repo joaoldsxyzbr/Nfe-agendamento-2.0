@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 const fromWeb = (path: string) => new URL(`../${path}`, import.meta.url);
 
 describe('application shell', () => {
-  it('has the minimal site files and no legacy architecture copy', () => {
+  it('has the site files and no legacy central architecture copy', () => {
     const required = [
       'index.html',
       'vite.config.ts',
@@ -14,6 +14,9 @@ describe('application shell', () => {
       'src/brand.css',
       'src/main.ts',
       'src/styles.css',
+      'src/batch.css',
+      'src/batch/input.ts',
+      'src/batch/zip.ts',
     ];
 
     for (const path of required) {
@@ -36,7 +39,6 @@ describe('application shell', () => {
     expect(main).toContain('aria-hidden="true"');
     expect(brandCss).not.toContain("content: 'nf-e'");
     expect(brandCss).not.toContain("content: 'agendamento'");
-    expect(activeSource).not.toContain('consulta em lote');
     expect(activeSource).not.toContain('pareamento');
     expect(activeSource).not.toContain('standby');
     expect(activeSource).not.toContain('login');
@@ -56,7 +58,7 @@ describe('application shell', () => {
     expect(main.toLowerCase()).not.toContain('janela de configuração');
   });
 
-  it('validates the key locally and validates XML before exposing download', () => {
+  it('validates the single key locally and validates XML before exposing download', () => {
     const main = readFileSync(fromWeb('src/main.ts'), 'utf8');
 
     expect(main).toContain("import { validateAccessKey } from './nfe/access-key';");
@@ -74,6 +76,23 @@ describe('application shell', () => {
     expect(downloadIndex).toBeGreaterThan(parseIndex);
   });
 
+  it('wires the hybrid batch flow with per-item DANFE and XML actions', () => {
+    const main = readFileSync(fromWeb('src/main.ts'), 'utf8');
+
+    expect(main).toContain('id="mode-batch"');
+    expect(main).toContain('id="batch-keys"');
+    expect(main).toContain('id="batch-list"');
+    expect(main).toContain('MAX_BATCH_ITEMS');
+    expect(main).toContain('processBatchDirectItem');
+    expect(main).toContain('processBatchPortalItem');
+    expect(main).toContain("batchRoute = 'portal'");
+    expect(main).toContain('Visualizar DANFE');
+    expect(main).toContain('Baixar XML');
+    expect(main).toContain('Baixar XMLs (.zip)');
+    expect(main).toContain('Imprimir DANFEs');
+    expect(main).toContain('createStoredZip(');
+  });
+
   it('shows a clear message for cancelled NF-e status 653', () => {
     const main = readFileSync(fromWeb('src/main.ts'), 'utf8');
 
@@ -82,6 +101,7 @@ describe('application shell', () => {
     expect(main).toContain('Esta nota fiscal foi cancelada na SEFAZ e, por isso, o XML não está disponível para download.');
     expect(main).toContain('Código SEFAZ: 653.');
   });
+
   it('wires the DANFE preview, local zoom, close and browser print actions', () => {
     const main = readFileSync(fromWeb('src/main.ts'), 'utf8');
     const css = readFileSync(fromWeb('src/styles.css'), 'utf8');
@@ -92,7 +112,7 @@ describe('application shell', () => {
     expect(main).toContain('Visualizar DANFE');
     expect(main).toContain('Baixar XML');
     expect(main).toContain('Ctrl + scroll para zoom');
-    expect(main).toContain('renderDanfe(parsed)');
+    expect(main).toContain('renderDanfe(item)');
     expect(main).toContain('attachDanfeZoom(');
     expect(main).toContain('window.print()');
     expect(css).toContain('.danfe-modal');

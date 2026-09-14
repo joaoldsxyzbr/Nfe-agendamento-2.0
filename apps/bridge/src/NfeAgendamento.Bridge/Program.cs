@@ -52,12 +52,14 @@ if (isManaged)
 
 builder.Services.AddSingleton<CertificateService>();
 builder.Services.AddSingleton<INfeDistributionTransport, SefazDistributionTransport>();
+builder.Services.AddSingleton(_ => FiscalUsageGuard.CreateDefault());
 builder.Services.AddScoped<NfeLookupService>(services =>
 {
     var transport = services.GetRequiredService<INfeDistributionTransport>();
     var certificates = services.GetRequiredService<CertificateService>();
+    var usageGuard = services.GetRequiredService<FiscalUsageGuard>();
     var logger = services.GetRequiredService<ILogger<NfeLookupService>>();
-    return new NfeLookupService(transport, certificates.GetSelectedCertificate, logger);
+    return new NfeLookupService(transport, certificates.GetSelectedCertificate, usageGuard, logger);
 });
 builder.Services.AddSingleton<IPortalWindowLauncher, ProcessPortalWindowLauncher>();
 builder.Services.AddSingleton<PortalFallbackService>(services =>

@@ -1,3 +1,5 @@
+import { MAX_BATCH_ITEMS, parseBatchInput } from './batch/input';
+import { createStoredZip } from './batch/zip';
 import { BridgeClient } from './bridge/client';
 import type { CertificateCatalog, CertificateSummary, NfeLookupResult } from './bridge/contracts';
 import { attachDanfeZoom, renderDanfe } from './danfe/render';
@@ -5,7 +7,30 @@ import { validateAccessKey } from './nfe/access-key';
 import { parseNfeXml, type ParsedNfe } from './nfe/xml';
 import { PortalFallbackController } from './portal/fallback';
 import './styles.css';
+import './batch.css';
 import './danfe/styles.css';
+
+type ConsultationMode = 'single' | 'batch';
+type BatchRoute = 'sefaz' | 'portal';
+type BatchItemStatus =
+  | 'queued'
+  | 'consulting'
+  | 'portal_queued'
+  | 'portal_waiting_user'
+  | 'success'
+  | 'fiscal_status'
+  | 'transport_error'
+  | 'portal_error'
+  | 'cancelled';
+type BatchSource = 'SEFAZ' | 'Portal';
+
+type BatchItem = {
+  accessKey: string;
+  status: BatchItemStatus;
+  message: string | null;
+  parsed: ParsedNfe | null;
+  source: BatchSource | null;
+};
 
 const app = document.querySelector<HTMLElement>('#app');
 
@@ -49,39 +74,87 @@ app.innerHTML = `
     </section>
 
     <section class="lookup-card" aria-labelledby="lookup-title">
-      <div class="section-heading">
+      <div class="section-heading lookup-heading">
         <div>
           <p class="eyebrow">Consulta</p>
           <h2 id="lookup-title">Chave de acesso</h2>
         </div>
-        <span class="key-hint">44 dígitos</span>
+        <div class="lookup-heading-actions">
+          <span class="key-hint">44 dígitos</span>
+          <div class="consultation-mode" role="group" aria-label="Modo de consulta">
+            <button id="mode-single" class="mode-button is-active" type="button" aria-pressed="true">Uma NF-e</button>
+            <button id="mode-batch" class="mode-button" type="button" aria-pressed="false">Lote</button>
+          </div>
+        </div>
       </div>
 
-      <form id="lookup-form" novalidate>
-        <label for="access-key">Chave da NF-e</label>
-        <div class="lookup-row">
-          <input
-            id="access-key"
-            name="accessKey"
-            inputmode="numeric"
-            autocomplete="off"
-            maxlength="44"
-            placeholder="Digite ou cole a chave de acesso"
-            aria-describedby="lookup-help"
-          />
-          <button id="lookup-submit" type="submit">Consultar</button>
-        </div>
-        <p id="lookup-help" class="help-text">O processamento visual acontece neste site. O Bridge local acessa o certificado A1 e consulta a SEFAZ quando necessário.</p>
-      </form>
+      <div id="single-consultation-panel">
+        <form id="lookup-form" novalidate>
+          <label for="access-key">Chave da NF-e</label>
+          <div class="lookup-row">
+            <input
+              id="access-key"
+              name="accessKey"
+              inputmode="numeric"
+              autocomplete="off"
+              maxlength="44"
+              placeholder="Digite ou cole a chave de acesso"
+              aria-describedby="lookup-help"
+            />
+            <button id="lookup-submit" type="submit">Consultar</button>
+          </div>
+          <p id="lookup-help" class="help-text">O processamento visual acontece neste site. O Bridge local acessa o certificado A1 e consulta a SEFAZ quando necessário.</p>
+        </form>
 
-      <div class="lookup-result-section">
-        <div class="result-toolbar">
-          <button id="lookup-reset" class="lookup-reset" type="button" hidden>Nova consulta</button>
+        <div class="lookup-result-section">
+          <div class="result-toolbar">
+            <button id="lookup-reset" class="lookup-reset" type="button" hidden>Nova consulta</button>
+          </div>
+          <div class="lookup-result" id="result" aria-live="polite">
+            <div class="empty-state">
+              <strong>Nenhuma NF-e carregada</strong>
+              <span>Informe uma chave para iniciar.</span>
+            </div>
+          </div>
         </div>
-        <div class="lookup-result" id="result" aria-live="polite">
-          <div class="empty-state">
-            <strong>Nenhuma NF-e carregada</strong>
-            <span>Informe uma chave para iniciar.</span>
+      </div>
+
+      <div id="batch-consultation-panel" hidden>
+        <form id="batch-form" novalidate>
+          <label for="batch-keys">Chaves das NF-e</label>
+          <textarea
+            id="batch-keys"
+            rows="6"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="Cole até 10 chaves, uma por linha"
+            aria-describedby="batch-help batch-input-summary"
+          ></textarea>
+          <div class="batch-form-footer">
+            <div>
+              <p id="batch-input-summary" class="batch-summary" aria-live="polite">Nenhuma chave informada.</p>
+              <p id="batch-help" class="help-text">As chaves válidas aparecem abaixo antes de iniciar. O lote processa uma NF-e por vez.</p>
+            </div>
+            <button id="batch-start" type="submit" disabled>Iniciar lote</button>
+          </div>
+        </form>
+
+        <div class="batch-run-toolbar" id="batch-run-toolbar">
+          <div class="batch-progress-copy" aria-live="polite">
+            <strong id="batch-progress">0 de 0</strong>
+            <span id="batch-route">Aguardando início</span>
+          </div>
+          <div class="batch-toolbar-actions">
+            <button id="batch-cancel" class="secondary-button" type="button" hidden>Cancelar lote</button>
+            <button id="batch-zip" class="secondary-button" type="button" disabled>Baixar XMLs (.zip)</button>
+            <button id="batch-print" class="secondary-button" type="button" disabled>Imprimir DANFEs</button>
+          </div>
+        </div>
+
+        <div id="batch-list" class="batch-list" aria-live="polite">
+          <div class="empty-state batch-empty">
+            <strong>Nenhuma chave no lote</strong>
+            <span>Cole as chaves acima para montar a lista.</span>
           </div>
         </div>
       </div>
@@ -113,27 +186,63 @@ const certificateSelect = requireElement<HTMLSelectElement>('#certificate-select
 const certificateApply = requireElement<HTMLButtonElement>('#certificate-apply');
 const certificateState = requireElement<HTMLElement>('#certificate-state');
 const certificateHelp = requireElement<HTMLElement>('#certificate-help');
+const modeSingle = requireElement<HTMLButtonElement>('#mode-single');
+const modeBatch = requireElement<HTMLButtonElement>('#mode-batch');
+const singlePanel = requireElement<HTMLElement>('#single-consultation-panel');
+const batchPanel = requireElement<HTMLElement>('#batch-consultation-panel');
 const lookupForm = requireElement<HTMLFormElement>('#lookup-form');
 const accessKeyInput = requireElement<HTMLInputElement>('#access-key');
 const lookupSubmit = requireElement<HTMLButtonElement>('#lookup-submit');
 const lookupReset = requireElement<HTMLButtonElement>('#lookup-reset');
 const resultCard = requireElement<HTMLElement>('#result');
+const batchForm = requireElement<HTMLFormElement>('#batch-form');
+const batchKeysInput = requireElement<HTMLTextAreaElement>('#batch-keys');
+const batchInputSummary = requireElement<HTMLElement>('#batch-input-summary');
+const batchStart = requireElement<HTMLButtonElement>('#batch-start');
+const batchProgress = requireElement<HTMLElement>('#batch-progress');
+const batchRouteText = requireElement<HTMLElement>('#batch-route');
+const batchCancel = requireElement<HTMLButtonElement>('#batch-cancel');
+const batchZip = requireElement<HTMLButtonElement>('#batch-zip');
+const batchPrint = requireElement<HTMLButtonElement>('#batch-print');
+const batchList = requireElement<HTMLElement>('#batch-list');
 const danfeViewer = requireElement<HTMLElement>('#danfe-viewer');
+const danfeTitle = requireElement<HTMLElement>('#danfe-title');
 const danfeContent = requireElement<HTMLElement>('#danfe-content');
 const danfeClose = requireElement<HTMLButtonElement>('#danfe-close');
 const danfePrint = requireElement<HTMLButtonElement>('#danfe-print');
 let currentDownloadUrl: string | null = null;
 let detachDanfeZoom: (() => void) | null = null;
 let activePortalOperationId: string | null = null;
+let consultationMode: ConsultationMode = 'single';
+let batchItems: BatchItem[] = [];
+let batchRunning = false;
+let batchManualPortalBusy = false;
+let batchCancelled = false;
+let batchRoute: BatchRoute = 'sefaz';
+let batchAbortController: AbortController | null = null;
 
 certificateApply.addEventListener('click', () => {
   void applyCertificateSelection();
 });
 
+modeSingle.addEventListener('click', () => setConsultationMode('single'));
+modeBatch.addEventListener('click', () => setConsultationMode('batch'));
+
 lookupForm.addEventListener('submit', (event) => {
   event.preventDefault();
   void submitLookup();
 });
+
+batchForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  void startBatch();
+});
+batchKeysInput.addEventListener('input', syncBatchDraft);
+batchCancel.addEventListener('click', () => {
+  void cancelBatch();
+});
+batchZip.addEventListener('click', downloadBatchZip);
+batchPrint.addEventListener('click', printBatchDanfes);
 
 lookupReset.addEventListener('click', resetConsultation);
 danfeClose.addEventListener('click', closeDanfe);
@@ -145,6 +254,7 @@ document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape' && !danfeViewer.hidden) closeDanfe();
 });
 window.addEventListener('pagehide', () => {
+  batchAbortController?.abort();
   if (!activePortalOperationId) return;
   const operationId = activePortalOperationId;
   activePortalOperationId = null;
@@ -154,6 +264,7 @@ window.addEventListener('pagehide', () => {
 });
 
 void refreshBridgeAndCertificates();
+syncBatchDraft();
 
 async function refreshBridgeAndCertificates(): Promise<void> {
   setBridgeState('checking');
@@ -284,6 +395,433 @@ async function runPortalFallback(accessKey: string, lookup: NfeLookupResult): Pr
   }
 }
 
+function setConsultationMode(mode: ConsultationMode): void {
+  if (batchRunning || batchManualPortalBusy || mode === consultationMode) return;
+  consultationMode = mode;
+  const single = mode === 'single';
+  singlePanel.hidden = !single;
+  batchPanel.hidden = single;
+  modeSingle.classList.toggle('is-active', single);
+  modeBatch.classList.toggle('is-active', !single);
+  modeSingle.setAttribute('aria-pressed', String(single));
+  modeBatch.setAttribute('aria-pressed', String(!single));
+
+  if (single) {
+    accessKeyInput.focus();
+  } else {
+    syncBatchDraft();
+    batchKeysInput.focus();
+  }
+}
+
+function syncBatchDraft(): void {
+  if (batchRunning || batchManualPortalBusy) return;
+  const summary = parseBatchInput(batchKeysInput.value);
+  const parts = [
+    `${summary.validKeys.length} válida${summary.validKeys.length === 1 ? '' : 's'}`,
+    `${summary.invalidCount} inválida${summary.invalidCount === 1 ? '' : 's'}`,
+    `${summary.duplicateCount} duplicada${summary.duplicateCount === 1 ? '' : 's'}`,
+  ];
+  batchInputSummary.textContent = summary.totalCandidates === 0
+    ? 'Nenhuma chave informada.'
+    : parts.join(' · ');
+
+  if (summary.exceedsLimit) {
+    batchInputSummary.textContent += ` · máximo ${MAX_BATCH_ITEMS} por lote`;
+  }
+
+  batchStart.disabled = summary.validKeys.length === 0 || summary.exceedsLimit;
+  batchItems = summary.validKeys.map((accessKey) => createBatchItem(accessKey));
+  batchRoute = 'sefaz';
+  renderBatchState('Aguardando início');
+}
+
+async function startBatch(): Promise<void> {
+  if (batchRunning || batchManualPortalBusy) return;
+  const summary = parseBatchInput(batchKeysInput.value);
+  if (summary.validKeys.length === 0 || summary.exceedsLimit) {
+    syncBatchDraft();
+    return;
+  }
+
+  batchItems = summary.validKeys.map((accessKey) => createBatchItem(accessKey));
+  batchRunning = true;
+  batchCancelled = false;
+  batchRoute = 'sefaz';
+  batchAbortController = new AbortController();
+  setBatchControlsRunning(true);
+  renderBatchState('Preparando lote');
+
+  try {
+    const health = await bridgeClient.health(batchAbortController.signal);
+    if (!health.certificateSelected) {
+      throw new Error('Selecione um certificado A1 antes de iniciar o lote.');
+    }
+
+    for (let index = 0; index < batchItems.length; index += 1) {
+      if (batchCancelled) break;
+      const item = batchItems[index];
+      if (!item || item.status !== 'queued') continue;
+
+      if (isBatchPortalRoute()) {
+        item.status = 'portal_queued';
+        item.message = 'SEFAZ em proteção; aguardando consulta pelo Portal.';
+        renderBatchState('Lote seguindo pelo Portal');
+        await processBatchPortalItem(item, batchAbortController.signal);
+      } else {
+        await processBatchDirectItem(item, batchAbortController.signal);
+      }
+    }
+  } catch (error) {
+    if (!isAbortError(error)) {
+      markQueuedBatchItems('cancelled', null);
+      batchRouteText.textContent = error instanceof Error ? error.message : 'Não foi possível iniciar o lote.';
+    }
+  } finally {
+    if (batchCancelled) markQueuedBatchItems('cancelled', 'Não processada porque o lote foi cancelado.');
+    batchRunning = false;
+    batchAbortController = null;
+    setBatchControlsRunning(false);
+    renderBatchState(batchCancelled ? 'Lote cancelado' : 'Lote concluído');
+  }
+}
+
+async function processBatchDirectItem(item: BatchItem, signal: AbortSignal): Promise<void> {
+  item.status = 'consulting';
+  item.message = 'Consultando SEFAZ…';
+  renderBatchState('Consultando SEFAZ');
+
+  try {
+    const lookup = await bridgeClient.lookupNfe(item.accessKey, signal);
+    if (lookup.category === 'success' && lookup.xml) {
+      completeBatchItem(item, lookup.xml, 'SEFAZ');
+      return;
+    }
+
+    if (lookup.category === 'consumption_limit') {
+      batchRoute = 'portal';
+      item.status = 'portal_queued';
+      item.message = lookup.message ?? 'Limite da SEFAZ atingido. Continuando pelo Portal.';
+      renderBatchState('SEFAZ em proteção · seguindo pelo Portal');
+      await processBatchPortalItem(item, signal);
+      return;
+    }
+
+    if (lookup.category === 'fiscal_status' && lookup.cStat === '217') {
+      item.status = 'portal_queued';
+      item.message = 'NF-e não localizada na consulta direta. Tentando pelo Portal.';
+      renderBatchState('Fallback pelo Portal');
+      await processBatchPortalItem(item, signal);
+      return;
+    }
+
+    if (lookup.category === 'certificate_error') {
+      item.status = 'transport_error';
+      item.message = lookup.message ?? 'Certificado A1 indisponível.';
+      batchCancelled = true;
+      return;
+    }
+
+    item.status = lookup.category === 'fiscal_status' ? 'fiscal_status' : 'transport_error';
+    item.message = lookup.cStat
+      ? `Status SEFAZ ${lookup.cStat}. ${lookup.message ?? 'Sem XML disponível.'}`
+      : lookup.message ?? 'Consulta não concluída.';
+  } catch (error) {
+    if (isAbortError(error) && batchCancelled) {
+      item.status = 'cancelled';
+      item.message = 'Consulta cancelada pelo usuário.';
+      return;
+    }
+    throw error;
+  } finally {
+    renderBatchState(batchRoute === 'portal' ? 'Lote seguindo pelo Portal' : 'Consultando SEFAZ');
+  }
+}
+
+async function processBatchPortalItem(item: BatchItem, signal?: AbortSignal): Promise<void> {
+  item.status = 'portal_queued';
+  item.message = 'Abrindo Portal Nacional…';
+  renderBatchState('Abrindo Portal Nacional');
+
+  try {
+    const operationId = await portalFallback.start(item.accessKey, signal);
+    activePortalOperationId = operationId;
+    item.status = 'portal_waiting_user';
+    item.message = 'Resolva o hCaptcha na janela do Portal.';
+    renderBatchState('Resolva o hCaptcha');
+
+    const portalStatus = await portalFallback.waitForResult(operationId, signal);
+    if (portalStatus.state === 'completed' && portalStatus.xml) {
+      completeBatchItem(item, portalStatus.xml, 'Portal');
+      return;
+    }
+
+    if (portalStatus.state === 'cancelled') {
+      item.status = batchCancelled ? 'cancelled' : 'portal_error';
+      item.message = portalStatus.message ?? 'Consulta pelo Portal cancelada.';
+      return;
+    }
+
+    item.status = 'portal_error';
+    item.message = portalStatus.message ?? 'O Portal não retornou o XML desta NF-e.';
+  } catch (error) {
+    if (isAbortError(error) && batchCancelled) {
+      item.status = 'cancelled';
+      item.message = 'Consulta pelo Portal cancelada pelo usuário.';
+      return;
+    }
+
+    item.status = 'portal_error';
+    item.message = error instanceof Error ? error.message : 'Não foi possível concluir a consulta pelo Portal.';
+  } finally {
+    activePortalOperationId = null;
+    renderBatchState(batchRoute === 'portal' ? 'Lote seguindo pelo Portal' : 'Consultando lote');
+  }
+}
+
+function completeBatchItem(item: BatchItem, xml: string, source: BatchSource): void {
+  try {
+    item.parsed = parseNfeXml(xml, item.accessKey);
+    item.source = source;
+    item.status = 'success';
+    item.message = `XML validado via ${source}.`;
+  } catch (error) {
+    item.status = source === 'Portal' ? 'portal_error' : 'transport_error';
+    item.message = error instanceof Error ? error.message : 'O XML retornado não pôde ser validado.';
+  }
+}
+
+async function cancelBatch(): Promise<void> {
+  if (!batchRunning) return;
+  batchCancelled = true;
+  batchAbortController?.abort();
+  const operationId = activePortalOperationId;
+  if (operationId) {
+    try {
+      await portalFallback.cancel(operationId);
+    } catch {
+      // A interrupção local já impede o próximo item; o cancelamento remoto é best-effort.
+    }
+  }
+}
+
+async function retryBatchPortal(index: number): Promise<void> {
+  const item = batchItems[index];
+  if (!item || item.status !== 'portal_error' || batchRunning || batchManualPortalBusy) return;
+
+  batchManualPortalBusy = true;
+  setBatchControlsLocked(true);
+  try {
+    await processBatchPortalItem(item);
+  } finally {
+    batchManualPortalBusy = false;
+    setBatchControlsLocked(false);
+    renderBatchState('Reconsulta pelo Portal concluída');
+  }
+}
+
+function renderBatchState(routeLabel: string): void {
+  const terminal = batchItems.filter((item) => isTerminalBatchStatus(item.status)).length;
+  const completed = completedBatchItems();
+  batchProgress.textContent = `${terminal} de ${batchItems.length}`;
+  batchRouteText.textContent = batchRunning
+    ? `${routeLabel} · rota ${batchRoute === 'portal' ? 'Portal' : 'SEFAZ'}`
+    : routeLabel;
+  batchZip.disabled = completed.length === 0 || batchRunning || batchManualPortalBusy;
+  batchPrint.disabled = completed.length === 0 || batchRunning || batchManualPortalBusy;
+  renderBatchRows();
+}
+
+function renderBatchRows(): void {
+  batchList.replaceChildren();
+  if (batchItems.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'empty-state batch-empty';
+    const title = document.createElement('strong');
+    title.textContent = 'Nenhuma chave no lote';
+    const message = document.createElement('span');
+    message.textContent = 'Cole as chaves acima para montar a lista.';
+    empty.append(title, message);
+    batchList.append(empty);
+    return;
+  }
+
+  batchItems.forEach((item, index) => {
+    const row = document.createElement('article');
+    row.className = 'batch-item';
+    row.dataset.state = item.status;
+
+    const order = document.createElement('span');
+    order.className = 'batch-order';
+    order.textContent = String(index + 1);
+
+    const information = document.createElement('div');
+    information.className = 'batch-item-info';
+    const key = document.createElement('code');
+    key.className = 'batch-key';
+    key.title = item.accessKey;
+    key.textContent = abbreviateAccessKey(item.accessKey);
+    information.append(key);
+
+    const details = document.createElement('span');
+    details.className = 'batch-details';
+    if (item.parsed) {
+      const invoice = item.parsed.number ? `NF-e ${item.parsed.number}` : 'NF-e';
+      const series = item.parsed.series ? ` · Série ${item.parsed.series}` : '';
+      const issuer = item.parsed.issuer.name ? ` · ${item.parsed.issuer.name}` : '';
+      const value = Number.isFinite(item.parsed.totals.invoice)
+        ? ` · ${formatCurrency(item.parsed.totals.invoice)}`
+        : '';
+      details.textContent = `${invoice}${series}${issuer}${value}`;
+    } else {
+      details.textContent = item.message ?? statusLabel(item.status);
+    }
+    information.append(details);
+
+    const status = document.createElement('div');
+    status.className = 'batch-status';
+    const badge = document.createElement('span');
+    badge.className = 'batch-status-badge';
+    badge.textContent = statusLabel(item.status);
+    status.append(badge);
+    if (item.source) {
+      const source = document.createElement('span');
+      source.className = 'batch-source';
+      source.textContent = item.source;
+      status.append(source);
+    }
+
+    const actions = document.createElement('div');
+    actions.className = 'batch-item-actions';
+    const preview = document.createElement('button');
+    preview.type = 'button';
+    preview.className = 'batch-action';
+    preview.textContent = 'Visualizar DANFE';
+    preview.disabled = item.parsed === null;
+    preview.addEventListener('click', () => {
+      if (item.parsed) openDanfe(item.parsed);
+    });
+
+    const download = document.createElement('button');
+    download.type = 'button';
+    download.className = 'batch-action batch-download';
+    download.textContent = 'Baixar XML';
+    download.disabled = item.parsed === null;
+    download.addEventListener('click', () => {
+      if (item.parsed) downloadXml(item.parsed);
+    });
+    actions.append(preview, download);
+
+    if (item.status === 'portal_error') {
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.className = 'batch-action';
+      retry.textContent = 'Tentar pelo Portal';
+      retry.disabled = batchRunning || batchManualPortalBusy;
+      retry.addEventListener('click', () => {
+        void retryBatchPortal(index);
+      });
+      actions.append(retry);
+    }
+
+    row.append(order, information, status, actions);
+    batchList.append(row);
+  });
+}
+
+function downloadBatchZip(): void {
+  const completed = completedBatchItems();
+  if (completed.length === 0) return;
+
+  const blob = createStoredZip(completed.map((item) => ({
+    name: `${item.parsed!.accessKey}.xml`,
+    content: item.parsed!.originalXml,
+  })));
+  downloadBlob(blob, `nfe-lote-${new Date().toISOString().slice(0, 10)}.zip`);
+}
+
+function printBatchDanfes(): void {
+  const parsed = completedBatchItems()
+    .map((item) => item.parsed)
+    .filter((item): item is ParsedNfe => item !== null);
+  if (parsed.length === 0) return;
+  openDanfeDocuments(parsed, `DANFEs do lote · ${parsed.length} NF-e`);
+  window.print();
+}
+
+function isBatchPortalRoute(): boolean {
+  return batchRoute === 'portal';
+}
+
+function completedBatchItems(): BatchItem[] {
+  return batchItems.filter((item) => item.status === 'success' && item.parsed !== null);
+}
+
+function createBatchItem(accessKey: string): BatchItem {
+  return {
+    accessKey,
+    status: 'queued',
+    message: 'Aguardando processamento.',
+    parsed: null,
+    source: null,
+  };
+}
+
+function markQueuedBatchItems(status: BatchItemStatus, message: string | null): void {
+  for (const item of batchItems) {
+    if (item.status !== 'queued' && item.status !== 'portal_queued') continue;
+    item.status = status;
+    item.message = message;
+  }
+}
+
+function setBatchControlsRunning(running: boolean): void {
+  batchKeysInput.disabled = running;
+  batchStart.disabled = running;
+  batchCancel.hidden = !running;
+  modeSingle.disabled = running;
+  modeBatch.disabled = running;
+  setCertificateControlsEnabled(!running && certificateSelect.options.length > 1);
+}
+
+function setBatchControlsLocked(locked: boolean): void {
+  batchKeysInput.disabled = locked;
+  batchStart.disabled = locked || parseBatchInput(batchKeysInput.value).validKeys.length === 0;
+  modeSingle.disabled = locked;
+  modeBatch.disabled = locked;
+  setCertificateControlsEnabled(!locked && certificateSelect.options.length > 1);
+}
+
+function isTerminalBatchStatus(status: BatchItemStatus): boolean {
+  return status === 'success'
+    || status === 'fiscal_status'
+    || status === 'transport_error'
+    || status === 'portal_error'
+    || status === 'cancelled';
+}
+
+function statusLabel(status: BatchItemStatus): string {
+  switch (status) {
+    case 'consulting': return 'Consultando SEFAZ';
+    case 'portal_queued': return 'Aguardando Portal';
+    case 'portal_waiting_user': return 'Resolva o hCaptcha';
+    case 'success': return 'Concluída';
+    case 'fiscal_status': return 'Resultado fiscal';
+    case 'transport_error': return 'Erro de consulta';
+    case 'portal_error': return 'Erro no Portal';
+    case 'cancelled': return 'Cancelada';
+    default: return 'Aguardando';
+  }
+}
+
+function abbreviateAccessKey(accessKey: string): string {
+  return `${accessKey.slice(0, 8)}…${accessKey.slice(-8)}`;
+}
+
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+}
+
 function renderInvalidXml(error: unknown): void {
   renderLookupState(
     'XML inválido',
@@ -354,8 +892,13 @@ function renderLookupSuccess(parsed: ParsedNfe): void {
 }
 
 function openDanfe(parsed: ParsedNfe): void {
+  openDanfeDocuments([parsed], `Visualizar DANFE · NF-e ${parsed.number || parsed.accessKey}`);
+}
+
+function openDanfeDocuments(parsed: readonly ParsedNfe[], title: string): void {
   detachDanfeZoom?.();
-  danfeContent.replaceChildren(renderDanfe(parsed));
+  danfeContent.replaceChildren(...parsed.map((item) => renderDanfe(item)));
+  danfeTitle.textContent = title;
   danfeViewer.hidden = false;
   document.body.classList.add('danfe-open');
   detachDanfeZoom = attachDanfeZoom(danfeViewer);
@@ -369,6 +912,23 @@ function closeDanfe(): void {
   detachDanfeZoom?.();
   detachDanfeZoom = null;
   danfeContent.replaceChildren();
+}
+
+function downloadXml(parsed: ParsedNfe): void {
+  const blob = new Blob([parsed.originalXml], { type: 'application/xml;charset=utf-8' });
+  downloadBlob(blob, `${parsed.accessKey}.xml`);
+}
+
+function downloadBlob(blob: Blob, fileName: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  link.hidden = true;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  globalThis.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 function renderLookupState(titleText: string, messageText: string): void {
@@ -413,6 +973,7 @@ function setLookupBusy(busy: boolean): void {
   lookupSubmit.disabled = busy;
   lookupReset.disabled = busy;
   accessKeyInput.disabled = busy;
+  modeBatch.disabled = busy;
   lookupSubmit.textContent = busy ? 'Consultando…' : 'Consultar';
 }
 
@@ -492,6 +1053,10 @@ function setBridgeState(state: 'checking' | 'connected' | 'missing' | 'permissio
     default:
       bridgeStatusText.textContent = 'Verificando Bridge…';
   }
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'AbortError';
 }
 
 function isLocalPermissionError(error: unknown): boolean {
