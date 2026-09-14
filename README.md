@@ -11,12 +11,13 @@ Reescrita limpa do NFe Agendamento com **site estático + App/Bridge Windows loc
 - **API local:** `/api/v1`.
 - **Certificado A1:** descoberto em `CurrentUser/My`; a chave privada nunca sai do Windows/Bridge.
 - **Persistência:** somente o thumbprint selecionado em `%LOCALAPPDATA%/NfeAgendamentoBridge/settings.json`.
-- **Diagnóstico local:** log estruturado JSON Lines com rotação em `%LOCALAPPDATA%\NfeAgendamentoBridge\logs`, sem armazenar chave da NF-e, XML, PFX, senha, chave privada, mensagem ou stack trace de exceção.
+- **Diagnóstico local:** log estruturado JSON Lines com rotação em `%LOCALAPPDATA%\NfeAgendamentoBridge\logs`, sem armazenar chave da NF-e, XML, PFX, senha, chave privada, mensagem ou stack trace de exceção; a interface também mostra um resumo de saúde do computador nas Configurações.
+- **Regras por fornecedor:** catálogo declarativo centralizado em `apps/web/src/nfe/supplier-rules.ts`, sem condicionais de fornecedor espalhadas no renderizador do DANFE.
 - **Fallback Portal:** helper Windows separado com WebView2, Portal Nacional fixo, hCaptcha sempre manual e processo persistente reutilizado entre consultas.
 - **Distribuição Windows:** instalador Inno Setup por usuário, sem administrador, com início automático do app na bandeja no login.
-- **Versão canônica atual:** `0.0.11` em `Directory.Build.props`.
+- **Versão canônica atual:** `0.0.12` em `Directory.Build.props`.
 
-## Estado funcional — 11/09/2026
+## Estado funcional — 14/09/2026
 
 Implementado e coberto pelos gates automatizados do projeto:
 
@@ -31,8 +32,11 @@ Implementado e coberto pelos gates automatizados do projeto:
 - tema dark e DANFE A4 branco/fiscal;
 - preview DANFE em modal com `Ctrl + scroll`, impressão/PDF e download XML;
 - DANFE mostra a composição da embalagem (ex.: `CX C/ 20 UN`) quando ela pode ser determinada diretamente por `uCom/qCom` e `uTrib/qTrib` da NF-e;
-- tratamento Fernando Klein preservando o `cProd` fiscal no XML;
+- Fernando Klein e Dionisio preservam o `cProd` fiscal e mostram o código interno compacto entre colchetes;
+- Souza Cruz preserva a quantidade fiscal e mostra a quantidade operacional compacta entre colchetes quando a conversão declarada for válida;
+- regras de fornecedores centralizadas em configuração declarativa validada, com catálogo compartilhado e conversão de quantidade fora do renderizador;
 - painel de configurações para certificado A1;
+- painel de diagnóstico local com conexão do Bridge, versão, certificado selecionado, disponibilidade do WebView2, horário da última verificação e último erro da verificação;
 - interface de consulta simplificada com resultado integrado e ação **Nova consulta**;
 - cabeçalho com marca e nome **NF-e / Agendamento** como conteúdo semântico real no `<h1>`;
 - atalho no topo do site para baixar o Setup Windows da release atual;
@@ -64,6 +68,8 @@ Implementado e coberto pelos gates automatizados do projeto:
 - instalador por usuário em `%LOCALAPPDATA%\NFe Agendamento Bridge`, sem UAC/admin;
 - CI com jobs `web`, `bridge` e `windows-package`;
 - release criada somente a partir dos artifacts do mesmo CI verde do commit marcador `release: v<versão>`.
+
+A consulta em lote não faz parte desta release. O desenho dela será tratado separadamente para preservar os limites fiscais, a ausência de retry automático e o fallback controlado já existentes.
 
 ## Fallback pelo Portal Nacional
 
@@ -115,7 +121,7 @@ Detalhes: `docs/testing/portal-post-hcaptcha.md`.
 Dois controles externos permanecem dependentes de configuração fora do código:
 
 - **Authenticode:** o pipeline está pronto para assinar App/Bridge/Portal/Setup com SHA-256 quando `CODE_SIGNING_PFX_BASE64` e `CODE_SIGNING_PFX_PASSWORD` forem configurados; sem certificado real de code signing, os artifacts permanecem sem publisher assinado;
-- **proteção da `main`:** em 11/09/2026 não há ruleset moderno configurado; a integração do GitHub usada no projeto não possui permissão administrativa de escrita para criá-lo. A configuração exata recomendada está em `docs/operations/repository-hardening.md`.
+- **proteção da `main`:** verificado novamente em 14/09/2026: não há ruleset moderno configurado. A integração do GitHub usada no projeto não possui permissão administrativa de escrita para criá-lo. A configuração exata recomendada está em `docs/operations/repository-hardening.md`.
 
 ## Desenvolvimento
 
@@ -150,12 +156,12 @@ O CI executa o Wrangler instalado pelo lockfile com `./node_modules/.bin/wrangle
 
 ## Distribuição Windows
 
-Release pública atual: **v0.0.11**.
+Release pública atual: **v0.0.12**.
 
 Asset principal:
 
 ```text
-NFeAgendamentoBridge-Setup-v0.0.11.exe
+NFeAgendamentoBridge-Setup-v0.0.12.exe
 ```
 
 O instalador:
@@ -168,7 +174,7 @@ O instalador:
 - preserva `%LOCALAPPDATA%\NfeAgendamentoBridge`, onde fica a seleção local do certificado;
 - não instala atualizações silenciosamente.
 
-Quem estiver na v0.0.10 pode usar **Verificar atualizações** no app da bandeja para instalar a v0.0.11 após confirmação.
+Quem estiver na v0.0.11 pode usar **Verificar atualizações** no app da bandeja para instalar a v0.0.12 após confirmação.
 
 O Microsoft Edge WebView2 Runtime é necessário somente para o fallback pelo Portal Nacional.
 
@@ -191,10 +197,12 @@ Não provoque bloqueio `656` repetindo consultas artificialmente apenas para tes
 ## Documentação
 
 - arquitetura/segurança: `docs/architecture/bridge-security.md`;
+- regras declarativas de fornecedores: `docs/architecture/supplier-rules.md`;
 - hardening do repositório/distribuição: `docs/operations/repository-hardening.md`;
 - logging local do Bridge: `docs/operations/local-logging.md`;
 - aceitação física: `docs/testing/acceptance.md`;
 - automação pós-hCaptcha: `docs/testing/portal-post-hcaptcha.md`;
 - atualizador manual: `docs/testing/bridge-updater.md`;
 - layout DANFE: `docs/testing/danfe-layout.md`;
-- notas da release atual: `docs/releases/v0.0.11.md`.
+- tela de consulta/configurações: `docs/ui/consultation-screen.md`;
+- notas da release atual: `docs/releases/v0.0.12.md`.
