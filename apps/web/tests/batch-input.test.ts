@@ -21,10 +21,28 @@ describe('batch input', () => {
     expect(summary.invalidCount).toBe(1);
   });
 
-  it('flags batches above the conservative maximum', () => {
-    const summary = parseBatchInput(KEY_A, 0);
+  it('accepts more than ten valid keys without a rigid batch cap', () => {
+    const keys = Array.from({ length: 25 }, (_, index) => createValidKey(index + 1));
+    const summary = parseBatchInput(keys.join('\n'));
 
-    expect(MAX_BATCH_ITEMS).toBe(10);
-    expect(summary.exceedsLimit).toBe(true);
+    expect(MAX_BATCH_ITEMS).toBe(Number.POSITIVE_INFINITY);
+    expect(summary.validKeys).toEqual(keys);
+    expect(summary.exceedsLimit).toBe(false);
+    expect(summary.invalidCount).toBe(0);
   });
 });
+
+function createValidKey(sequence: number): string {
+  const prefix = `${KEY_A.slice(0, 35)}${String(sequence).padStart(8, '0')}`;
+  let sum = 0;
+  let weight = 2;
+
+  for (let index = 42; index >= 0; index -= 1) {
+    sum += Number(prefix[index]) * weight;
+    weight = weight === 9 ? 2 : weight + 1;
+  }
+
+  let checkDigit = 11 - (sum % 11);
+  if (checkDigit >= 10) checkDigit = 0;
+  return `${prefix}${checkDigit}`;
+}
