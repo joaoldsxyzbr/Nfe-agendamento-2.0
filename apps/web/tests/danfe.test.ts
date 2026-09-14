@@ -15,6 +15,12 @@ describe('DANFE approved behavior', () => {
       expect(html).toContain(text);
     }
     expect(html.indexOf('<th>Item</th>')).toBeLessThan(html.indexOf('<th>Código produto</th>'));
+    for (const column of ['<th>NCM/SH</th>', '<th>Valor IPI</th>', '<th>Alíq. IPI</th>']) {
+      expect(html).not.toContain(column);
+    }
+    for (const column of ['<th>Descrição do produto / serviço</th>', '<th>Quant.</th>', '<th>Valor unit.</th>', '<th>Valor total</th>', '<th>Valor ICMS</th>']) {
+      expect(html).toContain(column);
+    }
     expect(html).toContain('ABC-001');
     expect(html).toContain('TRANSPORTADORA TESTE');
   });
@@ -100,5 +106,7 @@ describe('DANFE approved behavior', () => {
     expect(css).toContain('font-size: 8.6px');
     expect(css).toContain('.fiscal-label { font-size: 6.2px; font-weight: 700; }');
     expect(css).toContain('.products-table td { font-size: 7.8px; line-height: 1.16; }');
+    expect(css).toContain('.products-table col.description { width: 62mm; }');
+    expect(css).not.toContain('.products-table col.ncm');
   });
 });
