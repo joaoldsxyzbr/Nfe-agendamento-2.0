@@ -1,13 +1,17 @@
 import { validateAccessKey } from '../nfe/access-key';
 
+// Compatibilidade com a UI atual: não existe mais teto rígido de itens por lote.
+export const MAX_BATCH_ITEMS = Number.POSITIVE_INFINITY;
+
 export type BatchInputSummary = {
   validKeys: string[];
   invalidCount: number;
   duplicateCount: number;
   totalCandidates: number;
+  exceedsLimit: boolean;
 };
 
-export function parseBatchInput(raw: string): BatchInputSummary {
+export function parseBatchInput(raw: string, maxItems = MAX_BATCH_ITEMS): BatchInputSummary {
   const candidates = extractCandidates(raw);
   const validKeys: string[] = [];
   const seen = new Set<string>();
@@ -35,6 +39,7 @@ export function parseBatchInput(raw: string): BatchInputSummary {
     invalidCount,
     duplicateCount,
     totalCandidates: candidates.length,
+    exceedsLimit: validKeys.length > maxItems,
   };
 }
 
