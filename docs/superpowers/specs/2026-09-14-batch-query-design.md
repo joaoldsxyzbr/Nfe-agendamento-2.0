@@ -1,241 +1,197 @@
-# Consulta em lote — desenho proposto
+# Consulta em lote — desenho implementado
 
 **Data:** 2026-09-14  
-**Estado:** planejamento; não implementado  
-**Base:** arquitetura v0.0.12 (`site estático + App/Bridge local por PC`)
+**Estado:** implementado na `main`; validação física pendente; ainda não publicado em release  
+**Base:** arquitetura `site estático + App/Bridge local por PC`
 
 ## Objetivo
 
-Adicionar consulta/download de várias NF-e sem transformar o lote em um gerador de bloqueio `656`, sem reintroduzir Central/pareamento e sem enfraquecer as garantias já existentes de consulta única.
+Adicionar consulta/download de várias NF-e sem transformar o lote em um gerador de bloqueio `656`, sem reintroduzir Central/pareamento e sem enfraquecer as garantias da consulta única.
 
-A primeira versão deve privilegiar segurança fiscal, previsibilidade e uma experiência simples: consultar várias chaves, acompanhar cada uma individualmente e manter as mesmas ações de visualizar DANFE e baixar XML já existentes na consulta única.
+A implementação privilegia segurança fiscal e previsibilidade: no máximo 10 NF-e por lote, processamento estritamente sequencial, zero retry fiscal automático e fallback controlado para o Portal Nacional.
 
-## Restrições que governam o desenho
+## Arquitetura implementada
 
-- o Bridge atual consulta uma chave por vez via `consChNFe` no `NFeDistribuicaoDFe`;
-- não existe retry fiscal automático e isso deve permanecer assim;
-- `consumption_limit`, HTTP 429 e `cStat 656` não podem provocar nova tentativa automática contra a SEFAZ;
-- o fallback Portal exige hCaptcha manual e o projeto admite somente uma operação Portal por PC;
-- a arquitetura é independente por PC, sem coordenador central entre computadores;
-- o mesmo CNPJ pode ser usado em mais de um PC, então um contador exclusivamente local não conhece o consumo feito pelos demais computadores;
-- a regra oficial vigente para `consChNFe`/`consNSU` limita o uso a 20 consultas em uma hora; ao receber `656`, deve-se aguardar uma hora completa e uma nova tentativa antecipada reinicia a janela de bloqueio;
-- `distNSU` é o mecanismo oficial indicado para distribuição em volume e pode devolver lotes de até 50 documentos, porém exige sequência de `ultNSU` compartilhada pelo mesmo CNPJ. Em uma arquitetura multi-PC independente, dois computadores usando `distNSU` para o mesmo CNPJ podem disputar essa sequência e provocar uso indevido.
+O lote é um **orquestrador no site sobre o endpoint unitário `POST /api/v1/nfe/lookup`**. Não existe endpoint fiscal `/nfe/batch` que dispare várias consultas em paralelo.
 
-Por isso, `distNSU` não será usado na primeira versão do lote.
-
-## Decisão de arquitetura para v1
-
-O lote será um **orquestrador no site sobre o endpoint unitário já existente**. Não haverá endpoint fiscal `/nfe/batch` que dispare várias consultas de uma vez.
-
-O fluxo será híbrido: começa pela SEFAZ e, quando existir condição já elegível ao fallback, usa o Portal Nacional sem repetir a tentativa direta.
+Fluxo:
 
 ```text
 Usuário cola várias chaves
   -> validação local das 44 posições/DV
   -> remoção de duplicadas
   -> pré-checagem Bridge + A1
-  -> lista as chaves abaixo do campo de entrada
-  -> processa uma chave por vez
-       -> sucesso SEFAZ: guarda XML somente na sessão e libera Visualizar/Baixar
-       -> 217: abre Portal para aquela NF-e, sem repetir SEFAZ
-       -> 656/429/consumption_limit:
-            -> grava cooldown fiscal local
-            -> não toca novamente na SEFAZ durante o cooldown
-            -> envia a NF-e atual para o Portal
-            -> itens restantes passam a usar Portal sequencialmente
-       -> transporte/erro ambíguo: marca o item e NÃO repete
-  -> resumo final
-  -> ações individuais continuam disponíveis por NF-e concluída
-  -> opcionalmente ZIP dos XMLs / impressão conjunta dos DANFEs
+  -> todas as chaves válidas aparecem abaixo do campo
+  -> processamento de uma chave por vez
+       -> sucesso SEFAZ: valida XML e libera Visualizar DANFE / Baixar XML
+       -> cStat 217: usa Portal apenas para aquela NF-e
+       -> 656 / HTTP 429 / consumption_limit:
+            -> Bridge registra proteção fiscal local
+            -> não toca novamente na SEFAZ durante a proteção
+            -> NF-e atual usa Portal
+            -> itens restantes seguem pelo Portal, um por vez
+       -> transporte/erro ambíguo: marca o item e não repete
+  -> resultados concluídos continuam disponíveis individualmente
+  -> XMLs concluídos podem ser baixados em ZIP
+  -> DANFEs concluídos podem ser impressos em conjunto
 ```
 
-## Limite conservador da v1
+## Limites e serialização
 
 - máximo de **10 NF-e por lote**;
-- processamento estritamente sequencial;
-- nunca existem duas consultas SEFAZ ou duas operações Portal em paralelo;
-- nenhuma consulta seguinte começa enquanto a anterior não terminou;
-- o limite de 10 é sobre o lote recebido, independentemente de quantas terminem pela SEFAZ ou pelo Portal.
+- uma única consulta/fallback ativa por vez no lote;
+- sem paralelismo contra a SEFAZ;
+- sem duas operações Portal simultâneas;
+- nenhuma repetição automática de uma consulta fiscal ambígua;
+- cancelar o lote aborta a operação corrente quando possível e não inicia a próxima;
+- resultados já concluídos permanecem disponíveis após cancelamento.
 
-O limite de 10 não substitui a regra oficial de 20/h. Ele deixa margem para consultas unitárias e para eventual uso do mesmo CNPJ em outro PC, mas não consegue garantir quota global porque não existe coordenação entre computadores.
+O limite de 10 é conservador e não substitui as regras oficiais da SEFAZ. Como os PCs continuam independentes, o Bridge não conhece consumo feito por outro computador que use o mesmo CNPJ.
 
-## Proteção no Bridge
+## Proteção fiscal no Bridge
 
-Além da fila no site, o Bridge deve ganhar duas proteções globais para o PC:
+Foi implementado `FiscalUsageGuard` em `apps/bridge/src/NfeAgendamento.Bridge/Fiscal/FiscalUsageGuard.cs`.
 
-1. **gate fiscal único** (`SemaphoreSlim(1,1)` ou equivalente) para serializar qualquer `NFeDistribuicaoDFe`, inclusive duas abas do navegador;
-2. **FiscalUsageGuard** persistente e não sensível, mantendo apenas metadados necessários para segurança operacional:
-   - hash do CNPJ/identidade fiscal do certificado;
-   - timestamps das tentativas diretas recentes;
-   - `blockedUntilUtc` quando houver `656`/HTTP 429.
+O guard possui:
 
-Ao receber `656`/HTTP 429/`consumption_limit`, o Bridge deve gravar `blockedUntilUtc` e recusar localmente qualquer nova consulta direta desse CNPJ até o prazo terminar. Essa recusa local não toca a SEFAZ e, portanto, evita reiniciar acidentalmente a janela oficial de bloqueio.
+1. **gate fiscal único** (`SemaphoreSlim`) para serializar chamadas `NFeDistribuicaoDFe` naquele PC, inclusive entre abas;
+2. estado local por identidade fiscal;
+3. janela de uma hora para tentativas diretas;
+4. limite local conservador de 20 tentativas diretas por hora;
+5. `blockedUntilUtc` após `656` ou HTTP 429;
+6. persistência em `%LOCALAPPDATA%/NfeAgendamentoBridge/fiscal-usage.json`.
 
-O guard deve contar também consultas unitárias feitas fora do lote. Se uma consulta em lote começar durante cooldown já conhecido, ela deve iniciar diretamente pelo Portal, sem fazer uma tentativa de teste contra a SEFAZ.
+A persistência contém somente:
 
-A UI pode exibir um estado simples como `SEFAZ em proteção até HH:mm · lote seguindo pelo Portal`, sem expor histórico detalhado.
+- SHA-256 do CNPJ usado como identificador;
+- timestamps das tentativas diretas;
+- prazo de proteção fiscal.
 
-## Estados por item
+Ela **não contém** chave NF-e, XML, PFX, senha, chave privada ou o CNPJ em texto puro.
 
-- `queued` — aguardando processamento;
-- `consulting` — consulta direta SEFAZ em andamento;
-- `portal_queued` — aguardando sua vez no Portal porque a SEFAZ está em cooldown ou a NF-e exige fallback;
-- `portal_waiting_user` — Portal aberto, aguardando hCaptcha manual;
-- `success` — XML obtido e validado, seja pela SEFAZ ou pelo Portal;
-- `fiscal_status` — retorno fiscal definitivo sem XML e não elegível ao Portal;
-- `transport_error` — resultado ambíguo/indisponível; não repetir automaticamente;
-- `portal_error` — Portal não concluiu aquela NF-e;
-- `cancelled` — cancelado pelo usuário.
+Durante uma proteção ativa, `NfeLookupService` devolve `consumption_limit` localmente **sem chamar o transporte SEFAZ**. No lote isso faz a interface mudar a rota para Portal. A consulta única continua usando o mesmo fallback já existente.
 
-Cada item concluído deve guardar também a origem operacional do XML (`SEFAZ` ou `Portal`) somente para apresentação na sessão atual.
+## Comportamento do Portal
 
-## Comportamento do Portal dentro do lote
+O Portal mantém as mesmas garantias da consulta única:
 
-O Portal continuará obedecendo exatamente às garantias da consulta única: uma operação por vez, hCaptcha manual, certificado selecionado pelo usuário e XML validado contra a chave antes de ser aceito.
+- uma operação por vez;
+- hCaptcha sempre manual;
+- certificado A1 já selecionado no computador;
+- XML validado contra a chave antes de ser aceito;
+- sem fabricação de token, serviço de resolução ou tentativa de contornar captcha.
 
-### Retorno `217`
+### `217`
 
-Quando apenas uma NF-e retornar `217`:
+Quando apenas uma NF-e retorna `217`, aquela linha segue pelo Portal. Depois de concluída, a próxima NF-e volta à SEFAZ se não existir proteção fiscal ativa.
 
-1. o lote pausa naquela linha;
-2. o Portal abre automaticamente para a mesma chave;
-3. o usuário resolve o hCaptcha;
-4. o XML retorna e a linha passa para `success`;
-5. a fila volta para a SEFAZ na próxima NF-e, desde que não exista cooldown ativo.
+### `656`, HTTP 429 ou `consumption_limit`
 
-### Limite `656` / HTTP 429 / `consumption_limit`
+Ao atingir limite:
 
-Quando a SEFAZ atingir o limite:
+1. o Bridge registra a proteção antes de permitir nova consulta direta;
+2. a NF-e atual passa para o Portal;
+3. a rota geral do lote muda para Portal;
+4. as chaves restantes são processadas pelo Portal, uma por vez;
+5. cada hCaptcha continua manual;
+6. nenhuma NF-e restante volta à SEFAZ naquele lote.
 
-1. registrar o cooldown local antes de qualquer nova tentativa;
-2. a NF-e atual passa imediatamente para o Portal;
-3. depois que ela concluir, os demais itens pendentes passam para `portal_queued`;
-4. o Portal processa esses itens **um por vez**, abrindo automaticamente a próxima chave somente depois que a anterior finalizar;
-5. cada hCaptcha continua sendo resolvido manualmente pelo usuário;
-6. nenhuma das chaves restantes volta a tocar na SEFAZ enquanto o cooldown estiver ativo.
+Uma consulta iniciada enquanto o Bridge já está em proteção faz uma chamada local ao endpoint unitário, recebe `consumption_limit` sem comunicação fiscal e passa imediatamente para a rota Portal.
 
-Isso não é retry fiscal: após o limite, o lote troca de rota e continua somente pelo fallback oficial já existente.
+## Interface implementada
 
-Se o usuário fechar/cancelar uma operação Portal, aquela linha fica em `portal_error`/`cancelled` e deve oferecer ação manual **Tentar pelo Portal**. O sistema não repete sozinho a mesma operação indefinidamente.
+A tela principal possui alternância discreta **Uma NF-e | Lote**.
 
-## Interface proposta
+No modo **Lote** existem:
 
-Na tela principal, adicionar alternância discreta **Uma NF-e | Lote**.
-
-No modo **Lote**, a estrutura será:
-
-1. textarea para colar as chaves;
-2. resumo de entrada (`válidas`, `inválidas`, `duplicadas`);
-3. botão **Iniciar lote**;
-4. logo abaixo, uma lista/tabela com **todas as chaves válidas do lote**, preservando a ordem em que foram coladas;
-5. progresso geral e estado da rota atual (`SEFAZ` ou `Portal`);
-6. ações gerais de cancelar, baixar XMLs em ZIP e imprimir DANFEs concluídos.
+- textarea para colar as chaves;
+- extração de chaves formatadas ou separadas por linha/vírgula/ponto e vírgula;
+- validação de DV antes de iniciar;
+- contadores de válidas, inválidas e duplicadas;
+- bloqueio quando houver mais de 10 chaves válidas;
+- lista das chaves válidas preservando a ordem original;
+- progresso geral;
+- indicação da rota atual (`SEFAZ` ou `Portal`);
+- **Cancelar lote**;
+- **Baixar XMLs (.zip)**;
+- **Imprimir DANFEs**.
 
 ### Linha de cada NF-e
 
-Cada chave deve ocupar uma linha própria contendo:
+Cada linha mostra:
 
-- ordem do item (`1`, `2`, `3`...);
-- chave de acesso, preferencialmente abreviada visualmente mas com acesso à chave completa;
-- número/série, emitente e valor quando o XML já tiver sido carregado;
-- status claro: `Aguardando`, `Consultando SEFAZ`, `Aguardando Portal`, `Resolva o hCaptcha`, `Concluída`, `Erro` etc.;
-- indicação discreta da origem quando concluída: `SEFAZ` ou `Portal`;
-- botão **Visualizar DANFE**;
-- botão **Baixar XML**.
+- ordem;
+- chave abreviada visualmente, mantendo a completa no contexto do elemento;
+- status da operação;
+- origem do XML (`SEFAZ` ou `Portal`) após sucesso;
+- número, série, emitente e valor quando disponíveis no XML;
+- **Visualizar DANFE**;
+- **Baixar XML**.
 
-**Visualizar DANFE** e **Baixar XML** ficam desabilitados enquanto aquela NF-e não possuir XML validado. Assim que a linha chegar a `success`, os dois ficam disponíveis imediatamente, sem esperar o restante do lote terminar.
+**Visualizar DANFE** e **Baixar XML** são habilitados imediatamente quando o XML daquela linha foi validado, sem esperar o lote inteiro terminar.
 
-O botão **Visualizar DANFE** deve reutilizar exatamente o modal/renderer da consulta única, inclusive zoom `Ctrl + scroll`, impressão e regras específicas de fornecedores.
+O DANFE individual reutiliza o mesmo renderer/modal da consulta única, inclusive `Ctrl + scroll`, regras por fornecedor e impressão/PDF.
 
-O botão **Baixar XML** deve baixar somente o XML daquela linha, com nome determinístico apropriado e sem modificar seu conteúdo.
+Se uma operação Portal falhar, a linha fica em `portal_error` e oferece **Tentar pelo Portal**. Não existe retry automático infinito.
 
-Se a linha estiver em `portal_error`, ela pode substituir temporariamente essas ações por **Tentar pelo Portal**, voltando às ações normais depois de concluir.
+## XML, ZIP e impressão
 
-### Ações gerais
+- XMLs ficam somente em memória na página;
+- fechar/recarregar a página descarta o lote;
+- download individual usa exatamente o XML validado daquela linha;
+- ZIP é gerado no navegador sem dependência externa e contém somente XMLs concluídos;
+- impressão conjunta agrega somente DANFEs concluídos e reutiliza o renderer fiscal existente;
+- Bridge não persiste XMLs do lote.
 
-Ao lado do progresso geral:
+## Estados por item
 
-- **Cancelar lote** — para o processamento sem apagar o que já concluiu;
-- **Baixar XMLs (.zip)** — contém somente NF-e concluídas;
-- **Imprimir DANFEs** — agrega somente NF-e concluídas, cada DANFE iniciando em nova página.
+- `queued` — aguardando;
+- `consulting` — consulta SEFAZ em andamento;
+- `portal_queued` — aguardando Portal;
+- `portal_waiting_user` — aguardando hCaptcha manual;
+- `success` — XML obtido e validado;
+- `fiscal_status` — retorno fiscal sem XML não elegível ao fallback;
+- `transport_error` — falha/resultado ambíguo, sem retry;
+- `portal_error` — Portal não concluiu;
+- `cancelled` — cancelado.
 
-Essas ações em massa são complementares. A ação principal continua existindo em cada linha, para que o usuário possa visualizar ou baixar qualquer NF-e individualmente assim que ela ficar pronta.
-
-A chave completa só deve aparecer quando necessária na própria tela de trabalho; logs e mensagens de diagnóstico continuam sem persistir chaves.
-
-## Dados e privacidade
-
-- não persistir XMLs no Bridge;
-- não persistir chaves do lote em logs;
-- manter XMLs e resultados do lote somente em memória/sessão da página;
-- ao recarregar/fechar a página, o lote é descartado;
-- ZIP deve ser gerado no navegador;
-- downloads individuais usam o mesmo XML validado mantido em memória;
-- a impressão conjunta deve reutilizar o renderer DANFE existente, com `page-break` entre documentos.
-
-## Cancelamento
-
-Cancelar deve:
-
-- abortar a requisição HTTP em andamento via `AbortController` quando possível;
-- não iniciar o próximo item;
-- cancelar operação Portal ativa quando houver;
-- manter na tela todos os itens já concluídos, com **Visualizar DANFE** e **Baixar XML** funcionando;
-- marcar itens ainda não iniciados como `cancelled`;
-- nunca transformar cancelamento em retry.
-
-## Testes obrigatórios
+## Testes automatizados adicionados
 
 ### Web
 
-- validação e deduplicação de entrada;
-- máximo de 10 NF-e por lote;
-- lista renderiza todas as chaves válidas na ordem original;
-- apenas uma operação de consulta/fallback ativa por vez;
-- `success` libera **Visualizar DANFE** e **Baixar XML** imediatamente naquela linha;
-- downloads individuais retornam o XML correto de cada linha;
-- visualização individual usa o DANFE correto de cada NF-e;
-- cancelamento impede próximo item e preserva ações dos já concluídos;
-- `217` usa Portal apenas para aquela NF-e e depois permite retorno à SEFAZ;
-- `656`/429/`consumption_limit` muda os itens restantes para Portal sem nova chamada SEFAZ;
-- durante cooldown conhecido um novo lote começa diretamente pelo Portal;
-- erro de transporte não é repetido;
-- falha/cancelamento do Portal não entra em retry automático infinito;
-- ZIP contém somente XMLs concluídos;
-- impressão agrega somente DANFEs concluídos.
+- `apps/web/tests/batch-input.test.ts`: entrada, formatação, deduplicação e limite;
+- `apps/web/tests/batch-zip.test.ts`: geração do ZIP local;
+- `apps/web/tests/shell.test.ts`: wiring da interface híbrida, ações individuais e ações em massa.
 
 ### Bridge
 
-- gate impede duas consultas fiscais concorrentes;
-- guard conta consulta unitária e lote na mesma janela;
-- `656`/429 grava cooldown;
-- durante cooldown nenhuma chamada chega ao transporte SEFAZ;
-- reiniciar Bridge preserva cooldown;
-- metadados persistidos não contêm chave NF-e, XML, PFX, senha ou chave privada;
-- troca de certificado/CNPJ separa corretamente o estado do guard.
+- `FiscalUsageGuardTests.cs`: limite local, hash do CNPJ, persistência e expiração;
+- `NfeLookupUsageGuardTests.cs`: `656` bloqueia a próxima chamada antes do transporte;
+- testes existentes de `NfeLookupService` continuam cobrindo `138`, `137`, `656`, 429, timeout/falhas e certificado.
+
+## Validação física necessária
+
+O CI consegue validar lógica, builds e empacotamento, mas não comprova a interação externa real com SEFAZ, WebView2, certificado A1 e hCaptcha.
+
+Antes da próxima release, executar `docs/testing/batch-query.md`. Não provoque `656` artificialmente repetindo consultas apenas para testar o fallback.
 
 ## Evolução para volume alto
 
-Se o uso real exigir dezenas/centenas de NF-e por hora, não aumentar simplesmente o tamanho do lote de `consChNFe`.
+`distNSU` continua fora desta versão. Se o uso real exigir dezenas/centenas de NF-e, será necessário antes resolver a coordenação do `ultNSU` por CNPJ entre PCs.
 
-A próxima arquitetura a estudar será `distNSU`, pois é o caminho oficial para distribuição em volume e pode retornar até 50 documentos por lote. Porém, antes disso será necessário resolver de forma explícita a coordenação do `ultNSU` por CNPJ entre PCs. Opções futuras:
+Opções futuras continuam sendo:
 
-- eleger um único PC responsável por `distNSU` para cada CNPJ; ou
-- criar um coordenador compartilhado mínimo apenas para cursor/lease, sem certificado e sem XML.
+- um único PC responsável pelo cursor `distNSU` de cada CNPJ; ou
+- coordenador mínimo compartilhado somente para cursor/lease, sem certificado e sem XML.
 
-Nenhuma dessas opções faz parte da v1.
+## Critério de aceite
 
-## Critério de aceite da v1
+A funcionalidade pode ser declarada pronta para release quando:
 
-A consulta em lote pode ser considerada pronta quando:
-
-- mantém o endpoint unitário atual como primitive fiscal;
-- processa no máximo 10 NF-e sequencialmente;
-- não executa retries automáticos contra a SEFAZ;
-- usa o Portal automaticamente para `217` e para o lote restante após `656`/429/`consumption_limit`;
-- Bridge impede nova tentativa SEFAZ durante o cooldown registrado;
-- todas as chaves do lote ficam visíveis em linhas individuais;
-- cada NF-e concluída libera imediatamente **Visualizar DANFE** e **Baixar XML**;
-- XMLs/DANFEs concluídos também podem ser baixados/impressos em conjunto;
-- CI (`web`, `bridge`, `windows-package`) permanece verde;
-- validação física confirma um lote pequeno real sem regressão na consulta unitária.
+- CI `web`, `bridge` e `windows-package` estiver verde no HEAD da `main`;
+- lote pequeno real for validado com certificado A1;
+- ações **Visualizar DANFE** e **Baixar XML** forem confirmadas por linha;
+- ZIP e impressão conjunta forem confirmados;
+- `217` for validado quando ocorrer naturalmente;
+- proteção fiscal/fallback não fizer retry contra a SEFAZ;
+- consulta única continuar funcionando sem regressão.
