@@ -1,7 +1,7 @@
 # Consulta em lote — desenho implementado
 
 **Data:** 2026-09-14  
-**Estado:** implementado na `main`; validação física pendente; ainda não publicado em release  
+**Estado:** implementado e incluído na release v0.0.13; validação física real pendente  
 **Base:** arquitetura `site estático + App/Bridge local por PC`
 
 ## Objetivo
@@ -173,7 +173,7 @@ Se uma operação Portal falhar, a linha fica em `portal_error` e oferece **Tent
 
 O CI consegue validar lógica, builds e empacotamento, mas não comprova a interação externa real com SEFAZ, WebView2, certificado A1 e hCaptcha.
 
-Antes da próxima release, executar `docs/testing/batch-query.md`. Não provoque `656` artificialmente repetindo consultas apenas para testar o fallback.
+Para declarar a v0.0.13 fisicamente validada, executar `docs/testing/batch-query.md` em conjunto com `docs/testing/acceptance.md`. Não provoque `656` artificialmente repetindo consultas apenas para testar o fallback.
 
 ## Evolução para volume alto
 
@@ -184,11 +184,11 @@ Opções futuras continuam sendo:
 - um único PC responsável pelo cursor `distNSU` de cada CNPJ; ou
 - coordenador mínimo compartilhado somente para cursor/lease, sem certificado e sem XML.
 
-## Critério de aceite
+## Critério de validação física
 
-A funcionalidade pode ser declarada pronta para release quando:
+A funcionalidade pode ser declarada fisicamente validada quando:
 
-- CI `web`, `bridge` e `windows-package` estiver verde no HEAD da `main`;
+- CI `web`, `bridge` e `windows-package` estiver verde no SHA da release v0.0.13;
 - lote pequeno real for validado com certificado A1;
 - ações **Visualizar DANFE** e **Baixar XML** forem confirmadas por linha;
 - ZIP e impressão conjunta forem confirmados;
