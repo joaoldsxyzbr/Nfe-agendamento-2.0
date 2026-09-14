@@ -94,19 +94,24 @@ describe('DANFE approved behavior', () => {
     expect(html).toContain('/src/danfe/zoom-direct.ts');
   });
 
-  it('keeps approved A4 while compacting the fiscal header and expanding additional data', () => {
+  it('keeps the approved A4 layout readable and structured like the visual reference', () => {
     const css = readFileSync(new URL('../src/danfe/styles.css', import.meta.url), 'utf8');
     for (const rule of ['width: 210mm', 'min-height: 277mm', 'font-family: Arial', '.products-table col.item', 'width: 8mm', '@media print']) {
       expect(css).toContain(rule);
     }
-    expect(css).toContain('min-height: 36px');
-    expect(css).toContain('min-height: 78px');
-    expect(css).toContain('min-height: 88px');
+    expect(css).toContain('min-height: 40px');
+    expect(css).toContain('min-height: 94px');
+    expect(css).toContain('min-height: 92px');
     expect(css).toContain('padding: 3.5mm');
-    expect(css).toContain('font-size: 8.6px');
-    expect(css).toContain('.fiscal-label { font-size: 6.2px; font-weight: 700; }');
-    expect(css).toContain('.products-table td { font-size: 7.8px; line-height: 1.16; }');
+    expect(css).toContain('font-size: 8.9px');
+    expect(css).toContain('.fiscal-label { font-size: 6.35px; font-weight: 700; }');
+    expect(css).toContain('.products-table td { font-size: 8.15px; line-height: 1.18; }');
     expect(css).toContain('.products-table col.description { width: 62mm; }');
+    expect(css).toContain('grid-template-columns: repeat(12, minmax(0, 1fr));');
+    expect(css).toContain('align-items: flex-start; justify-content: center; padding: 5px 8px; text-align: left;');
+    expect(css).toContain('.products-table.danfe-products-fill { width: 100%; border-collapse: collapse; table-layout: fixed; }');
+    expect(css).toContain('.danfe-footer { margin-top: auto;');
     expect(css).not.toContain('.products-table col.ncm');
+    expect(css).not.toContain('tbody tr:last-child td { height: 100%; }');
   });
 });

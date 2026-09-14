@@ -1,29 +1,37 @@
 # DANFE — referência visual e critérios de layout
 
-Este documento registra o estado do DANFE após a comparação visual de 09/09/2026 com uma impressão do FSist gerada para a mesma NF-e.
+Este documento registra o estado visual aprovado do DANFE em 14/09/2026, após comparação com uma impressão do FSist e com o mockup visual aprovado durante a revisão do projeto.
 
 ## Objetivo
 
-Manter a legibilidade e organização visual do NFe Agendamento, aproximando a densidade e a hierarquia fiscal do DANFE tradicional sem copiar integralmente o FSist.
+Manter a eficiência de espaço do NFe Agendamento, mas com leitura e acabamento visual mais próximos do DANFE tradicional: tipografia maior, hierarquia mais clara, blocos melhor proporcionados e tabela sem aparência comprimida.
+
+O alvo visual não é copiar o FSist literalmente. A referência aprovada combina a leitura confortável do FSist com a compactação que já existia no NFe Agendamento.
 
 ## Ajustes implementados
 
-- canhoto de recebimento mais compacto;
-- cabeçalho emitente / DANFE / chave reduzido verticalmente;
-- número, série, chave e protocolo preservados com hierarquia fiscal clara;
-- texto de consulta de autenticidade no Portal Nacional abaixo da chave;
+- canhoto de recebimento levemente maior e mais legível;
+- cabeçalho principal com proporção mais equilibrada entre emitente, identificação DANFE e chave de acesso;
+- emitente alinhado à esquerda, com razão social em maior destaque e endereço/telefone mais fáceis de ler;
+- título **DANFE**, entrada/saída, número, série, folha, chave e protocolo com hierarquia visual reforçada;
+- texto de consulta de autenticidade no Portal Nacional preservado abaixo da chave;
 - telefone/fax do emitente mostrado no cabeçalho quando existir no XML;
+- blocos fiscais com rótulos menores que os valores, mantendo leitura rápida sem desperdiçar altura;
+- destinatário/remetente reorganizado em grade de 12 colunas para manter nome, documento, datas, endereço, município, UF e inscrição estadual nas proporções corretas;
+- transportador/volumes reorganizado em grade de 12 colunas, evitando campos excessivamente estreitos e mantendo três linhas semânticas claras;
+- totais fiscais mantidos compactos, com valores alinhados à direita e total da nota com destaque maior;
+- área de **Dados adicionais** mantida ampla, com melhor proporção entre informações complementares e reservado ao fisco;
+- tabela de produtos não força mais a última linha a preencher verticalmente todo o espaço restante da página;
+- rodapé fica ancorado no fim da página sem obrigar a tabela a se esticar;
+- tipografia do preview e da impressão aumentada de forma controlada, principalmente em emitente, valores fiscais e produtos;
+- espaçamento vertical e padding de células ajustados para aproximar o acabamento do mockup aprovado sem perder densidade;
+- impressão A4 continua independente do zoom da tela;
 - `vICMSUFDest` exibido como **V. ICMS UF dest.** quando a tag existir;
 - `vTotTrib` exibido como **V. tot. trib.** quando a tag existir;
-- grade de totais adaptada para acomodar os campos adicionais sem aumentar desnecessariamente a altura;
-- área de **Dados adicionais** ampliada para melhorar a leitura das informações complementares;
 - composição de embalagem exibida abaixo da descrição do item quando `uCom/qCom` e `uTrib/qTrib` permitem determinar uma relação inteira, por exemplo **CX C/ 20 UN**;
-- bloco de transportador/volumes continua sendo omitido quando não houver informação útil e permanece compacto quando utilizado;
-- impressão A4 usa tipografia própria mais legível que o preview, com reforço de tamanho/peso em rótulos, valores e tabela de produtos sem aplicar o zoom de tela;
-- o padding de impressão foi reduzido de `4mm` para `3.5mm` para compensar o aumento tipográfico e preservar o encaixe físico na folha A4;
-- a tabela de produtos foi simplificada de 16 para 13 colunas: **NCM/SH**, **Valor IPI** e **Alíq. IPI** deixaram de ser exibidos na grade para liberar largura para os dados operacionais mais úteis;
-- a remoção dessas três colunas é apenas visual: os dados fiscais continuam preservados no XML e os totais fiscais do DANFE não são alterados;
-- a coluna de descrição passou a reservar `62mm`, aproveitando parte da largura liberada para melhorar a leitura dos itens.
+- bloco de transportador/volumes continua sendo omitido quando não houver informação útil;
+- a tabela de produtos permanece com 13 colunas: **NCM/SH**, **Valor IPI** e **Alíq. IPI** continuam fora da grade para preservar largura para os dados operacionais mais úteis;
+- a remoção dessas três colunas continua sendo apenas visual: os dados fiscais permanecem preservados no XML e nos totais fiscais.
 
 ## Regras por fornecedor
 
@@ -66,9 +74,11 @@ Para evitar inferências incorretas, a quantidade interna só é mostrada quando
 
 - fonte Arial/Helvetica legível;
 - DANFE A4;
-- impressão A4 preserva tipografia reforçada sem herdar o zoom do preview;
+- emitente alinhado à esquerda com hierarquia visual clara;
+- preview e impressão com tipografia confortável sem herdar o zoom da tela;
 - coluna inicial **Item**;
 - tabela de produtos mantém 13 colunas e não reintroduz **NCM/SH**, **Valor IPI** ou **Alíq. IPI**;
+- tabela cresce apenas conforme a quantidade de itens e não estica artificialmente a última linha;
 - código fiscal `cProd` preservado;
 - Fernando Klein e Dionisio mostram o código interno entre colchetes abaixo do `cProd`, apenas na apresentação, sem alterar o XML original;
 - o catálogo de códigos internos só se aplica aos emitentes explicitamente configurados;
@@ -105,20 +115,26 @@ Os contratos principais ficam em `apps/web/tests/danfe.test.ts`, `apps/web/tests
 - `vICMSUFDest` e `vTotTrib` quando presentes;
 - composição de embalagem derivada de `uCom/qCom` e `uTrib/qTrib`;
 - limites do zoom;
-- regras estruturais de A4 e compactação do CSS;
-- regras específicas de legibilidade da impressão, incluindo padding A4 e tamanhos mínimos do texto fiscal e da tabela de produtos.
+- largura A4 e padding de impressão;
+- proporção maior do cabeçalho principal;
+- grade de 12 colunas de destinatário e transportador;
+- emitente alinhado à esquerda;
+- tipografia reforçada da impressão;
+- ausência do antigo preenchimento artificial da última linha da tabela de produtos.
 
 ## Aceitação visual física
 
 Ao validar em navegador/Windows real:
 
-1. comparar o preview com uma NF-e conhecida e confirmar que chave, número, série e protocolo estão facilmente identificáveis;
-2. confirmar que o cabeçalho ocupa menos espaço vertical que a versão anterior sem perder legibilidade;
-3. conferir que Dados adicionais tem espaço suficiente para textos longos e não invade o rodapé;
-4. conferir uma NF-e com e sem transportador;
-5. conferir uma NF-e que contenha `vICMSUFDest` e/ou `vTotTrib`;
-6. imprimir/salvar em PDF A4 e confirmar que não há corte de campos nem criação desnecessária de página adicional;
-7. na impressão física, confirmar que rótulos fiscais, valores e linhas da tabela de produtos podem ser lidos confortavelmente sem zoom ou aproximação excessiva;
-8. confirmar que a tabela de produtos ficou visualmente mais espaçosa após a remoção de NCM/SH e das duas colunas de IPI;
-9. validar uma NF-e de Fernando Klein e uma de Dionisio e confirmar `cProd` na primeira linha + `[código interno]` abaixo, incluindo `ALECRIM → 104144` e `COUVE FOLHA → 104107`;
-10. validar uma NF-e Souza Cruz e confirmar que a quantidade fiscal continua visível e a linha `[<unidades> UN]` aparece somente quando a conversão for válida.
+1. confirmar que a aparência geral corresponde ao mockup aprovado: cabeçalho equilibrado, texto maior e blocos com mais respiro;
+2. confirmar que razão social do emitente, número da NF-e, série, chave e protocolo podem ser identificados rapidamente;
+3. conferir destinatário/remetente e transportador para garantir que os campos não ficaram excessivamente estreitos;
+4. conferir uma NF-e com poucos itens e confirmar que a tabela termina após os itens, sem uma última linha esticada até o fim da página;
+5. conferir uma NF-e com muitos itens e confirmar que a paginação continua correta, sem corte de linhas;
+6. conferir Dados adicionais e reservado ao fisco sem sobreposição ou invasão do rodapé;
+7. conferir uma NF-e com e sem transportador;
+8. conferir uma NF-e que contenha `vICMSUFDest` e/ou `vTotTrib`;
+9. imprimir/salvar em PDF A4 e confirmar que não há corte de campos nem criação desnecessária de página adicional;
+10. na impressão física, confirmar que rótulos fiscais, valores e linhas da tabela de produtos podem ser lidos confortavelmente sem zoom ou aproximação excessiva;
+11. validar uma NF-e de Fernando Klein e uma de Dionisio e confirmar `cProd` na primeira linha + `[código interno]` abaixo, incluindo `ALECRIM → 104144` e `COUVE FOLHA → 104107`;
+12. validar uma NF-e Souza Cruz e confirmar que a quantidade fiscal continua visível e a linha `[<unidades> UN]` aparece somente quando a conversão for válida.

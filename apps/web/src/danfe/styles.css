@@ -1,57 +1,85 @@
 .danfe-pages { display: flex; flex-direction: column; gap: 22px; align-items: center; }
-.danfe-page { width: 210mm; min-height: 277mm; display: flex; flex-direction: column; padding: 4mm; background: #fff; color: #000; box-shadow: 0 9px 34px rgba(0,0,0,.2); font-family: Arial, Helvetica, sans-serif; font-size: 8px; line-height: 1.12; }
+.danfe-page { width: 210mm; min-height: 277mm; display: flex; flex-direction: column; padding: 4mm; background: #fff; color: #000; box-shadow: 0 9px 34px rgba(0,0,0,.2); font-family: Arial, Helvetica, sans-serif; font-size: 8.35px; line-height: 1.16; }
 .danfe-page, .danfe-page * { font-family: Arial, Helvetica, sans-serif; box-sizing: border-box; }
 .danfe-block { border: 1px solid #111; }
 .danfe-block + .danfe-block, .danfe-section + .danfe-section { margin-top: 1px; }
-.danfe-section-title { margin: 1px 0; font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: .12px; }
-.fiscal-label { display: block; margin-bottom: 1px; font-size: 5.7px; text-transform: uppercase; }
-.fiscal-value { display: block; font-size: 7.8px; font-weight: 700; }
-.receipt-stub { display: grid; grid-template-columns: 1fr 130px; min-height: 36px; margin-bottom: 2px; flex-shrink: 0; }
-.receipt-copy { padding: 2px 4px; border-right: 1px solid #111; line-height: 1.14; text-transform: uppercase; }
-.receipt-nfe { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
-.receipt-nfe strong { font-size: 13px; }
-.receipt-signature { grid-column: 1 / -1; display: grid; grid-template-columns: 160px 1fr; min-height: 14px; border-top: 1px solid #111; }
-.receipt-signature > div { padding: 2px 4px; }
+.danfe-section-title { margin: 2px 0 1px; font-size: 7.4px; font-weight: 800; text-transform: uppercase; letter-spacing: .08px; }
+.fiscal-label { display: block; margin-bottom: 1px; font-size: 6.05px; line-height: 1.05; text-transform: uppercase; }
+.fiscal-value { display: block; font-size: 8.2px; line-height: 1.12; font-weight: 700; }
+.receipt-stub { display: grid; grid-template-columns: 1fr 136px; min-height: 40px; margin-bottom: 2px; flex-shrink: 0; }
+.receipt-copy { padding: 3px 5px; border-right: 1px solid #111; font-size: 6.8px; line-height: 1.17; text-transform: uppercase; }
+.receipt-nfe { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 2px; }
+.receipt-nfe strong { font-size: 13.5px; }
+.receipt-signature { grid-column: 1 / -1; display: grid; grid-template-columns: 165px 1fr; min-height: 16px; border-top: 1px solid #111; font-size: 6.2px; text-transform: uppercase; }
+.receipt-signature > div { padding: 3px 5px; }
 .receipt-signature > div + div { border-left: 1px solid #111; }
-.danfe-header { display: grid; grid-template-columns: 1.05fr .52fr 1.28fr; min-height: 78px; flex-shrink: 0; }
+.danfe-header { display: grid; grid-template-columns: 1.12fr .52fr 1.18fr; min-height: 94px; flex-shrink: 0; }
 .danfe-header > div + div { border-left: 1px solid #111; }
-.issuer-identification { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3px; text-align: center; }
-.issuer-identification .issuer-title { width: 100%; margin-bottom: 3px; font-size: 6.1px; text-transform: uppercase; }
-.issuer-identification strong { font-size: 10.5px; text-transform: uppercase; }
-.issuer-identification span { margin-top: 1px; font-size: 6.9px; }
+.issuer-identification { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: 5px 8px; text-align: left; }
+.issuer-identification .issuer-title { width: 100%; margin-bottom: 5px; font-size: 6.2px; font-weight: 800; text-transform: uppercase; }
+.issuer-identification strong { margin-bottom: 2px; font-size: 11.6px; line-height: 1.05; text-transform: uppercase; }
+.issuer-identification span { margin-top: 1px; font-size: 7.35px; line-height: 1.14; }
 .issuer-phone { font-weight: 700; }
-.danfe-identity { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3px 4px; text-align: center; }
-.danfe-word { font-size: 19px; font-weight: 800; line-height: .95; }
-.danfe-subtitle { margin: 2px 0 3px; font-size: 6.5px; }
-.entry-exit { display: grid; grid-template-columns: 1fr 22px; width: 100%; align-items: center; margin: 1px 0; }
-.entry-exit span { text-align: left; font-size: 6.7px; }
-.entry-exit b { display: grid; place-items: center; height: 20px; border: 1px solid #111; font-size: 12px; }
-.invoice-id { margin-top: 1px; font-size: 7.8px; }
-.invoice-id strong { display: block; font-size: 10.5px; }
-.barcode-area { display: grid; grid-template-rows: 40px auto auto 1fr; }
-.barcode-wrap { padding: 3px 7px 0; }
-.barcode-wrap svg { width: 100%; height: 34px; fill: #000; }
-.access-key, .authenticity-box, .protocol-box { padding: 2px 4px; border-top: 1px solid #111; text-align: center; }
-.access-key strong { font-size: 7.8px; }
-.authenticity-box { font-size: 5.9px; line-height: 1.15; }
-.protocol-box strong { font-size: 7.6px; }
-.operation-grid { display: grid; grid-template-columns: 2fr .8fr .8fr .8fr; }
-.issuer-registry { display: grid; grid-template-columns: repeat(4, 1fr); }
-.recipient-grid { display: grid; grid-template-columns: 2fr 1fr .8fr; }
-.transport-grid { display: grid; grid-template-columns: 1.6fr 1.3fr .8fr .8fr .4fr 1.1fr; }
-.operation-grid > div, .issuer-registry > div, .recipient-grid > div, .transport-grid > div, .total-grid > div { min-height: 20px; padding: 1.5px 3px; border-right: 1px solid #111; border-bottom: 1px solid #111; }
-.operation-grid > div:last-child, .issuer-registry > div:last-child { border-right: 0; }
-.payment-wrap { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); }
-.payment-item { min-height: 20px; padding: 2px 3px; border-right: 1px solid #111; }
-.total-grid { display: grid; grid-template-columns: repeat(9, 1fr); }
-.total-grid > div { min-height: 24px; }
-.invoice-total .fiscal-value { font-size: 9px; }
-.products-table.danfe-products-fill { width: 100%; flex: 1; border-collapse: collapse; table-layout: fixed; }
-.products-table.danfe-products-fill tbody tr:last-child td { height: 100%; }
-.products-table th, .products-table td { padding: 2.2px 2.4px; border: 1px solid #111; vertical-align: top; }
-.products-table th { font-size: 6.4px; line-height: 1.08; text-transform: uppercase; }
-.products-table td { font-size: 7.2px; line-height: 1.15; }
-.products-table .description { font-size: 7.4px; }
+.danfe-identity { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px 5px; text-align: center; }
+.danfe-word { font-size: 21px; font-weight: 800; line-height: .94; }
+.danfe-subtitle { max-width: 104px; margin: 3px 0 4px; font-size: 7px; line-height: 1.1; }
+.entry-exit { display: grid; grid-template-columns: 1fr 24px; width: 100%; align-items: center; margin: 1px 0 2px; }
+.entry-exit span { text-align: left; font-size: 7px; line-height: 1.16; }
+.entry-exit b { display: grid; place-items: center; height: 23px; border: 1px solid #111; font-size: 13px; }
+.invoice-id { margin-top: 1px; font-size: 8px; line-height: 1.1; }
+.invoice-id strong { display: block; margin: 1px 0; font-size: 11.2px; }
+.barcode-area { display: grid; grid-template-rows: 43px auto auto 1fr; }
+.barcode-wrap { padding: 4px 8px 0; }
+.barcode-wrap svg { width: 100%; height: 35px; fill: #000; }
+.access-key, .authenticity-box, .protocol-box { padding: 3px 5px; border-top: 1px solid #111; text-align: center; }
+.access-key strong { font-size: 8.1px; letter-spacing: .08px; }
+.authenticity-box { font-size: 6.2px; line-height: 1.17; }
+.protocol-box strong { font-size: 7.9px; }
+.operation-grid { display: grid; grid-template-columns: 2.25fr .72fr .72fr .72fr; }
+.issuer-registry { display: grid; grid-template-columns: 1.15fr 1.35fr 1.15fr 1fr; }
+.recipient-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); }
+.recipient-grid > div:nth-child(1) { grid-column: span 7; }
+.recipient-grid > div:nth-child(2) { grid-column: span 3; }
+.recipient-grid > div:nth-child(3) { grid-column: span 2; }
+.recipient-grid > div:nth-child(4) { grid-column: span 6; }
+.recipient-grid > div:nth-child(5) { grid-column: span 3; }
+.recipient-grid > div:nth-child(6) { grid-column: span 1; }
+.recipient-grid > div:nth-child(7) { grid-column: span 2; }
+.recipient-grid > div:nth-child(8) { grid-column: span 4; }
+.recipient-grid > div:nth-child(9) { grid-column: span 2; }
+.recipient-grid > div:nth-child(10) { grid-column: span 1; }
+.recipient-grid > div:nth-child(11) { grid-column: span 3; }
+.recipient-grid > div:nth-child(12) { grid-column: span 2; }
+.recipient-grid > div:nth-child(13) { grid-column: span 2; min-height: 18px; }
+.recipient-grid > div:nth-child(14) { grid-column: span 10; min-height: 18px; }
+.transport-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); }
+.transport-grid > div:nth-child(1) { grid-column: span 5; }
+.transport-grid > div:nth-child(2) { grid-column: span 2; }
+.transport-grid > div:nth-child(3) { grid-column: span 1; }
+.transport-grid > div:nth-child(4) { grid-column: span 1; }
+.transport-grid > div:nth-child(5) { grid-column: span 1; }
+.transport-grid > div:nth-child(6) { grid-column: span 2; }
+.transport-grid > div:nth-child(7) { grid-column: span 5; }
+.transport-grid > div:nth-child(8) { grid-column: span 4; }
+.transport-grid > div:nth-child(9) { grid-column: span 1; }
+.transport-grid > div:nth-child(10) { grid-column: span 2; }
+.transport-grid > div:nth-child(n+11):nth-child(-n+16) { grid-column: span 2; }
+.operation-grid > div, .issuer-registry > div, .recipient-grid > div, .transport-grid > div, .total-grid > div { min-height: 23px; padding: 2px 4px; border-right: 1px solid #111; border-bottom: 1px solid #111; }
+.operation-grid > div:last-child, .issuer-registry > div:last-child, .recipient-grid > div:nth-child(3), .recipient-grid > div:nth-child(7), .recipient-grid > div:nth-child(12), .recipient-grid > div:nth-child(14), .transport-grid > div:nth-child(6), .transport-grid > div:nth-child(10), .transport-grid > div:nth-child(16) { border-right: 0; }
+.payment-wrap { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.payment-item { min-height: 23px; padding: 3px 4px; border-right: 1px solid #111; }
+.total-grid { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); }
+.total-grid > div { min-height: 27px; padding-top: 3px; }
+.total-grid .fiscal-label { font-size: 5.7px; }
+.total-grid .fiscal-value { margin-top: 2px; text-align: right; font-size: 8.2px; }
+.invoice-total .fiscal-label { font-weight: 800; }
+.invoice-total .fiscal-value { font-size: 10.1px; }
+.products-table.danfe-products-fill { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.products-table th, .products-table td { padding: 2.5px 2.7px; border: 1px solid #111; vertical-align: top; }
+.products-table th { font-size: 6.6px; line-height: 1.08; font-weight: 800; text-transform: uppercase; }
+.products-table td { font-size: 7.75px; line-height: 1.18; }
+.products-table tbody tr { break-inside: avoid; page-break-inside: avoid; }
+.products-table .description { font-size: 8px; }
 .products-table col.item { width: 8mm; }
 .products-table col.code { width: 20mm; }
 .products-table col.description { width: 62mm; }
@@ -63,14 +91,14 @@
 .numeric { text-align: right; white-space: nowrap; }
 .source-product-code { display: block; }
 .internal-product-code { display: block; margin-top: 1px; font-size: .95em; font-weight: 700; }
-.internal-quantity { display: block; margin-top: 1px; font-size: 6.2px; line-height: 1.05; font-weight: 700; white-space: nowrap; }
-.package-detail { display: block; margin-top: 1px; font-size: 6.4px; font-weight: 700; }
-.tax-detail { display: block; margin-top: 1px; font-size: 6.2px; }
-.additional-grid { display: grid; grid-template-columns: 2fr 1fr; min-height: 88px; flex-shrink: 0; }
-.additional-grid > div { padding: 3px 4px; }
+.internal-quantity { display: block; margin-top: 1px; font-size: 6.4px; line-height: 1.06; font-weight: 700; white-space: nowrap; }
+.package-detail { display: block; margin-top: 1px; font-size: 6.6px; font-weight: 700; }
+.tax-detail { display: block; margin-top: 1px; font-size: 6.4px; }
+.additional-grid { display: grid; grid-template-columns: 1.65fr 1fr; min-height: 92px; flex-shrink: 0; }
+.additional-grid > div { padding: 4px 5px; }
 .additional-grid > div + div { border-left: 1px solid #111; }
-.additional-grid p { margin: 2px 0 0; font-size: 6.6px; line-height: 1.16; white-space: pre-wrap; }
-.danfe-footer { margin-top: 2px; text-align: right; font-size: 6px; color: #333; }
+.additional-grid p { margin: 3px 0 0; font-size: 7px; line-height: 1.2; white-space: pre-wrap; }
+.danfe-footer { margin-top: auto; padding-top: 3px; text-align: right; font-size: 6.2px; color: #333; }
 .danfe-zoom-hint { margin-left: auto; margin-right: 4px; color: #9fb0c3; font-size: 10.5px; font-weight: 600; white-space: nowrap; }
 
 @media (max-width: 760px) { .danfe-zoom-hint { display: none; } }
@@ -80,26 +108,29 @@
   body * { visibility: hidden; }
   .danfe-pages, .danfe-pages * { visibility: visible; }
   .danfe-pages { position: absolute; inset: 0; gap: 0; }
-  .danfe-page { width: 210mm; min-height: 297mm; height: 297mm; padding: 3.5mm; overflow: hidden; box-shadow: none; font-size: 8.6px; line-height: 1.15; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .danfe-page { width: 210mm; min-height: 297mm; height: 297mm; padding: 3.5mm; overflow: hidden; box-shadow: none; font-size: 8.9px; line-height: 1.17; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .danfe-page:last-child { break-after: auto; }
-  .danfe-section-title { font-size: 7.5px; }
-  .fiscal-label { font-size: 6.2px; font-weight: 700; }
-  .fiscal-value { font-size: 8.3px; }
-  .issuer-identification .issuer-title { font-size: 6.5px; }
-  .issuer-identification span { font-size: 7.2px; }
-  .danfe-subtitle { font-size: 6.9px; }
-  .entry-exit span { font-size: 7.1px; }
-  .invoice-id { font-size: 8.1px; }
-  .access-key strong { font-size: 8.2px; }
-  .authenticity-box { font-size: 6.3px; }
-  .protocol-box strong { font-size: 8px; }
-  .products-table th { font-size: 6.9px; font-weight: 800; }
-  .products-table td { font-size: 7.8px; line-height: 1.16; }
-  .products-table .description { font-size: 8px; }
-  .internal-quantity { font-size: 6.6px; }
-  .package-detail { font-size: 6.8px; }
-  .tax-detail { font-size: 6.6px; }
-  .additional-grid p { font-size: 7px; line-height: 1.17; }
-  .danfe-footer { font-size: 6.4px; color: #111; }
+  .danfe-section-title { font-size: 7.8px; }
+  .fiscal-label { font-size: 6.35px; font-weight: 700; }
+  .fiscal-value { font-size: 8.65px; }
+  .receipt-copy { font-size: 7px; }
+  .issuer-identification .issuer-title { font-size: 6.6px; }
+  .issuer-identification strong { font-size: 12px; }
+  .issuer-identification span { font-size: 7.55px; }
+  .danfe-word { font-size: 21.5px; }
+  .danfe-subtitle { font-size: 7.2px; }
+  .entry-exit span { font-size: 7.25px; }
+  .invoice-id { font-size: 8.3px; }
+  .access-key strong { font-size: 8.4px; }
+  .authenticity-box { font-size: 6.45px; }
+  .protocol-box strong { font-size: 8.2px; }
+  .products-table th { font-size: 7px; font-weight: 800; }
+  .products-table td { font-size: 8.15px; line-height: 1.18; }
+  .products-table .description { font-size: 8.4px; }
+  .internal-quantity { font-size: 6.75px; }
+  .package-detail { font-size: 7px; }
+  .tax-detail { font-size: 6.75px; }
+  .additional-grid p { font-size: 7.25px; line-height: 1.2; }
+  .danfe-footer { font-size: 6.5px; color: #111; }
   .danfe-zoom-hint { display: none !important; }
 }
