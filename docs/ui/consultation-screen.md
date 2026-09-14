@@ -1,6 +1,6 @@
 # Tela de consulta
 
-Estado atual da interface principal do NFe Agendamento 2.0.
+Estado atual da interface principal do NFe Agendamento 2.0 na `main`.
 
 ## Barra superior
 
@@ -10,81 +10,130 @@ A área de ações do canto superior direito contém, nesta ordem:
 2. atalho quadrado **Baixar app para Windows**;
 3. botão quadrado de **Configurações**.
 
-O atalho de download aponta diretamente para o Setup da versão canônica atualmente publicada (`v0.0.12`). O teste `apps/web/tests/settings-panel.test.ts` cruza a URL do Setup com `Directory.Build.props`, para que um futuro bump de versão não deixe o link silenciosamente desatualizado.
+O atalho de download continua apontando para o Setup da versão canônica publicada (`v0.0.12`). O teste `apps/web/tests/settings-panel.test.ts` cruza a URL do Setup com `Directory.Build.props`, para que um futuro bump de versão não deixe o link silenciosamente desatualizado.
 
-O cabeçalho usa um único bloco visual à esquerda: símbolo da aplicação e, ao lado, o nome quebrado em duas linhas, **NF-e** e **Agendamento**, separados por uma divisória vertical discreta. A frase de apoio fica logo abaixo do conjunto. O grupo de ações da direita é alinhado visualmente ao centro desse bloco de marca em desktop.
+O cabeçalho usa um único bloco visual à esquerda: símbolo da aplicação e, ao lado, o nome quebrado em duas linhas, **NF-e** e **Agendamento**, separados por uma divisória vertical discreta. A frase de apoio fica logo abaixo do conjunto.
 
 ## Identidade visual
 
-A marca atual usa azul vibrante e amarelo vibrante, com fundo transparente e símbolo composto por documento NF-e, relógio/agendamento e confirmação.
+A marca usa azul vibrante e amarelo vibrante, com fundo transparente e símbolo composto por documento NF-e, relógio/agendamento e confirmação.
 
-- no cabeçalho do site, o símbolo transparente fica em `apps/web/public/brand-mark.png` e é renderizado como imagem decorativa;
-- o nome **NF-e** / **Agendamento** existe como conteúdo real dentro do `<h1>`, em duas `<span>`, preservando semântica e acessibilidade; `apps/web/src/brand.css` cuida somente da apresentação;
-- a aba do navegador usa somente o símbolo, sem o nome, em `apps/web/public/favicon.ico`;
-- App/Bridge Windows usam somente o mesmo símbolo, sem o nome, em `apps/bridge/assets/nfe-agendamento-bridge.ico`.
+- no cabeçalho, o símbolo fica em `apps/web/public/brand-mark.png`;
+- o nome **NF-e / Agendamento** existe como conteúdo real dentro do `<h1>`;
+- a aba usa `apps/web/public/favicon.ico`;
+- App/Bridge Windows usam `apps/bridge/assets/nfe-agendamento-bridge.ico`.
 
-## Refinamentos visuais
+## Modos de consulta
 
-A tela foi compactada sem alterar comportamento funcional:
+A tela principal agora possui alternância **Uma NF-e | Lote** no card de consulta.
 
-- o conjunto logo + nome foi levemente reduzido e aproximado, diminuindo o espaço ocioso no topo;
-- a distância entre o cabeçalho e o card principal foi reduzida;
-- o estado vazio do resultado ocupa menos altura, e o card cresce naturalmente quando houver conteúdo;
-- o indicador **44 dígitos** ganhou menor peso visual por ser informação secundária;
-- o texto auxiliar sobre processamento/Bridge recebeu contraste e legibilidade um pouco maiores;
-- as ações do canto superior direito foram reposicionadas para ficar visualmente alinhadas com a marca em telas desktop.
+Trocar o modo não muda certificado, Bridge, regras do DANFE ou segurança fiscal. Durante uma operação ativa, a alternância fica bloqueada para evitar duas rotas concorrentes pela mesma tela.
 
-## Consulta e resultado
+## Consulta única
 
-A tela principal usa um único card visual. O formulário da chave de acesso e o resultado da consulta ficam dentro do mesmo container, separados apenas por uma divisória interna.
+O formulário da chave e o resultado continuam no mesmo card visual. Os controles ficam agrupados abaixo do campo na ordem **Nova consulta** → **Consultar**.
 
-Os controles principais da consulta ficam imediatamente abaixo do campo da chave, agrupados no lado esquerdo na ordem **Nova consulta** → **Consultar**. Em telas menores, os dois permanecem lado a lado em duas colunas de largura equivalente.
-
-O estado inicial continua informando que nenhuma NF-e foi carregada. Depois que uma consulta é iniciada, o botão **Nova consulta** fica disponível. Ele permanece desabilitado enquanto uma operação está em andamento e, quando acionado após a conclusão, limpa a chave digitada, remove o resultado/DANFE/XML temporário, restaura o estado inicial e devolve o foco ao campo da chave.
-
-Os refinamentos visuais descritos acima não alteram o comportamento de consulta, reset, SEFAZ, Portal, certificado ou DANFE.
+O estado inicial informa que nenhuma NF-e foi carregada. Depois de uma consulta, **Nova consulta** limpa chave, resultado, DANFE/XML temporário e devolve foco ao campo.
 
 ### Retorno de NF-e cancelada
 
-Quando a consulta direta retorna `fiscal_status` com `cStat 653`, a interface apresenta um aviso amigável em vez do título genérico **Resultado fiscal**:
+Quando a consulta direta retorna `fiscal_status` com `cStat 653`, a interface apresenta:
 
-- título: **NF-e cancelada**;
-- mensagem: informa que a nota foi cancelada na SEFAZ e que o XML não está disponível para download;
-- o código **SEFAZ 653** permanece visível como informação técnica secundária.
+- título **NF-e cancelada**;
+- mensagem informando que o XML não está disponível;
+- código **SEFAZ 653** como informação técnica.
 
-O retorno `fiscal_status` com `cStat 217` é a exceção operacional: ele aciona o fallback pelo Portal Nacional porque a consulta direta pode não disponibilizar o XML mesmo quando o documento é obtido pelo Portal. Os demais `fiscal_status` continuam usando o tratamento genérico existente. O aviso específico de `653` continua sendo somente de apresentação.
+O `cStat 217` continua elegível ao fallback Portal Nacional.
+
+## Consulta em lote
+
+O modo **Lote** aceita até 10 NF-e por execução e processa uma por vez.
+
+### Entrada
+
+A área contém:
+
+- textarea para colar chaves;
+- aceitação de chaves em linhas separadas, com vírgula ou ponto e vírgula, além de chave formatada com separadores;
+- validação local do DV;
+- remoção de duplicadas válidas;
+- resumo `válidas · inválidas · duplicadas`;
+- botão **Iniciar lote**.
+
+Com mais de 10 chaves válidas, **Iniciar lote** permanece desabilitado e o resumo informa o limite.
+
+As chaves válidas aparecem abaixo do campo **antes de iniciar**, preservando a ordem original.
+
+### Linha de cada NF-e
+
+Cada linha contém:
+
+- número de ordem;
+- chave abreviada visualmente, com a chave completa associada ao elemento;
+- status atual;
+- origem `SEFAZ` ou `Portal` quando concluída;
+- número/série, emitente e valor depois que o XML é carregado;
+- **Visualizar DANFE**;
+- **Baixar XML**.
+
+Enquanto não existe XML validado, as duas ações ficam desabilitadas. Assim que aquela linha conclui, ficam disponíveis imediatamente, mesmo que o restante do lote ainda esteja processando.
+
+**Visualizar DANFE** reutiliza o mesmo modal da consulta única, incluindo `Ctrl + scroll`, impressão/PDF e regras específicas de fornecedores.
+
+### Progresso e ações gerais
+
+O bloco do lote mostra `concluídos/total`, rota atual e:
+
+- **Cancelar lote**;
+- **Baixar XMLs (.zip)**;
+- **Imprimir DANFEs**.
+
+ZIP e impressão usam somente NF-e concluídas. Cancelar não apaga resultados já concluídos.
+
+### Fluxo híbrido SEFAZ → Portal
+
+O lote começa pela SEFAZ e nunca processa duas chaves em paralelo.
+
+- sucesso direto: a linha conclui com origem **SEFAZ**;
+- `217`: somente aquela linha usa Portal, depois a fila pode voltar à SEFAZ;
+- `656`, HTTP 429 ou `consumption_limit`: a proteção fiscal local é ativada e o restante do lote segue pelo **Portal**, uma chave por vez;
+- hCaptcha continua sendo resolvido manualmente em cada operação Portal;
+- erro ambíguo de transporte não é repetido automaticamente;
+- falha Portal deixa a linha em erro e oferece ação manual **Tentar pelo Portal**.
+
+Detalhes de arquitetura e aceitação: `docs/superpowers/specs/2026-09-14-batch-query-design.md` e `docs/testing/batch-query.md`.
 
 ## Configurações
 
-A seleção do certificado A1 continua fora da tela principal e fica no painel aberto pela engrenagem.
+A seleção do certificado A1 continua fora da área principal e fica no painel aberto pela engrenagem.
 
-A partir da v0.0.12, esse painel também contém **Diagnóstico local**. Ao abrir Configurações, ou ao clicar em **Atualizar**, o site consulta apenas o endpoint local `/api/v1/health` e apresenta:
+Desde a v0.0.12, o painel também contém **Diagnóstico local**. Ao abrir Configurações ou clicar em **Atualizar**, o site consulta `/api/v1/health` e apresenta:
 
 - conexão do Bridge;
-- versão do Bridge em execução;
+- versão do Bridge;
 - existência de certificado A1 selecionado;
-- disponibilidade do helper Portal/WebView2;
+- disponibilidade do Portal/WebView2;
 - horário da última verificação;
-- último erro ocorrido durante a própria verificação de diagnóstico.
+- último erro da própria verificação.
 
-O diagnóstico não lê PFX, senha, chave privada ou XML. Mensagens exibidas pelo diagnóstico também removem sequências de 44 dígitos antes de aparecer na tela, evitando exposição acidental de uma chave NF-e.
+O diagnóstico não lê PFX, senha, chave privada ou XML. Mensagens exibidas removem sequências de 44 dígitos para evitar exposição acidental de chave NF-e.
 
-Nenhum comportamento fiscal, endpoint do Bridge ou fluxo SEFAZ/Portal foi alterado por essa mudança de interface.
+## Dados temporários
+
+Tanto na consulta única quanto no lote, XML/DANFE ficam em memória no navegador. Recarregar/fechar a página descarta esses resultados. O Bridge não é usado como armazenamento de XML.
 
 ## Arquivos relacionados
 
 - `apps/web/index.html`
-- `apps/web/public/brand-mark.png`
-- `apps/web/public/favicon.ico`
-- `apps/web/src/brand.css`
 - `apps/web/src/main.ts`
 - `apps/web/src/styles.css`
+- `apps/web/src/batch.css`
+- `apps/web/src/batch/input.ts`
+- `apps/web/src/batch/zip.ts`
 - `apps/web/src/consultation-actions.ts`
-- `apps/web/src/consultation-actions.css`
 - `apps/web/src/settings-panel.ts`
-- `apps/web/src/settings-panel.css`
+- `apps/web/src/danfe/render.ts`
+- `apps/web/tests/batch-input.test.ts`
+- `apps/web/tests/batch-zip.test.ts`
 - `apps/web/tests/shell.test.ts`
-- `apps/web/tests/theme.test.ts`
-- `apps/web/tests/consultation-actions.test.ts`
-- `apps/web/tests/settings-panel.test.ts`
-- `apps/bridge/assets/nfe-agendamento-bridge.ico`
+- `docs/testing/batch-query.md`
