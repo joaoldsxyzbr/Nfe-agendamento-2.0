@@ -18,7 +18,9 @@ Manter a legibilidade e organização visual do NFe Agendamento, aproximando a d
 - grade de totais adaptada para acomodar os campos adicionais sem aumentar desnecessariamente a altura;
 - área de **Dados adicionais** ampliada para melhorar a leitura das informações complementares;
 - composição de embalagem exibida abaixo da descrição do item quando `uCom/qCom` e `uTrib/qTrib` permitem determinar uma relação inteira, por exemplo **CX C/ 20 UN**;
-- bloco de transportador/volumes continua sendo omitido quando não houver informação útil e permanece compacto quando utilizado.
+- bloco de transportador/volumes continua sendo omitido quando não houver informação útil e permanece compacto quando utilizado;
+- impressão A4 usa tipografia própria mais legível que o preview, com reforço de tamanho/peso em rótulos, valores e tabela de produtos sem aplicar o zoom de tela;
+- o padding de impressão foi reduzido de `4mm` para `3.5mm` para compensar o aumento tipográfico e preservar o encaixe físico na folha A4.
 
 ## Regras por fornecedor
 
@@ -61,6 +63,7 @@ Para evitar inferências incorretas, a quantidade interna só é mostrada quando
 
 - fonte Arial/Helvetica legível;
 - DANFE A4;
+- impressão A4 preserva tipografia reforçada sem herdar o zoom do preview;
 - coluna inicial **Item**;
 - código fiscal `cProd` preservado;
 - Fernando Klein e Dionisio mostram o código interno entre colchetes abaixo do `cProd`, apenas na apresentação, sem alterar o XML original;
@@ -96,7 +99,8 @@ Os contratos principais ficam em `apps/web/tests/danfe.test.ts`, `apps/web/tests
 - `vICMSUFDest` e `vTotTrib` quando presentes;
 - composição de embalagem derivada de `uCom/qCom` e `uTrib/qTrib`;
 - limites do zoom;
-- regras estruturais de A4 e compactação do CSS.
+- regras estruturais de A4 e compactação do CSS;
+- regras específicas de legibilidade da impressão, incluindo padding A4 e tamanhos mínimos do texto fiscal e da tabela de produtos.
 
 ## Aceitação visual física
 
@@ -108,5 +112,6 @@ Ao validar em navegador/Windows real:
 4. conferir uma NF-e com e sem transportador;
 5. conferir uma NF-e que contenha `vICMSUFDest` e/ou `vTotTrib`;
 6. imprimir/salvar em PDF A4 e confirmar que não há corte de campos nem criação desnecessária de página adicional;
-7. validar uma NF-e de Fernando Klein e uma de Dionisio e confirmar `cProd` na primeira linha + `[código interno]` abaixo, incluindo `ALECRIM → 104144` e `COUVE FOLHA → 104107`;
-8. validar uma NF-e Souza Cruz e confirmar que a quantidade fiscal continua visível e a linha `[<unidades> UN]` aparece somente quando a conversão for válida.
+7. na impressão física, confirmar que rótulos fiscais, valores e linhas da tabela de produtos podem ser lidos confortavelmente sem zoom ou aproximação excessiva;
+8. validar uma NF-e de Fernando Klein e uma de Dionisio e confirmar `cProd` na primeira linha + `[código interno]` abaixo, incluindo `ALECRIM → 104144` e `COUVE FOLHA → 104107`;
+9. validar uma NF-e Souza Cruz e confirmar que a quantidade fiscal continua visível e a linha `[<unidades> UN]` aparece somente quando a conversão for válida.
