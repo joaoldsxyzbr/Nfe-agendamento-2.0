@@ -22,7 +22,9 @@ Manter a legibilidade e organização visual do NFe Agendamento, aproximando a d
 
 ## Códigos internos por fornecedor
 
-O tratamento histórico do Fernando Klein continua preservado e agora é compartilhado com o fornecedor adicional configurado no mapeamento. Os dois fornecedores usam o mesmo catálogo de apresentação, sem alterar o `cProd` fiscal do XML.
+O tratamento histórico do Fernando Klein continua preservado e é compartilhado com o fornecedor adicional configurado no mapeamento, usado para Dionisio. Os dois fornecedores usam o mesmo catálogo de apresentação, sem alterar o `cProd` fiscal do XML.
+
+No DANFE, o código fiscal original continua na primeira linha e o código interno é mostrado abaixo em formato compacto entre colchetes, por exemplo `FK001` + `[73457]`. O prefixo antigo `Int.:` não é mais exibido.
 
 O catálogo compartilhado contém os 17 produtos já existentes e também:
 
@@ -40,10 +42,10 @@ Para o emitente **Souza Cruz**, identificado pelo CNPJ configurado no código, a
 
 A regra é **quantidade fiscal × 50**:
 
-- `0,2` → `Int.: 10 UN`;
-- `0,4` → `Int.: 20 UN`;
-- `0,6` → `Int.: 30 UN`;
-- `1,0` → `Int.: 50 UN`.
+- `0,2` → `[10 UN]`;
+- `0,4` → `[20 UN]`;
+- `0,6` → `[30 UN]`;
+- `1,0` → `[50 UN]`.
 
 Essa conversão é exclusivamente de apresentação. O XML, `qCom`, valor unitário, valor total e demais campos fiscais não são alterados.
 
@@ -55,10 +57,10 @@ Para evitar inferências incorretas, a quantidade interna só é mostrada quando
 - DANFE A4;
 - coluna inicial **Item**;
 - código fiscal `cProd` preservado;
-- fornecedores configurados mostram `Int.` apenas na apresentação e não alteram o XML original;
+- Fernando Klein e Dionisio mostram o código interno entre colchetes abaixo do `cProd`, apenas na apresentação, sem alterar o XML original;
 - o catálogo de códigos internos só se aplica aos emitentes explicitamente configurados;
 - `COUVE FOLHA` deve ser apresentada com o código interno da `COUVE`, `104107`;
-- Souza Cruz mantém a quantidade fiscal visível e mostra a quantidade interna apenas como complemento;
+- Souza Cruz mantém a quantidade fiscal visível e mostra a quantidade interna apenas como complemento entre colchetes;
 - a conversão Souza Cruz não se aplica a outros emitentes nem a quantidades cujo resultado não seja inteiro;
 - `Ctrl + scroll` aplica zoom somente ao DANFE no preview;
 - impressão/PDF não utiliza o zoom de tela;
@@ -74,7 +76,8 @@ Os contratos principais ficam em `apps/web/tests/danfe.test.ts`, `apps/web/tests
 - coluna Item antes do código do produto;
 - omissão de transporte sem informação útil;
 - tratamento de códigos internos por fornecedor;
-- catálogo compartilhado entre os dois fornecedores configurados;
+- catálogo compartilhado entre Fernando Klein e Dionisio;
+- apresentação compacta do código interno como `[código]`, sem o prefixo `Int.:`;
 - `ALECRIM` mapeado para `104144`;
 - `COUVE FOLHA` mapeado para `104107` nos dois fornecedores configurados;
 - preservação do `cProd` original;
@@ -98,5 +101,5 @@ Ao validar em navegador/Windows real:
 4. conferir uma NF-e com e sem transportador;
 5. conferir uma NF-e que contenha `vICMSUFDest` e/ou `vTotTrib`;
 6. imprimir/salvar em PDF A4 e confirmar que não há corte de campos nem criação desnecessária de página adicional;
-7. validar uma NF-e de cada fornecedor configurado e confirmar `cProd` + `Int.` corretamente, incluindo `ALECRIM → 104144` e `COUVE FOLHA → 104107`;
-8. validar uma NF-e Souza Cruz e confirmar que a quantidade fiscal continua visível e a linha `Int.: <unidades> UN` aparece somente quando a conversão for válida.
+7. validar uma NF-e de Fernando Klein e uma de Dionisio e confirmar `cProd` na primeira linha + `[código interno]` abaixo, incluindo `ALECRIM → 104144` e `COUVE FOLHA → 104107`;
+8. validar uma NF-e Souza Cruz e confirmar que a quantidade fiscal continua visível e a linha `[<unidades> UN]` aparece somente quando a conversão for válida.
