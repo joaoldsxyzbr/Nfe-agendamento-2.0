@@ -101,18 +101,13 @@ function initializeSettingsPanel(): void {
       <div class="diagnostics-error-row"><dt>Último erro</dt><dd id="diagnostics-last-error">Nenhum erro detectado nesta sessão.</dd></div>
     </dl>`;
 
-  const diagnosticsRefresh = diagnosticsCard.querySelector<HTMLButtonElement>('#diagnostics-refresh');
-  const diagnosticsBridge = diagnosticsCard.querySelector<HTMLElement>('#diagnostics-bridge');
-  const diagnosticsVersion = diagnosticsCard.querySelector<HTMLElement>('#diagnostics-version');
-  const diagnosticsCertificate = diagnosticsCard.querySelector<HTMLElement>('#diagnostics-certificate');
-  const diagnosticsWebView = diagnosticsCard.querySelector<HTMLElement>('#diagnostics-webview');
-  const diagnosticsLastCheck = diagnosticsCard.querySelector<HTMLElement>('#diagnostics-last-check');
-  const diagnosticsLastError = diagnosticsCard.querySelector<HTMLElement>('#diagnostics-last-error');
-
-  if (!diagnosticsRefresh || !diagnosticsBridge || !diagnosticsVersion || !diagnosticsCertificate ||
-      !diagnosticsWebView || !diagnosticsLastCheck || !diagnosticsLastError) {
-    return;
-  }
+  const diagnosticsRefresh = requireChild<HTMLButtonElement>(diagnosticsCard, '#diagnostics-refresh');
+  const diagnosticsBridge = requireChild<HTMLElement>(diagnosticsCard, '#diagnostics-bridge');
+  const diagnosticsVersion = requireChild<HTMLElement>(diagnosticsCard, '#diagnostics-version');
+  const diagnosticsCertificate = requireChild<HTMLElement>(diagnosticsCard, '#diagnostics-certificate');
+  const diagnosticsWebView = requireChild<HTMLElement>(diagnosticsCard, '#diagnostics-webview');
+  const diagnosticsLastCheck = requireChild<HTMLElement>(diagnosticsCard, '#diagnostics-last-check');
+  const diagnosticsLastError = requireChild<HTMLElement>(diagnosticsCard, '#diagnostics-last-error');
 
   const settingsContent = document.createElement('div');
   settingsContent.className = 'settings-content';
@@ -187,6 +182,12 @@ function initializeSettingsPanel(): void {
       diagnosticsRefresh.textContent = 'Atualizar';
     }
   }
+}
+
+function requireChild<T extends Element>(root: ParentNode, selector: string): T {
+  const element = root.querySelector<T>(selector);
+  if (!element) throw new Error(`Elemento ${selector} não encontrado no painel de configurações.`);
+  return element;
 }
 
 function diagnosticErrorMessage(error: unknown): string {
