@@ -1,6 +1,6 @@
 # Aceitação física — consulta em lote
 
-Este roteiro valida a consulta em lote implementada na `main` após a v0.0.12. Ele complementa `docs/testing/acceptance.md` e `docs/testing/portal-post-hcaptcha.md`.
+Este roteiro valida a consulta em lote incluída na release v0.0.13. Ele complementa `docs/testing/acceptance.md` e `docs/testing/portal-post-hcaptcha.md`.
 
 ## Pré-condições
 
