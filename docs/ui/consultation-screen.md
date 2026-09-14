@@ -10,7 +10,7 @@ A área de ações do canto superior direito contém, nesta ordem:
 2. atalho quadrado **Baixar app para Windows**;
 3. botão quadrado de **Configurações**.
 
-O atalho de download aponta diretamente para o Setup da versão canônica atualmente publicada (`v0.0.11`). O teste `apps/web/tests/settings-panel.test.ts` cruza a URL do Setup com `Directory.Build.props`, para que um futuro bump de versão não deixe o link silenciosamente desatualizado.
+O atalho de download aponta diretamente para o Setup da versão canônica atualmente publicada (`v0.0.12`). O teste `apps/web/tests/settings-panel.test.ts` cruza a URL do Setup com `Directory.Build.props`, para que um futuro bump de versão não deixe o link silenciosamente desatualizado.
 
 O cabeçalho usa um único bloco visual à esquerda: símbolo da aplicação e, ao lado, o nome quebrado em duas linhas, **NF-e** e **Agendamento**, separados por uma divisória vertical discreta. A frase de apoio fica logo abaixo do conjunto. O grupo de ações da direita é alinhado visualmente ao centro desse bloco de marca em desktop.
 
@@ -56,7 +56,20 @@ O retorno `fiscal_status` com `cStat 217` é a exceção operacional: ele aciona
 
 ## Configurações
 
-A seleção do certificado A1 continua fora da tela principal e fica no painel aberto pela engrenagem. Nenhum comportamento fiscal, endpoint do Bridge ou fluxo SEFAZ/Portal foi alterado por esta mudança de interface.
+A seleção do certificado A1 continua fora da tela principal e fica no painel aberto pela engrenagem.
+
+A partir da v0.0.12, esse painel também contém **Diagnóstico local**. Ao abrir Configurações, ou ao clicar em **Atualizar**, o site consulta apenas o endpoint local `/api/v1/health` e apresenta:
+
+- conexão do Bridge;
+- versão do Bridge em execução;
+- existência de certificado A1 selecionado;
+- disponibilidade do helper Portal/WebView2;
+- horário da última verificação;
+- último erro ocorrido durante a própria verificação de diagnóstico.
+
+O diagnóstico não lê PFX, senha, chave privada ou XML. Mensagens exibidas pelo diagnóstico também removem sequências de 44 dígitos antes de aparecer na tela, evitando exposição acidental de uma chave NF-e.
+
+Nenhum comportamento fiscal, endpoint do Bridge ou fluxo SEFAZ/Portal foi alterado por essa mudança de interface.
 
 ## Arquivos relacionados
 
