@@ -1,6 +1,8 @@
+import { BridgeClient } from './bridge/client';
 import './settings-panel.css';
 
 const WINDOWS_SETUP_URL = 'https://github.com/joaoldsxyzbr/Nfe-agendamento-2.0/releases/download/v0.0.11/NFeAgendamentoBridge-Setup-v0.0.11.exe';
+const diagnosticsClient = new BridgeClient();
 
 window.addEventListener('DOMContentLoaded', initializeSettingsPanel, { once: true });
 
@@ -77,11 +79,44 @@ function initializeSettingsPanel(): void {
 
   const settingsIntro = document.createElement('p');
   settingsIntro.className = 'settings-intro';
-  settingsIntro.textContent = 'Gerencie o certificado A1 e a integração local deste computador.';
+  settingsIntro.textContent = 'Gerencie o certificado A1 e verifique a integração local deste computador.';
+
+  const diagnosticsCard = document.createElement('section');
+  diagnosticsCard.className = 'diagnostics-card';
+  diagnosticsCard.setAttribute('aria-labelledby', 'diagnostics-title');
+  diagnosticsCard.innerHTML = `
+    <div class="diagnostics-heading">
+      <div>
+        <p class="eyebrow">Diagnóstico local</p>
+        <h3 id="diagnostics-title">Estado do computador</h3>
+      </div>
+      <button id="diagnostics-refresh" type="button">Atualizar</button>
+    </div>
+    <dl class="diagnostics-grid">
+      <div><dt>Bridge</dt><dd id="diagnostics-bridge">Ainda não verificado</dd></div>
+      <div><dt>Versão</dt><dd id="diagnostics-version">—</dd></div>
+      <div><dt>Certificado A1</dt><dd id="diagnostics-certificate">—</dd></div>
+      <div><dt>Portal / WebView2</dt><dd id="diagnostics-webview">—</dd></div>
+      <div><dt>Última verificação</dt><dd id="diagnostics-last-check">—</dd></div>
+      <div class="diagnostics-error-row"><dt>Último erro</dt><dd id="diagnostics-last-error">Nenhum erro detectado nesta sessão.</dd></div>
+    </dl>`;
+
+  const diagnosticsRefresh = diagnosticsCard.querySelector<HTMLButtonElement>('#diagnostics-refresh');
+  const diagnosticsBridge = diagnosticsCard.querySelector<HTMLElement>('#diagnostics-bridge');
+  const diagnosticsVersion = diagnosticsCard.querySelector<HTMLElement>('#diagnostics-version');
+  const diagnosticsCertificate = diagnosticsCard.querySelector<HTMLElement>('#diagnostics-certificate');
+  const diagnosticsWebView = diagnosticsCard.querySelector<HTMLElement>('#diagnostics-webview');
+  const diagnosticsLastCheck = diagnosticsCard.querySelector<HTMLElement>('#diagnostics-last-check');
+  const diagnosticsLastError = diagnosticsCard.querySelector<HTMLElement>('#diagnostics-last-error');
+
+  if (!diagnosticsRefresh || !diagnosticsBridge || !diagnosticsVersion || !diagnosticsCertificate ||
+      !diagnosticsWebView || !diagnosticsLastCheck || !diagnosticsLastError) {
+    return;
+  }
 
   const settingsContent = document.createElement('div');
   settingsContent.className = 'settings-content';
-  settingsContent.append(certificateCard);
+  settingsContent.append(diagnosticsCard, certificateCard);
 
   settingsPanel.append(settingsHeader, settingsIntro, settingsContent);
   appShell.append(settingsPanel);
@@ -95,6 +130,7 @@ function initializeSettingsPanel(): void {
   });
 
   settingsClose.addEventListener('click', () => closeSettings());
+  diagnosticsRefresh.addEventListener('click', () => void refreshDiagnostics());
 
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && !settingsPanel.hidden) closeSettings();
@@ -110,6 +146,7 @@ function initializeSettingsPanel(): void {
     settingsPanel.hidden = false;
     settingsTrigger.setAttribute('aria-expanded', 'true');
     settingsClose.focus();
+    void refreshDiagnostics();
   }
 
   function closeSettings(restoreFocus = true): void {
@@ -117,4 +154,42 @@ function initializeSettingsPanel(): void {
     settingsTrigger.setAttribute('aria-expanded', 'false');
     if (restoreFocus) settingsTrigger.focus();
   }
+
+  async function refreshDiagnostics(): Promise<void> {
+    diagnosticsRefresh.disabled = true;
+    diagnosticsRefresh.textContent = 'Verificando…';
+    diagnosticsBridge.textContent = 'Verificando…';
+
+    try {
+      const health = await diagnosticsClient.health();
+      diagnosticsBridge.textContent = 'Conectado';
+      diagnosticsVersion.textContent = health.version;
+      diagnosticsCertificate.textContent = health.certificateSelected ? 'Selecionado' : 'Não selecionado';
+      diagnosticsWebView.textContent = health.webView2Available ? 'Disponível' : 'Indisponível';
+      diagnosticsLastCheck.textContent = new Intl.DateTimeFormat('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      }).format(new Date());
+    } catch (error) {
+      diagnosticsBridge.textContent = 'Indisponível';
+      diagnosticsVersion.textContent = '—';
+      diagnosticsCertificate.textContent = '—';
+      diagnosticsWebView.textContent = '—';
+      diagnosticsLastCheck.textContent = new Intl.DateTimeFormat('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      }).format(new Date());
+      diagnosticsLastError.textContent = diagnosticErrorMessage(error);
+    } finally {
+      diagnosticsRefresh.disabled = false;
+      diagnosticsRefresh.textContent = 'Atualizar';
+    }
+  }
+}
+
+function diagnosticErrorMessage(error: unknown): string {
+  const raw = error instanceof Error ? error.message : 'Não foi possível acessar o Bridge local.';
+  return raw.replace(/\b\d{44}\b/g, '[chave omitida]').slice(0, 240);
 }
