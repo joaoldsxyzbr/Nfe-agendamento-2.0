@@ -20,7 +20,10 @@ Manter a legibilidade e organização visual do NFe Agendamento, aproximando a d
 - composição de embalagem exibida abaixo da descrição do item quando `uCom/qCom` e `uTrib/qTrib` permitem determinar uma relação inteira, por exemplo **CX C/ 20 UN**;
 - bloco de transportador/volumes continua sendo omitido quando não houver informação útil e permanece compacto quando utilizado;
 - impressão A4 usa tipografia própria mais legível que o preview, com reforço de tamanho/peso em rótulos, valores e tabela de produtos sem aplicar o zoom de tela;
-- o padding de impressão foi reduzido de `4mm` para `3.5mm` para compensar o aumento tipográfico e preservar o encaixe físico na folha A4.
+- o padding de impressão foi reduzido de `4mm` para `3.5mm` para compensar o aumento tipográfico e preservar o encaixe físico na folha A4;
+- a tabela de produtos foi simplificada de 16 para 13 colunas: **NCM/SH**, **Valor IPI** e **Alíq. IPI** deixaram de ser exibidos na grade para liberar largura para os dados operacionais mais úteis;
+- a remoção dessas três colunas é apenas visual: os dados fiscais continuam preservados no XML e os totais fiscais do DANFE não são alterados;
+- a coluna de descrição passou a reservar `62mm`, aproveitando parte da largura liberada para melhorar a leitura dos itens.
 
 ## Regras por fornecedor
 
@@ -65,6 +68,7 @@ Para evitar inferências incorretas, a quantidade interna só é mostrada quando
 - DANFE A4;
 - impressão A4 preserva tipografia reforçada sem herdar o zoom do preview;
 - coluna inicial **Item**;
+- tabela de produtos mantém 13 colunas e não reintroduz **NCM/SH**, **Valor IPI** ou **Alíq. IPI**;
 - código fiscal `cProd` preservado;
 - Fernando Klein e Dionisio mostram o código interno entre colchetes abaixo do `cProd`, apenas na apresentação, sem alterar o XML original;
 - o catálogo de códigos internos só se aplica aos emitentes explicitamente configurados;
@@ -83,6 +87,8 @@ Os contratos principais ficam em `apps/web/tests/danfe.test.ts`, `apps/web/tests
 
 - presença dos blocos fiscais;
 - coluna Item antes do código do produto;
+- ausência das colunas **NCM/SH**, **Valor IPI** e **Alíq. IPI** na grade de produtos;
+- presença das colunas operacionais principais, incluindo descrição, quantidade, valor unitário, valor total e ICMS;
 - omissão de transporte sem informação útil;
 - validação das regras declarativas e dos CPF/CNPJ configurados;
 - tratamento de códigos internos por fornecedor;
@@ -113,5 +119,6 @@ Ao validar em navegador/Windows real:
 5. conferir uma NF-e que contenha `vICMSUFDest` e/ou `vTotTrib`;
 6. imprimir/salvar em PDF A4 e confirmar que não há corte de campos nem criação desnecessária de página adicional;
 7. na impressão física, confirmar que rótulos fiscais, valores e linhas da tabela de produtos podem ser lidos confortavelmente sem zoom ou aproximação excessiva;
-8. validar uma NF-e de Fernando Klein e uma de Dionisio e confirmar `cProd` na primeira linha + `[código interno]` abaixo, incluindo `ALECRIM → 104144` e `COUVE FOLHA → 104107`;
-9. validar uma NF-e Souza Cruz e confirmar que a quantidade fiscal continua visível e a linha `[<unidades> UN]` aparece somente quando a conversão for válida.
+8. confirmar que a tabela de produtos ficou visualmente mais espaçosa após a remoção de NCM/SH e das duas colunas de IPI;
+9. validar uma NF-e de Fernando Klein e uma de Dionisio e confirmar `cProd` na primeira linha + `[código interno]` abaixo, incluindo `ALECRIM → 104144` e `COUVE FOLHA → 104107`;
+10. validar uma NF-e Souza Cruz e confirmar que a quantidade fiscal continua visível e a linha `[<unidades> UN]` aparece somente quando a conversão for válida.
