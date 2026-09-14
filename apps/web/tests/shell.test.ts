@@ -16,6 +16,7 @@ describe('application shell', () => {
       'src/styles.css',
       'src/batch.css',
       'src/batch/input.ts',
+      'src/batch/ui.ts',
       'src/batch/zip.ts',
     ];
 
@@ -34,6 +35,8 @@ describe('application shell', () => {
     expect(html).toContain('rel="icon"');
     expect(html).toContain('href="/favicon.ico"');
     expect(html).toContain('href="/src/brand.css"');
+    expect(html).toContain('src="/src/batch/ui.ts"');
+    expect(html.indexOf('/src/main.ts')).toBeLessThan(html.indexOf('/src/batch/ui.ts'));
     expect(main).toContain('class="brand-mark" src="/brand-mark.png"');
     expect(main).toContain('<h1 class="brand-title"><span>nf-e</span><span>agendamento</span></h1>');
     expect(main).toContain('aria-hidden="true"');
@@ -78,11 +81,11 @@ describe('application shell', () => {
 
   it('wires the hybrid batch flow with per-item DANFE and XML actions', () => {
     const main = readFileSync(fromWeb('src/main.ts'), 'utf8');
+    const batchUi = readFileSync(fromWeb('src/batch/ui.ts'), 'utf8');
 
     expect(main).toContain('id="mode-batch"');
     expect(main).toContain('id="batch-keys"');
     expect(main).toContain('id="batch-list"');
-    expect(main).toContain('MAX_BATCH_ITEMS');
     expect(main).toContain('processBatchDirectItem');
     expect(main).toContain('processBatchPortalItem');
     expect(main).toContain("batchRoute = 'portal'");
@@ -91,6 +94,8 @@ describe('application shell', () => {
     expect(main).toContain('Baixar XMLs (.zip)');
     expect(main).toContain('Imprimir DANFEs');
     expect(main).toContain('createStoredZip(');
+    expect(batchUi).toContain("batchKeysInput.placeholder = 'Cole as chaves, uma por linha'");
+    expect(batchUi).toContain('Sem limite fixo de quantidade');
   });
 
   it('shows a clear message for cancelled NF-e status 653', () => {
