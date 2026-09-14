@@ -1,6 +1,6 @@
 # Hardening do repositório e da distribuição
 
-Estado: implementado no código/pipeline em 11/09/2026, exceto controles que dependem de administração externa do GitHub ou de certificado de assinatura.
+Estado: implementado no código/pipeline e revisado em 14/09/2026, exceto controles que dependem de administração externa do GitHub ou de certificado real de assinatura.
 
 ## CI e cadeia de build
 
@@ -43,11 +43,13 @@ O script `scripts/sign-windows-artifacts.ps1`:
 - verifica cada assinatura com `signtool verify /pa`;
 - remove o certificado importado e o PFX temporário no `finally`.
 
-Enquanto não houver um certificado de code signing real, os binários continuam sem publisher Authenticode. Isso é uma dependência externa, não uma falha silenciosa do pipeline.
+Em 14/09/2026 não foi fornecido ao projeto um certificado real de code signing nem acesso aos secrets do repositório. Portanto, não é correto declarar Authenticode como concluído. O código/pipeline está pronto; a etapa restante é exclusivamente externa.
 
 ## Proteção da `main`
 
-Em 11/09/2026 o repositório não possui GitHub Ruleset moderno configurado. A integração usada pelo projeto não possui permissão administrativa de escrita para criar esse controle automaticamente.
+Em 14/09/2026 a API do GitHub retornou `[]` para os rulesets deste repositório: não existe ruleset moderno configurado.
+
+A integração usada pelo projeto não possui permissão administrativa de escrita para criar esse controle automaticamente. Portanto, não é possível concluir esse item a partir deste ambiente sem ação do proprietário no GitHub.
 
 Configuração recomendada no GitHub para o ruleset `main-protection`:
 
@@ -67,7 +69,7 @@ Depois de habilitar o ruleset, validar com um PR pequeno que o GitHub realmente 
 
 ## Portal Nacional
 
-As decisões sensíveis do helper WebView2 foram concentradas em `PortalSecurityPolicy` e passaram a ter testes comportamentais para:
+As decisões sensíveis do helper WebView2 foram concentradas em `PortalSecurityPolicy` e passam por testes comportamentais para:
 
 - HTTPS obrigatório;
 - host oficial exato;
@@ -77,6 +79,6 @@ As decisões sensíveis do helper WebView2 foram concentradas em `PortalSecurity
 - conteúdo mínimo esperado da confirmação;
 - nome aleatório do XML temporário.
 
-O nome do arquivo temporário agora usa somente GUID e extensão `.xml`; a chave NF-e não é mais colocada no nome do arquivo. A chave continua sendo validada dentro do XML antes de o conteúdo ser aceito.
+O nome do arquivo temporário usa somente GUID e extensão `.xml`; a chave NF-e não é colocada no nome do arquivo. A chave continua sendo validada dentro do XML antes de o conteúdo ser aceito.
 
 Os testes estáticos do WebView2 permanecem apenas onde são úteis para garantir o wiring dos eventos e que não foi introduzida automação de captcha. A interação real com Portal Nacional, hCaptcha, A1 e SEFAZ continua exigindo a validação física descrita em `docs/testing/acceptance.md`.
