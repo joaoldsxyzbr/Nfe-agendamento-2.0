@@ -1,6 +1,6 @@
 # Aceitação física — consulta em lote
 
-Este roteiro valida a consulta em lote incluída na release v0.0.13. Ele complementa `docs/testing/acceptance.md` e `docs/testing/portal-post-hcaptcha.md`.
+Este roteiro valida a consulta em lote incluída na release v0.0.13 e o comportamento atual da `main`, que remove o teto rígido de 10 chaves. Ele complementa `docs/testing/acceptance.md` e `docs/testing/portal-post-hcaptcha.md`.
 
 ## Pré-condições
 
@@ -19,7 +19,7 @@ Este roteiro valida a consulta em lote incluída na release v0.0.13. Ele complem
 4. Confirmar que **Visualizar DANFE** e **Baixar XML** começam desabilitados.
 5. Repetir uma chave e confirmar que a duplicada é contabilizada e não vira uma segunda linha.
 6. Inserir uma chave inválida e confirmar a contagem de inválidas.
-7. Confirmar que mais de 10 chaves válidas bloqueiam **Iniciar lote**.
+7. Colar mais de 10 chaves válidas e confirmar que todas continuam aceitas, aparecem na lista e **Iniciar lote** permanece disponível.
 
 ## Processamento normal pela SEFAZ
 
@@ -32,6 +32,16 @@ Este roteiro valida a consulta em lote incluída na release v0.0.13. Ele complem
    - **Visualizar DANFE** e **Baixar XML** ficam disponíveis imediatamente.
 4. Abrir o DANFE de duas linhas diferentes e confirmar que cada modal corresponde à NF-e correta.
 5. Baixar o XML de duas linhas e confirmar que cada arquivo pertence à chave da própria linha.
+
+## Lote grande sem teto artificial
+
+1. Montar um lote com quantidade superior a 10 chaves válidas.
+2. Confirmar que nenhuma chave válida é descartada por quantidade.
+3. Confirmar que o processamento continua estritamente sequencial.
+4. Se a proteção fiscal local for ativada durante uso real, confirmar que o restante segue pelo Portal sem nova tentativa direta à SEFAZ.
+5. Confirmar que o hCaptcha continua manual para cada operação Portal.
+
+A ausência de limite rígido de itens não deve ser interpretada como garantia de capacidade ilimitada do Portal Nacional. O objetivo é remover o teto artificial da interface mantendo serialização, proteção fiscal e interação humana do hCaptcha.
 
 ## ZIP e impressão conjunta
 
@@ -92,4 +102,4 @@ Depois dos testes do lote:
 
 ## Critério de aprovação física
 
-A consulta em lote está fisicamente validada quando o fluxo normal, ações individuais, ZIP, impressão, cancelamento e regressão da consulta única passam em um PC real. Cenários `217` e limite fiscal devem ser registrados quando ocorrerem naturalmente, sem gerar consumo indevido apenas para testar.
+A consulta em lote está fisicamente validada quando o fluxo normal, lote acima de 10 chaves, ações individuais, ZIP, impressão, cancelamento e regressão da consulta única passam em um PC real. Cenários `217` e limite fiscal devem ser registrados quando ocorrerem naturalmente, sem gerar consumo indevido apenas para testar.
