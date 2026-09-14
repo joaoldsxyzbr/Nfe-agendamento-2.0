@@ -122,12 +122,78 @@
   line-height: 1.5;
 }
 
+.settings-content {
+  display: grid;
+  gap: 14px;
+}
+
+.diagnostics-card,
 .settings-content .certificate-card {
   margin: 0;
   padding: 20px;
-  border-color: var(--line);
+  border: 1px solid var(--line);
+  border-radius: 16px;
   background: linear-gradient(180deg, rgba(19, 34, 51, 0.98), rgba(13, 23, 35, 0.99));
   box-shadow: none;
+}
+
+.diagnostics-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.diagnostics-heading .eyebrow {
+  margin-bottom: 3px;
+}
+
+.diagnostics-heading h3 {
+  margin: 0;
+  font-size: 17px;
+}
+
+#diagnostics-refresh {
+  min-height: 34px;
+  padding: 7px 10px;
+  font-size: 12px;
+}
+
+.diagnostics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  margin: 0;
+}
+
+.diagnostics-grid > div {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(91, 126, 166, 0.24);
+  border-radius: 10px;
+  background: rgba(8, 16, 26, 0.5);
+}
+
+.diagnostics-grid dt {
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.diagnostics-grid dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.diagnostics-error-row {
+  grid-column: 1 / -1;
 }
 
 .settings-content .certificate-row {
@@ -165,8 +231,17 @@
     right: 9px;
   }
 
+  .diagnostics-card,
   .settings-content .certificate-card {
     padding: 16px;
+  }
+
+  .diagnostics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .diagnostics-error-row {
+    grid-column: auto;
   }
 
   .settings-content .section-heading {
