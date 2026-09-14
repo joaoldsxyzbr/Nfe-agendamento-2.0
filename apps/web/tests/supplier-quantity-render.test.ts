@@ -19,7 +19,8 @@ describe('Souza Cruz quantity in DANFE', () => {
     const html = renderDanfeHtml(nfe);
 
     expect(html).toContain('0,2000');
-    expect(html).toContain('Int.: 10 UN');
+    expect(html).toContain('[10 UN]');
+    expect(html).not.toContain('Int.: 10 UN');
     expect(nfe.originalXml).toBe(originalXml);
   });
 
@@ -35,6 +36,6 @@ describe('Souza Cruz quantity in DANFE', () => {
     const html = renderDanfeHtml(nfe);
 
     expect(html).toContain('0,2000');
-    expect(html).not.toContain('Int.: 10 UN');
+    expect(html).not.toContain('[10 UN]');
   });
 });
