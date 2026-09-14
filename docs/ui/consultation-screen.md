@@ -47,7 +47,7 @@ O `cStat 217` continua elegível ao fallback Portal Nacional.
 
 ## Consulta em lote
 
-O modo **Lote** aceita até 10 NF-e por execução e processa uma por vez.
+O modo **Lote** não aplica limite rígido de quantidade de NF-e por execução e continua processando uma por vez.
 
 ### Entrada
 
@@ -60,7 +60,7 @@ A área contém:
 - resumo `válidas · inválidas · duplicadas`;
 - botão **Iniciar lote**.
 
-Com mais de 10 chaves válidas, **Iniciar lote** permanece desabilitado e o resumo informa o limite.
+Não existe bloqueio artificial por quantidade de chaves válidas. Lotes grandes continuam estritamente sequenciais e podem levar mais tempo, principalmente depois que a rota muda para o Portal e cada operação exige hCaptcha manual.
 
 As chaves válidas aparecem abaixo do campo **antes de iniciar**, preservando a ordem original.
 
@@ -101,6 +101,8 @@ O lote começa pela SEFAZ e nunca processa duas chaves em paralelo.
 - erro ambíguo de transporte não é repetido automaticamente;
 - falha Portal deixa a linha em erro e oferece ação manual **Tentar pelo Portal**.
 
+A ausência de limite rígido no lote não significa que o Portal seja tratado como serviço oficialmente ilimitado. A interface apenas deixa de impor um teto artificial; o processamento continua sequencial, sujeito ao hCaptcha e ao comportamento do Portal Nacional.
+
 Detalhes de arquitetura e aceitação: `docs/superpowers/specs/2026-09-14-batch-query-design.md` e `docs/testing/batch-query.md`.
 
 ## Configurações
@@ -129,6 +131,7 @@ Tanto na consulta única quanto no lote, XML/DANFE ficam em memória no navegado
 - `apps/web/src/styles.css`
 - `apps/web/src/batch.css`
 - `apps/web/src/batch/input.ts`
+- `apps/web/src/batch/ui.ts`
 - `apps/web/src/batch/zip.ts`
 - `apps/web/src/consultation-actions.ts`
 - `apps/web/src/settings-panel.ts`
