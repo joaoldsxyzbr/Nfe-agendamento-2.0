@@ -13,11 +13,11 @@ Este checklist cobre o que o CI não consegue provar: instalação real no Windo
 - site oficial disponível exatamente em `https://nfeagendamento.joaolds.xyz.br`;
 - acesso à Internet para SEFAZ, GitHub Releases e Portal Nacional da NF-e.
 
-Versão canônica atual: **`0.0.11`**. Para validar a release pública, use `NFeAgendamentoBridge-Setup-v0.0.11.exe` e registre o SHA/tag correspondentes.
+Versão canônica atual: **`0.0.12`**. Para validar a release pública, use `NFeAgendamentoBridge-Setup-v0.0.12.exe` e registre o SHA/tag correspondentes.
 
 > O publish é self-contained: não exige instalação prévia do .NET 10. O WebView2 Runtime continua necessário somente para o fallback Portal.
 
-> Os artifacts atuais não possuem Authenticode. Este checklist valida funcionamento, não identidade criptográfica de publisher.
+> Os artifacts atuais não possuem Authenticode enquanto os secrets de assinatura não forem configurados. Este checklist valida funcionamento, não identidade criptográfica de publisher.
 
 Registre antes de começar:
 
@@ -25,7 +25,7 @@ Registre antes de começar:
 | --- | --- |
 | Data | |
 | Commit SHA | |
-| Versão canônica | `0.0.11` |
+| Versão canônica | `0.0.12` |
 | Run CI / artifact | |
 | URL do site | `https://nfeagendamento.joaolds.xyz.br` |
 | Windows | |
@@ -77,6 +77,18 @@ Executar em Chrome, Edge e Firefox quando disponíveis.
 
 Resultado: ☐ aprovado
 
+## 2.1. Diagnóstico local
+
+1. Abra **Configurações** e confirme que o bloco **Diagnóstico local** aparece antes do certificado.
+2. Com Bridge ativo, confirme **Bridge: Conectado** e versão igual à instalada.
+3. Confirme que **Certificado A1** reflete se há thumbprint selecionado.
+4. Com WebView2 Runtime disponível, confirme **Portal / WebView2: Disponível**; sem Runtime, confirme **Indisponível**.
+5. Clique em **Atualizar** e confirme atualização do horário da última verificação.
+6. Pare o Bridge, clique em **Atualizar** e confirme estado **Indisponível** com erro legível.
+7. Confirme que uma mensagem de erro contendo uma sequência de 44 dígitos não exibe essa sequência integralmente.
+
+Resultado: ☐ aprovado
+
 ## 3. Certificado A1
 
 1. Confirme que o site lista somente certificados utilizáveis.
@@ -102,7 +114,7 @@ Resultado: ☐ aprovado
 2. Confirme uma única tentativa perceptível, sem retry fiscal automático.
 3. Confira número, série e emitente.
 4. Baixe o XML e compare `infNFe/@Id` com a chave consultada.
-5. Confirme que o XML original não foi alterado pelo tratamento Fernando Klein.
+5. Confirme que o XML original não foi alterado por regras de apresentação de fornecedor.
 
 Resultado: ☐ aprovado
 
@@ -111,13 +123,14 @@ Resultado: ☐ aprovado
 1. Confirme resultado integrado à consulta e ação **Nova consulta**.
 2. Clique em `Visualizar DANFE`.
 3. Confira emitente, destinatário, chave, protocolo, itens, totais e informações adicionais contra o XML.
-4. Para Fernando Klein, confira código interno somente na apresentação e preserve `cProd` no XML.
-5. Verifique coluna inicial `Item` e contagem/ordem.
-6. Use `Ctrl + scroll`: somente o DANFE deve receber zoom.
-7. Feche por botão, `Esc` e backdrop.
-8. Use `Imprimir / PDF` e confira A4/paginação.
-9. Confirme que transporte/volumes não aparece sem conteúdo útil.
-10. Confirme que o atalho de download do app aponta para `NFeAgendamentoBridge-Setup-v0.0.11.exe`.
+4. Para Fernando Klein e Dionisio, confira `cProd` na primeira linha e `[código interno]` abaixo, sem alterar o XML.
+5. Para Souza Cruz, confira quantidade fiscal preservada e `[<unidades> UN]` somente quando a conversão declarada for válida.
+6. Verifique coluna inicial `Item` e contagem/ordem.
+7. Use `Ctrl + scroll`: somente o DANFE deve receber zoom.
+8. Feche por botão, `Esc` e backdrop.
+9. Use `Imprimir / PDF` e confira A4/paginação.
+10. Confirme que transporte/volumes não aparece sem conteúdo útil.
+11. Confirme que o atalho de download do app aponta para `NFeAgendamentoBridge-Setup-v0.0.12.exe`.
 
 Resultado: ☐ aprovado
 
@@ -178,11 +191,11 @@ Resultado: ☐ aprovado
 
 ## 10. Atualizador manual
 
-1. Em uma instalação v0.0.10, clique em **Verificar atualizações**.
-2. Confirme descoberta da v0.0.11.
+1. Em uma instalação v0.0.11, clique em **Verificar atualizações**.
+2. Confirme descoberta da v0.0.12.
 3. Confirme exibição da versão e pedido de confirmação.
 4. Confirme que asset/tamanho/SHA-256 inválidos impedem execução.
-5. Após confirmação válida, confirme que o Setup v0.0.11 inicia e App/Bridge encerram para substituição.
+5. Após confirmação válida, confirme que o Setup v0.0.12 inicia e App/Bridge encerram para substituição.
 6. Após atualizar, confirme que nova verificação informa que a versão está atualizada.
 
 Detalhes: `docs/testing/bridge-updater.md`.
@@ -200,7 +213,7 @@ Resultado: ☐ aprovado
 
 ## 12. Segundo PC independente
 
-1. Instale o mesmo Setup v0.0.11 validado.
+1. Instale o mesmo Setup v0.0.12 validado.
 2. Confirme início na bandeja sem console.
 3. Use o A1 instalado nesse segundo PC.
 4. Abra o site oficial e faça consulta normal.
@@ -227,7 +240,7 @@ Uma release só deve ser declarada fisicamente validada depois de:
 - etapas 0–7 aprovadas;
 - etapa 8 aprovada em ocorrência real/controlada;
 - lifecycle/recovery aprovado;
-- atualização v0.0.10 → v0.0.11 validada;
+- atualização v0.0.11 → v0.0.12 validada;
 - segundo PC aprovado quando fizer parte da implantação;
 - divergências registradas e corrigidas.
 
