@@ -96,5 +96,9 @@ describe('DANFE approved behavior', () => {
     expect(css).toContain('min-height: 36px');
     expect(css).toContain('min-height: 78px');
     expect(css).toContain('min-height: 88px');
+    expect(css).toContain('padding: 3.5mm');
+    expect(css).toContain('font-size: 8.6px');
+    expect(css).toContain('.fiscal-label { font-size: 6.2px; font-weight: 700; }');
+    expect(css).toContain('.products-table td { font-size: 7.8px; line-height: 1.16; }');
   });
 });
