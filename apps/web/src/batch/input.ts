@@ -1,16 +1,13 @@
 import { validateAccessKey } from '../nfe/access-key';
 
-export const MAX_BATCH_ITEMS = 10;
-
 export type BatchInputSummary = {
   validKeys: string[];
   invalidCount: number;
   duplicateCount: number;
   totalCandidates: number;
-  exceedsLimit: boolean;
 };
 
-export function parseBatchInput(raw: string, maxItems = MAX_BATCH_ITEMS): BatchInputSummary {
+export function parseBatchInput(raw: string): BatchInputSummary {
   const candidates = extractCandidates(raw);
   const validKeys: string[] = [];
   const seen = new Set<string>();
@@ -38,7 +35,6 @@ export function parseBatchInput(raw: string, maxItems = MAX_BATCH_ITEMS): BatchI
     invalidCount,
     duplicateCount,
     totalCandidates: candidates.length,
-    exceedsLimit: validKeys.length > maxItems,
   };
 }
 
