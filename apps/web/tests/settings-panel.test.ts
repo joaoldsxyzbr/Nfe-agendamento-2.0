@@ -39,11 +39,24 @@ describe('settings panel', () => {
   it('moves certificate controls behind a gear button in the top-right area', () => {
     const settings = readIfExists(settingsModuleUrl);
     expect(settings).toContain("document.querySelector<HTMLElement>('.certificate-card')");
-    expect(settings).toContain("settingsContent.append(certificateCard)");
+    expect(settings).toContain('settingsContent.append(diagnosticsCard, certificateCard)');
     expect(settings).toContain("settingsTrigger.id = 'settings-trigger'");
     expect(settings).toContain("settingsTrigger.setAttribute('aria-label', 'Abrir configurações')");
     expect(settings).toContain("settingsPanel.id = 'settings-panel'");
     expect(settings).toContain("settingsClose.id = 'settings-close'");
+  });
+
+  it('shows local diagnostics for Bridge, version, certificate and WebView2', () => {
+    const settings = readIfExists(settingsModuleUrl);
+    const styles = readIfExists(settingsStylesUrl);
+
+    expect(settings).toContain("diagnosticsCard.className = 'diagnostics-card'");
+    expect(settings).toContain('const health = await diagnosticsClient.health()');
+    expect(settings).toContain("health.certificateSelected ? 'Selecionado' : 'Não selecionado'");
+    expect(settings).toContain("health.webView2Available ? 'Disponível' : 'Indisponível'");
+    expect(settings).toContain('diagnosticErrorMessage(error)');
+    expect(styles).toContain('.diagnostics-grid');
+    expect(styles).toContain('.diagnostics-error-row');
   });
 
   it('opens and closes the popup while preserving the existing certificate controls', () => {
@@ -53,6 +66,7 @@ describe('settings panel', () => {
     expect(settings).toContain("if (event.key === 'Escape' && !settingsPanel.hidden) closeSettings();");
     expect(settings).toContain("settingsTrigger.setAttribute('aria-expanded', 'true')");
     expect(settings).toContain("settingsTrigger.setAttribute('aria-expanded', 'false')");
+    expect(settings).toContain('void refreshDiagnostics();');
   });
 
   it('styles the gear trigger and floating settings panel in the existing dark theme', () => {
