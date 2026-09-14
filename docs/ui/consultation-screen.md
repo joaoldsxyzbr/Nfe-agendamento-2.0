@@ -10,7 +10,7 @@ A área de ações do canto superior direito contém, nesta ordem:
 2. atalho quadrado **Baixar app para Windows**;
 3. botão quadrado de **Configurações**.
 
-O atalho de download continua apontando para o Setup da versão canônica publicada (`v0.0.12`). O teste `apps/web/tests/settings-panel.test.ts` cruza a URL do Setup com `Directory.Build.props`, para que um futuro bump de versão não deixe o link silenciosamente desatualizado.
+O atalho de download aponta para o Setup da versão canônica publicada (`v0.0.13`). O teste `apps/web/tests/settings-panel.test.ts` cruza a URL do Setup com `Directory.Build.props`, para que um futuro bump de versão não deixe o link silenciosamente desatualizado.
 
 O cabeçalho usa um único bloco visual à esquerda: símbolo da aplicação e, ao lado, o nome quebrado em duas linhas, **NF-e** e **Agendamento**, separados por uma divisória vertical discreta. A frase de apoio fica logo abaixo do conjunto.
 
@@ -25,7 +25,7 @@ A marca usa azul vibrante e amarelo vibrante, com fundo transparente e símbolo 
 
 ## Modos de consulta
 
-A tela principal agora possui alternância **Uma NF-e | Lote** no card de consulta.
+A tela principal possui alternância **Uma NF-e | Lote** no card de consulta. O modo Lote entrou na release pública v0.0.13.
 
 Trocar o modo não muda certificado, Bridge, regras do DANFE ou segurança fiscal. Durante uma operação ativa, a alternância fica bloqueada para evitar duas rotas concorrentes pela mesma tela.
 
