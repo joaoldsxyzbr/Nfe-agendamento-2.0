@@ -74,7 +74,16 @@ export function createStoredZip(files: readonly ZipTextFile[]): Blob {
   endView.setUint32(16, centralOffset, true);
   endView.setUint16(20, 0, true);
 
-  return new Blob([...localParts, ...centralParts, end], { type: 'application/zip' });
+  const parts = [...localParts, ...centralParts, end];
+  const totalLength = parts.reduce((total, part) => total + part.length, 0);
+  const archive = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const part of parts) {
+    archive.set(part, offset);
+    offset += part.length;
+  }
+
+  return new Blob([archive.buffer], { type: 'application/zip' });
 }
 
 function sanitizeName(name: string): string {
