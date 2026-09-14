@@ -1,14 +1,14 @@
 # Consulta em lote — desenho implementado
 
 **Data:** 2026-09-14  
-**Estado:** implementado e incluído na release v0.0.13; validação física real pendente  
+**Estado:** implementado e incluído na release v0.0.13; a `main` posterior remove o teto rígido de 10 chaves; validação física real pendente  
 **Base:** arquitetura `site estático + App/Bridge local por PC`
 
 ## Objetivo
 
 Adicionar consulta/download de várias NF-e sem transformar o lote em um gerador de bloqueio `656`, sem reintroduzir Central/pareamento e sem enfraquecer as garantias da consulta única.
 
-A implementação privilegia segurança fiscal e previsibilidade: no máximo 10 NF-e por lote, processamento estritamente sequencial, zero retry fiscal automático e fallback controlado para o Portal Nacional.
+A implementação privilegia segurança fiscal e previsibilidade: sem limite rígido de quantidade na interface, processamento estritamente sequencial, zero retry fiscal automático e fallback controlado para o Portal Nacional.
 
 ## Arquitetura implementada
 
@@ -36,17 +36,17 @@ Usuário cola várias chaves
   -> DANFEs concluídos podem ser impressos em conjunto
 ```
 
-## Limites e serialização
+## Quantidade e serialização
 
-- máximo de **10 NF-e por lote**;
-- uma única consulta/fallback ativa por vez no lote;
+- não existe teto rígido de quantidade de NF-e por lote na interface;
+- uma única consulta/fallback fica ativa por vez no lote;
 - sem paralelismo contra a SEFAZ;
 - sem duas operações Portal simultâneas;
 - nenhuma repetição automática de uma consulta fiscal ambígua;
 - cancelar o lote aborta a operação corrente quando possível e não inicia a próxima;
 - resultados já concluídos permanecem disponíveis após cancelamento.
 
-O limite de 10 é conservador e não substitui as regras oficiais da SEFAZ. Como os PCs continuam independentes, o Bridge não conhece consumo feito por outro computador que use o mesmo CNPJ.
+A remoção do teto de 10 não altera as regras de proteção fiscal. Lotes grandes apenas mantêm a fila sequencial por mais tempo. Como os PCs continuam independentes, o Bridge não conhece consumo feito por outro computador que use o mesmo CNPJ.
 
 ## Proteção fiscal no Bridge
 
@@ -71,6 +71,8 @@ Ela **não contém** chave NF-e, XML, PFX, senha, chave privada ou o CNPJ em tex
 
 Durante uma proteção ativa, `NfeLookupService` devolve `consumption_limit` localmente **sem chamar o transporte SEFAZ**. No lote isso faz a interface mudar a rota para Portal. A consulta única continua usando o mesmo fallback já existente.
 
+O limite local de 20 tentativas diretas por hora protege somente a rota SEFAZ e não limita a quantidade total de itens do lote. Depois que a proteção entra em ação, os itens restantes continuam pelo Portal.
+
 ## Comportamento do Portal
 
 O Portal mantém as mesmas garantias da consulta única:
@@ -80,6 +82,8 @@ O Portal mantém as mesmas garantias da consulta única:
 - certificado A1 já selecionado no computador;
 - XML validado contra a chave antes de ser aceito;
 - sem fabricação de token, serviço de resolução ou tentativa de contornar captcha.
+
+A aplicação não trata o Portal como serviço oficialmente ilimitado. A ausência de teto rígido significa apenas que a UI não bloqueia a quantidade de chaves; o fluxo continua sujeito ao hCaptcha, disponibilidade e comportamento do Portal Nacional.
 
 ### `217`
 
@@ -108,7 +112,7 @@ No modo **Lote** existem:
 - extração de chaves formatadas ou separadas por linha/vírgula/ponto e vírgula;
 - validação de DV antes de iniciar;
 - contadores de válidas, inválidas e duplicadas;
-- bloqueio quando houver mais de 10 chaves válidas;
+- ausência de bloqueio artificial por quantidade de chaves válidas;
 - lista das chaves válidas preservando a ordem original;
 - progresso geral;
 - indicação da rota atual (`SEFAZ` ou `Portal`);
@@ -159,9 +163,9 @@ Se uma operação Portal falhar, a linha fica em `portal_error` e oferece **Tent
 
 ### Web
 
-- `apps/web/tests/batch-input.test.ts`: entrada, formatação, deduplicação e limite;
+- `apps/web/tests/batch-input.test.ts`: entrada, formatação, deduplicação e aceitação de mais de 10 chaves sem teto rígido;
 - `apps/web/tests/batch-zip.test.ts`: geração do ZIP local;
-- `apps/web/tests/shell.test.ts`: wiring da interface híbrida, ações individuais e ações em massa.
+- `apps/web/tests/shell.test.ts`: wiring da interface híbrida, copy sem teto fixo, ações individuais e ações em massa.
 
 ### Bridge
 
@@ -173,13 +177,13 @@ Se uma operação Portal falhar, a linha fica em `portal_error` e oferece **Tent
 
 O CI consegue validar lógica, builds e empacotamento, mas não comprova a interação externa real com SEFAZ, WebView2, certificado A1 e hCaptcha.
 
-Para declarar a v0.0.13 fisicamente validada, executar `docs/testing/batch-query.md` em conjunto com `docs/testing/acceptance.md`. Não provoque `656` artificialmente repetindo consultas apenas para testar o fallback.
+Para declarar o comportamento atual fisicamente validado, executar `docs/testing/batch-query.md` em conjunto com `docs/testing/acceptance.md`. Não provoque `656` artificialmente repetindo consultas apenas para testar o fallback.
 
 ## Evolução para volume alto
 
-`distNSU` continua fora desta versão. Se o uso real exigir dezenas/centenas de NF-e, será necessário antes resolver a coordenação do `ultNSU` por CNPJ entre PCs.
+`distNSU` continua fora desta versão. A consulta em lote não possui teto rígido, mas `distNSU` pode continuar sendo estudado futuramente caso o uso real de dezenas/centenas de NF-e mostre necessidade de uma estratégia mais eficiente de distribuição.
 
-Opções futuras continuam sendo:
+Antes de usar `distNSU`, ainda será necessário resolver a coordenação do `ultNSU` por CNPJ entre PCs. Opções futuras continuam sendo:
 
 - um único PC responsável pelo cursor `distNSU` de cada CNPJ; ou
 - coordenador mínimo compartilhado somente para cursor/lease, sem certificado e sem XML.
@@ -188,8 +192,9 @@ Opções futuras continuam sendo:
 
 A funcionalidade pode ser declarada fisicamente validada quando:
 
-- CI `web`, `bridge` e `windows-package` estiver verde no SHA da release v0.0.13;
+- CI `web`, `bridge` e `windows-package` estiver verde no HEAD correspondente;
 - lote pequeno real for validado com certificado A1;
+- um lote com mais de 10 chaves for aceito sem bloqueio artificial e continuar sequencial;
 - ações **Visualizar DANFE** e **Baixar XML** forem confirmadas por linha;
 - ZIP e impressão conjunta forem confirmados;
 - `217` for validado quando ocorrer naturalmente;
