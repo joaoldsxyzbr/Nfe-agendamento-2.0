@@ -280,7 +280,7 @@ function buildProductsTable(nfe: ParsedNfe, products: readonly ParsedNfeProduct[
     const packageLabel = productPackageLabel(product);
     const description = `${escapeHtml(product.description)}${packageLabel ? `<small class="package-detail">${escapeHtml(packageLabel)}</small>` : ''}${product.tax.taxNote ? `<small class="tax-detail">${escapeHtml(product.tax.taxNote)}</small>` : ''}`;
     const internalQuantity = resolveSupplierInternalQuantity({ emitterTaxId: nfe.issuer.taxId, quantity: product.quantity });
-    const quantity = `<span class="source-product-quantity">${decimal(product.quantity, 4, 4)}</span>${internalQuantity !== null ? `<small class="internal-product-code internal-quantity">Int.: ${internalQuantity} UN</small>` : ''}`;
+    const quantity = `<span class="source-product-quantity">${decimal(product.quantity, 4, 4)}</span>${internalQuantity !== null ? `<small class="internal-quantity">[${internalQuantity} UN]</small>` : ''}`;
     return `<tr>
       <td class="center item-col">${product.itemNumber}</td><td class="code-col">${code}</td><td class="description">${description}</td>
       <td class="center">${escapeHtml(product.ncm)}</td><td class="center">${escapeHtml(product.tax.cst)}</td><td class="center">${escapeHtml(product.cfop)}</td><td class="center">${escapeHtml(product.unit)}</td>
