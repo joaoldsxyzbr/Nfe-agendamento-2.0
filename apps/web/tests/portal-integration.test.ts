@@ -21,7 +21,13 @@ describe('portal fallback integration', () => {
     expect(waitIndex).toBeGreaterThan(startIndex);
     expect(parseIndex).toBeGreaterThan(waitIndex);
     expect(successIndex).toBeGreaterThan(parseIndex);
-    expect(main.match(/lookupNfe\(/g)).toHaveLength(1);
+
+    const singleFallback = main.slice(
+      main.indexOf('async function runPortalFallback'),
+      main.indexOf('function setConsultationMode'),
+    );
+    expect(singleFallback).not.toContain('lookupNfe(');
+    expect(main.match(/lookupNfe\(/g)).toHaveLength(2);
   });
 
   it('keeps captcha manual and reports cancelled/failed Portal operations', () => {
