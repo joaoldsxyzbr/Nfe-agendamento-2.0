@@ -81,7 +81,26 @@
   body * { visibility: hidden; }
   .danfe-pages, .danfe-pages * { visibility: visible; }
   .danfe-pages { position: absolute; inset: 0; gap: 0; }
-  .danfe-page { width: 210mm; min-height: 297mm; height: 297mm; padding: 4mm; overflow: hidden; box-shadow: none; break-after: page; }
+  .danfe-page { width: 210mm; min-height: 297mm; height: 297mm; padding: 3.5mm; overflow: hidden; box-shadow: none; font-size: 8.6px; line-height: 1.15; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .danfe-page:last-child { break-after: auto; }
+  .danfe-section-title { font-size: 7.5px; }
+  .fiscal-label { font-size: 6.2px; font-weight: 700; }
+  .fiscal-value { font-size: 8.3px; }
+  .issuer-identification .issuer-title { font-size: 6.5px; }
+  .issuer-identification span { font-size: 7.2px; }
+  .danfe-subtitle { font-size: 6.9px; }
+  .entry-exit span { font-size: 7.1px; }
+  .invoice-id { font-size: 8.1px; }
+  .access-key strong { font-size: 8.2px; }
+  .authenticity-box { font-size: 6.3px; }
+  .protocol-box strong { font-size: 8px; }
+  .products-table th { font-size: 6.9px; font-weight: 800; }
+  .products-table td { font-size: 7.8px; line-height: 1.16; }
+  .products-table .description { font-size: 8px; }
+  .internal-quantity { font-size: 6.6px; }
+  .package-detail { font-size: 6.8px; }
+  .tax-detail { font-size: 6.6px; }
+  .additional-grid p { font-size: 7px; line-height: 1.17; }
+  .danfe-footer { font-size: 6.4px; color: #111; }
   .danfe-zoom-hint { display: none !important; }
 }
