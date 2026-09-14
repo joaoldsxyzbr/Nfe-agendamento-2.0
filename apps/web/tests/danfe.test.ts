@@ -23,6 +23,7 @@ describe('DANFE approved behavior', () => {
     }
     expect(html).toContain('ABC-001');
     expect(html).toContain('TRANSPORTADORA TESTE');
+    expect(html).toContain('class="products-filler"');
   });
 
   it('shows authentication guidance and issuer phone in the fiscal header', async () => {
@@ -63,6 +64,23 @@ describe('DANFE approved behavior', () => {
     const { renderDanfeHtml } = await import('../src/danfe/render');
     const html = renderDanfeHtml(parseNfeXml(basicXml, KEY));
     expect(html).not.toContain('Transportador / Volumes transportados');
+  });
+
+  it('omits an empty freight mode 9 transport block', async () => {
+    const { renderDanfeHtml } = await import('../src/danfe/render');
+    const base = parseNfeXml(fullXml, KEY);
+    const html = renderDanfeHtml({
+      ...base,
+      transport: {
+        freightMode: '9',
+        carrier: { taxId: '', name: '', stateRegistration: '', address: '', city: '', state: '' },
+        vehicle: { plate: '', state: '', rntc: '' },
+        volumes: [],
+      },
+    });
+
+    expect(html).not.toContain('Transportador / Volumes transportados');
+    expect(html).not.toContain('9-Sem Transporte');
   });
 
   it('shows Fernando Klein and Dionisio internal codes without replacing cProd', async () => {
@@ -109,7 +127,9 @@ describe('DANFE approved behavior', () => {
     expect(css).toContain('.products-table col.description { width: 62mm; }');
     expect(css).toContain('grid-template-columns: repeat(12, minmax(0, 1fr));');
     expect(css).toContain('align-items: flex-start; justify-content: center; padding: 5px 8px; text-align: left;');
-    expect(css).toContain('.products-table.danfe-products-fill { width: 100%; border-collapse: collapse; table-layout: fixed; }');
+    expect(css).toContain('.products-table.danfe-products-fill { width: 100%; flex: 1 1 auto; border-collapse: collapse; table-layout: fixed; }');
+    expect(css).toContain('.products-table .products-filler { height: 100%; }');
+    expect(css).toContain('.products-table .products-filler td { height: 100%; padding: 0; }');
     expect(css).toContain('.danfe-footer { margin-top: auto;');
     expect(css).not.toContain('.products-table col.ncm');
     expect(css).not.toContain('tbody tr:last-child td { height: 100%; }');

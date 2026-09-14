@@ -74,11 +74,13 @@
 .total-grid .fiscal-value { margin-top: 2px; text-align: right; font-size: 8.2px; }
 .invoice-total .fiscal-label { font-weight: 800; }
 .invoice-total .fiscal-value { font-size: 10.1px; }
-.products-table.danfe-products-fill { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.products-table.danfe-products-fill { width: 100%; flex: 1 1 auto; border-collapse: collapse; table-layout: fixed; }
 .products-table th, .products-table td { padding: 2.5px 2.7px; border: 1px solid #111; vertical-align: top; }
 .products-table th { font-size: 6.6px; line-height: 1.08; font-weight: 800; text-transform: uppercase; }
 .products-table td { font-size: 7.75px; line-height: 1.18; }
 .products-table tbody tr { break-inside: avoid; page-break-inside: avoid; }
+.products-table .products-filler { height: 100%; }
+.products-table .products-filler td { height: 100%; padding: 0; }
 .products-table .description { font-size: 8px; }
 .products-table col.item { width: 8mm; }
 .products-table col.code { width: 20mm; }

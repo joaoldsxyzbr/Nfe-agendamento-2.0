@@ -248,7 +248,7 @@ function buildTotals(nfe: ParsedNfe): string {
 
 function buildTransport(nfe: ParsedNfe): string {
   const transport = nfe.transport;
-  if (!transport) return '';
+  if (!hasUsefulTransportData(transport)) return '';
   const carrier = transport.carrier;
   const vehicle = transport.vehicle;
   const volume = transport.volumes[0];
@@ -273,6 +273,19 @@ function buildTransport(nfe: ParsedNfe): string {
     </section>`;
 }
 
+function hasUsefulTransportData(transport: ParsedNfe['transport']): transport is NonNullable<ParsedNfe['transport']> {
+  if (!transport) return false;
+  const carrier = transport.carrier;
+  const vehicle = transport.vehicle;
+  const hasCarrier = [carrier.taxId, carrier.name, carrier.stateRegistration, carrier.address, carrier.city, carrier.state].some(hasText);
+  const hasVehicle = [vehicle.plate, vehicle.state, vehicle.rntc].some(hasText);
+  const hasVolume = transport.volumes.some((volume) =>
+    volume.quantity > 0 || volume.netWeight > 0 || volume.grossWeight > 0 || [volume.species, volume.brand, volume.number].some(hasText),
+  );
+  const hasFreightMode = hasText(transport.freightMode) && transport.freightMode !== '9';
+  return hasFreightMode || hasCarrier || hasVehicle || hasVolume;
+}
+
 function buildProductsTable(nfe: ParsedNfe, products: readonly ParsedNfeProduct[]): string {
   const rows = products.map((product) => {
     const mapping = resolveFernandoKleinProduct({ emitterTaxId: nfe.issuer.taxId, xProd: product.description, cProd: product.code });
@@ -288,12 +301,13 @@ function buildProductsTable(nfe: ParsedNfe, products: readonly ParsedNfeProduct[
       <td class="numeric">${moneyFiscal(product.tax.icmsBase)}</td><td class="numeric">${moneyFiscal(product.tax.icms)}</td><td class="numeric">${decimal(product.tax.icmsRate)}</td>
     </tr>`;
   }).join('');
+  const filler = rows ? '<tr class="products-filler" aria-hidden="true"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>' : '';
 
   return `<div class="danfe-section-title">Dados dos produtos / serviços</div>
     <table class="products-table danfe-products-fill">
       <colgroup><col class="item"><col class="code"><col class="description"><col class="cst"><col class="cfop"><col class="unit"><col class="qty"><col class="unit-value"><col class="total-value"><col class="discount"><col class="bc"><col class="icms"><col class="rate"></colgroup>
       <thead><tr><th>Item</th><th>Código produto</th><th>Descrição do produto / serviço</th><th>O/CST</th><th>CFOP</th><th>UN</th><th>Quant.</th><th>Valor unit.</th><th>Valor total</th><th>Valor desc.</th><th>B.Cálc ICMS</th><th>Valor ICMS</th><th>Alíq. ICMS</th></tr></thead>
-      <tbody>${rows || '<tr><td colspan="13">Nenhum produto informado no XML.</td></tr>'}</tbody>
+      <tbody>${rows || '<tr><td colspan="13">Nenhum produto informado no XML.</td></tr>'}${filler}</tbody>
     </table>`;
 }
 
@@ -357,6 +371,10 @@ function estimateAdditionalPenaltyMm(text: string): number {
   const value = text.trim();
   if (!value) return 0;
   return Math.max(0, Math.ceil(value.length / 145) - 4) * 1.35;
+}
+
+function hasText(value: unknown): boolean {
+  return String(value ?? '').trim().length > 0;
 }
 
 function fiscalCell(label: string, content: string, extraClass = ''): string {
