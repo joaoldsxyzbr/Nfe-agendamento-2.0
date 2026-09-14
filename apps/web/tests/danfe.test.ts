@@ -59,17 +59,21 @@ describe('DANFE approved behavior', () => {
     expect(html).not.toContain('Transportador / Volumes transportados');
   });
 
-  it('shows Fernando Klein internal code without replacing cProd', async () => {
+  it('shows Fernando Klein and Dionisio internal codes without replacing cProd', async () => {
     const { renderDanfeHtml } = await import('../src/danfe/render');
     const base = parseNfeXml(basicXml, KEY);
-    const nfe = {
-      ...base,
-      issuer: { ...base.issuer, taxId: '067.277.939-05' },
-      products: [{ ...base.products[0], code: 'FK001', description: 'ALFACE' }],
-    };
-    const html = renderDanfeHtml(nfe);
-    expect(html).toContain('FK001');
-    expect(html).toContain('Int.: 73457');
+
+    for (const taxId of ['067.277.939-05', '649.433.569-15']) {
+      const nfe = {
+        ...base,
+        issuer: { ...base.issuer, taxId },
+        products: [{ ...base.products[0], code: 'FK001', description: 'ALFACE' }],
+      };
+      const html = renderDanfeHtml(nfe);
+      expect(html).toContain('FK001');
+      expect(html).toContain('[73457]');
+      expect(html).not.toContain('Int.: 73457');
+    }
   });
 
   it('clamps Ctrl+wheel zoom to the approved range', async () => {
