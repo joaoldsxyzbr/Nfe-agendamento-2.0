@@ -69,18 +69,22 @@ A consulta única continua chamando o mesmo endpoint `/api/v1/nfe/lookup`. Se o 
 
 ## Integração com consulta em lote
 
-O lote continua usando o endpoint unitário. Ao receber `consumption_limit`:
+O lote continua usando o endpoint unitário e não possui teto rígido de quantidade na interface. Ao receber `consumption_limit`:
 
 - a NF-e atual passa ao Portal;
 - a rota do restante do lote muda para Portal;
 - nenhuma chave restante tenta a SEFAZ naquele lote;
 - hCaptcha continua manual para cada operação Portal.
 
+O teto local de 20 tentativas diretas por hora é uma proteção da rota SEFAZ, não um limite de tamanho do lote. Um lote pode conter mais itens; depois que a proteção fiscal entra em ação, os itens restantes seguem sequencialmente pelo Portal.
+
 ## Limitação multi-PC
 
-O arquivo é local. Se dois PCs usam certificados do mesmo CNPJ, cada um conhece somente as próprias tentativas. Por isso o lote foi limitado a 10 NF-e e `distNSU` não foi introduzido.
+O arquivo é local. Se dois PCs usam certificados do mesmo CNPJ, cada um conhece somente as próprias tentativas. Essa limitação continua existindo mesmo sem teto rígido de itens no lote.
 
-Caso o volume futuro exija coordenação real por CNPJ, isso deve ser projetado separadamente sem mover certificado/chave privada para um coordenador remoto.
+O Portal não é tratado como serviço oficialmente ilimitado. A aplicação apenas deixa de impor um limite artificial de quantidade; o fluxo continua sequencial, sujeito ao hCaptcha manual e ao comportamento do Portal Nacional.
+
+`distNSU` continua fora desta arquitetura. Caso o volume futuro exija coordenação real por CNPJ, isso deve ser projetado separadamente sem mover certificado/chave privada para um coordenador remoto.
 
 ## Testes
 
