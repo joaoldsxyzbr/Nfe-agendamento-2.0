@@ -69,7 +69,7 @@ Implementado e coberto pelos gates automatizados do projeto:
 - CI com jobs `web`, `bridge` e `windows-package`;
 - release criada somente a partir dos artifacts do mesmo CI verde do commit marcador `release: v<versão>`.
 
-A consulta em lote não faz parte desta release. O desenho dela será tratado separadamente para preservar os limites fiscais, a ausência de retry automático e o fallback controlado já existentes.
+A consulta em lote não faz parte desta release. O desenho aprovado/proposto fica em `docs/superpowers/specs/2026-09-14-batch-query-design.md`: v1 sequencial e conservadora, sem retry automático, com parada imediata em `656`/429/`consumption_limit` e sem `distNSU` até existir uma estratégia segura de coordenação entre PCs.
 
 ## Fallback pelo Portal Nacional
 
@@ -198,6 +198,7 @@ Não provoque bloqueio `656` repetindo consultas artificialmente apenas para tes
 
 - arquitetura/segurança: `docs/architecture/bridge-security.md`;
 - regras declarativas de fornecedores: `docs/architecture/supplier-rules.md`;
+- desenho da consulta em lote: `docs/superpowers/specs/2026-09-14-batch-query-design.md`;
 - hardening do repositório/distribuição: `docs/operations/repository-hardening.md`;
 - logging local do Bridge: `docs/operations/local-logging.md`;
 - aceitação física: `docs/testing/acceptance.md`;
