@@ -1,5 +1,5 @@
-const SOUZA_CRUZ_TAX_ID = '33009911028572';
-const SOUZA_CRUZ_UNITS_PER_FISCAL_UNIT = 50;
+import { normalizeSupplierTaxId, resolveSupplierRule } from './supplier-rules';
+
 const INTEGER_TOLERANCE = 1e-6;
 
 export type SupplierQuantityInput = Readonly<{
@@ -7,21 +7,20 @@ export type SupplierQuantityInput = Readonly<{
   quantity?: number | null;
 }>;
 
-export function normalizeSupplierTaxId(value: unknown): string {
-  return String(value ?? '').replace(/\D/g, '');
-}
+export { normalizeSupplierTaxId };
 
 export function isSouzaCruzEmitter(emitterTaxId: unknown): boolean {
-  return normalizeSupplierTaxId(emitterTaxId) === SOUZA_CRUZ_TAX_ID;
+  return resolveSupplierRule(emitterTaxId)?.id === 'souza-cruz';
 }
 
 export function resolveSupplierInternalQuantity(input: SupplierQuantityInput): number | null {
-  if (!isSouzaCruzEmitter(input.emitterTaxId)) return null;
+  const quantityRule = resolveSupplierRule(input.emitterTaxId)?.internalQuantity;
+  if (!quantityRule) return null;
 
   const quantity = Number(input.quantity);
   if (!Number.isFinite(quantity) || quantity <= 0) return null;
 
-  const converted = quantity * SOUZA_CRUZ_UNITS_PER_FISCAL_UNIT;
+  const converted = quantity * quantityRule.multiplier;
   const rounded = Math.round(converted);
   if (rounded <= 0 || Math.abs(converted - rounded) > INTEGER_TOLERANCE) return null;
 
