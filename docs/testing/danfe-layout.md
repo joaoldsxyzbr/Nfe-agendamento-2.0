@@ -20,9 +20,15 @@ Manter a legibilidade e organização visual do NFe Agendamento, aproximando a d
 - composição de embalagem exibida abaixo da descrição do item quando `uCom/qCom` e `uTrib/qTrib` permitem determinar uma relação inteira, por exemplo **CX C/ 20 UN**;
 - bloco de transportador/volumes continua sendo omitido quando não houver informação útil e permanece compacto quando utilizado.
 
+## Regras por fornecedor
+
+CPF/CNPJ, catálogo compartilhado e conversões operacionais ficam centralizados em `apps/web/src/nfe/supplier-rules.ts`. O renderizador do DANFE não contém condicionais específicas por nome de fornecedor; ele recebe apenas o resultado já resolvido pelas regras de apresentação.
+
+A configuração completa e o procedimento para novos fornecedores ficam em `docs/architecture/supplier-rules.md`.
+
 ## Códigos internos por fornecedor
 
-O tratamento histórico do Fernando Klein continua preservado e é compartilhado com o fornecedor adicional configurado no mapeamento, usado para Dionisio. Os dois fornecedores usam o mesmo catálogo de apresentação, sem alterar o `cProd` fiscal do XML.
+O tratamento histórico do Fernando Klein continua preservado e é compartilhado com Dionisio. Os dois fornecedores usam o mesmo catálogo declarativo de apresentação, sem alterar o `cProd` fiscal do XML.
 
 No DANFE, o código fiscal original continua na primeira linha e o código interno é mostrado abaixo em formato compacto entre colchetes, por exemplo `FK001` + `[73457]`. O prefixo antigo `Int.:` não é mais exibido.
 
@@ -38,9 +44,9 @@ A identificação do fornecedor é feita pelo CPF/CNPJ normalizado do emitente. 
 
 ## Quantidade interna — Souza Cruz
 
-Para o emitente **Souza Cruz**, identificado pelo CNPJ configurado no código, a quantidade fiscal do item continua sendo exibida exatamente como veio na NF-e e recebe abaixo uma quantidade operacional em unidades.
+Para o emitente **Souza Cruz**, a quantidade fiscal do item continua sendo exibida exatamente como veio na NF-e e recebe abaixo uma quantidade operacional em unidades. O CNPJ, multiplicador e unidade ficam declarados na regra do fornecedor.
 
-A regra é **quantidade fiscal × 50**:
+A regra atual é **quantidade fiscal × 50**:
 
 - `0,2` → `[10 UN]`;
 - `0,4` → `[20 UN]`;
@@ -49,7 +55,7 @@ A regra é **quantidade fiscal × 50**:
 
 Essa conversão é exclusivamente de apresentação. O XML, `qCom`, valor unitário, valor total e demais campos fiscais não são alterados.
 
-Para evitar inferências incorretas, a quantidade interna só é mostrada quando o emitente é Souza Cruz, a quantidade fiscal é positiva e o resultado de `quantidade × 50` é um número inteiro. Caso contrário, somente a quantidade fiscal é apresentada.
+Para evitar inferências incorretas, a quantidade interna só é mostrada quando o emitente possui uma regra `internalQuantity`, a quantidade fiscal é positiva e o resultado da multiplicação é um número inteiro. Caso contrário, somente a quantidade fiscal é apresentada.
 
 ## Comportamentos que não podem regredir
 
@@ -61,7 +67,7 @@ Para evitar inferências incorretas, a quantidade interna só é mostrada quando
 - o catálogo de códigos internos só se aplica aos emitentes explicitamente configurados;
 - `COUVE FOLHA` deve ser apresentada com o código interno da `COUVE`, `104107`;
 - Souza Cruz mantém a quantidade fiscal visível e mostra a quantidade interna apenas como complemento entre colchetes;
-- a conversão Souza Cruz não se aplica a outros emitentes nem a quantidades cujo resultado não seja inteiro;
+- a conversão de quantidade só se aplica aos emitentes com regra declarada e a resultados inteiros válidos;
 - `Ctrl + scroll` aplica zoom somente ao DANFE no preview;
 - impressão/PDF não utiliza o zoom de tela;
 - paginação deve manter os itens na mesma folha quando houver espaço suficiente;
@@ -70,11 +76,12 @@ Para evitar inferências incorretas, a quantidade interna só é mostrada quando
 
 ## Testes automatizados
 
-Os contratos principais ficam em `apps/web/tests/danfe.test.ts`, `apps/web/tests/product-mapping.test.ts`, `apps/web/tests/supplier-quantity.test.ts` e `apps/web/tests/supplier-quantity-render.test.ts`, incluindo:
+Os contratos principais ficam em `apps/web/tests/danfe.test.ts`, `apps/web/tests/supplier-rules.test.ts`, `apps/web/tests/product-mapping.test.ts`, `apps/web/tests/supplier-quantity.test.ts` e `apps/web/tests/supplier-quantity-render.test.ts`, incluindo:
 
 - presença dos blocos fiscais;
 - coluna Item antes do código do produto;
 - omissão de transporte sem informação útil;
+- validação das regras declarativas e dos CPF/CNPJ configurados;
 - tratamento de códigos internos por fornecedor;
 - catálogo compartilhado entre Fernando Klein e Dionisio;
 - apresentação compacta do código interno como `[código]`, sem o prefixo `Int.:`;
