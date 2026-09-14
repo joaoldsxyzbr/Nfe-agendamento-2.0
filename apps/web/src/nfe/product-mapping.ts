@@ -1,15 +1,11 @@
-const FERNANDO_KLEIN_TAX_ID = '06727793905';
-const ADDITIONAL_SUPPLIER_TAX_ID = '64943356915';
-const INTERNAL_CODE_SUPPLIER_TAX_IDS = new Set<string>([
-  FERNANDO_KLEIN_TAX_ID,
-  ADDITIONAL_SUPPLIER_TAX_ID,
-]);
+import {
+  GREEN_SUPPLIER_CATALOG,
+  normalizeSupplierTaxId,
+  resolveSupplierRule,
+  type SupplierCatalogItem,
+} from './supplier-rules';
 
-export type FernandoKleinCatalogItem = Readonly<{
-  internalCode: string;
-  name: string;
-  aliases: readonly string[];
-}>;
+export type FernandoKleinCatalogItem = SupplierCatalogItem;
 
 export type ProductPresentation = Readonly<{
   sourceCode: string;
@@ -30,29 +26,10 @@ export type FernandoKleinSummary = Readonly<{
   unknownProducts: readonly Readonly<{ cProd: string; xProd: string }>[];
 }>;
 
-export const FERNANDO_KLEIN_CATALOG: readonly FernandoKleinCatalogItem[] = Object.freeze([
-  Object.freeze({ internalCode: '73457', name: 'ALFACE CRESPA', aliases: Object.freeze(['ALFACE', 'ALFACE CRESPA']) }),
-  Object.freeze({ internalCode: '104128', name: 'ALFACE LISA', aliases: Object.freeze(['ALFACE LISA']) }),
-  Object.freeze({ internalCode: '104129', name: 'ALFACE ROXA', aliases: Object.freeze(['ALFACE ROXA']) }),
-  Object.freeze({ internalCode: '30228', name: 'ALFACE AMERICANA', aliases: Object.freeze(['ALFACE AMERICANA', 'AMERICANA']) }),
-  Object.freeze({ internalCode: '104130', name: 'ALFAVACA', aliases: Object.freeze(['ALFAVACA']) }),
-  Object.freeze({ internalCode: '104109', name: 'AGRIAO', aliases: Object.freeze(['AGRIAO']) }),
-  Object.freeze({ internalCode: '104108', name: 'BROCOLIS', aliases: Object.freeze(['BROCOLIS']) }),
-  Object.freeze({ internalCode: '104106', name: 'CEBOLINHA', aliases: Object.freeze(['CEBOLA', 'CEBOLINHA']) }),
-  Object.freeze({ internalCode: '104113', name: 'COENTRO', aliases: Object.freeze(['COENTRO']) }),
-  Object.freeze({ internalCode: '104107', name: 'COUVE', aliases: Object.freeze(['COUVE', 'COUVE FOLHA']) }),
-  Object.freeze({ internalCode: '104104', name: 'CHICORIA', aliases: Object.freeze(['CHICORIA']) }),
-  Object.freeze({ internalCode: '104110', name: 'ESPINAFRE', aliases: Object.freeze(['ESPINAFRE']) }),
-  Object.freeze({ internalCode: '104115', name: 'HORTELA', aliases: Object.freeze(['HORTELA']) }),
-  Object.freeze({ internalCode: '104114', name: 'MANJERICAO', aliases: Object.freeze(['MANJERICAO']) }),
-  Object.freeze({ internalCode: '104111', name: 'RUCULA', aliases: Object.freeze(['RUCULA']) }),
-  Object.freeze({ internalCode: '104112', name: 'RADITE', aliases: Object.freeze(['RADITE']) }),
-  Object.freeze({ internalCode: '104105', name: 'SALSINHA', aliases: Object.freeze(['SALSA', 'SALSINHA']) }),
-  Object.freeze({ internalCode: '104144', name: 'ALECRIM', aliases: Object.freeze(['ALECRIM']) }),
-]);
+export const FERNANDO_KLEIN_CATALOG = GREEN_SUPPLIER_CATALOG;
 
 export function normalizeFernandoKleinTaxId(value: unknown): string {
-  return String(value ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return normalizeSupplierTaxId(value);
 }
 
 export function normalizeFernandoKleinProductName(value: unknown): string {
@@ -102,22 +79,32 @@ export function validateFernandoKleinCatalog(
   return true;
 }
 
-const FERNANDO_KLEIN_ALIAS_INDEX = buildAliasIndex(FERNANDO_KLEIN_CATALOG);
+const catalogIndexes = new Map<readonly FernandoKleinCatalogItem[], Readonly<Record<string, string>>>();
+
+function aliasIndexFor(catalog: readonly FernandoKleinCatalogItem[]): Readonly<Record<string, string>> {
+  const cached = catalogIndexes.get(catalog);
+  if (cached) return cached;
+  const index = buildAliasIndex(catalog);
+  catalogIndexes.set(catalog, index);
+  return index;
+}
 
 export function isFernandoKleinEmitter(emitterTaxId: unknown): boolean {
-  return INTERNAL_CODE_SUPPLIER_TAX_IDS.has(normalizeFernandoKleinTaxId(emitterTaxId));
+  return Boolean(resolveSupplierRule(emitterTaxId)?.productCatalog?.length);
 }
 
 export function resolveFernandoKleinProduct(input: FernandoKleinProductInput): ProductPresentation {
   const sourceCode = String(input.cProd ?? '');
-  if (!isFernandoKleinEmitter(input.emitterTaxId)) {
+  const supplier = resolveSupplierRule(input.emitterTaxId);
+  const catalog = supplier?.productCatalog;
+  if (!catalog?.length) {
     return Object.freeze({ sourceCode, internalCode: '' });
   }
 
   const productName = normalizeFernandoKleinProductName(input.xProd);
   return Object.freeze({
     sourceCode,
-    internalCode: FERNANDO_KLEIN_ALIAS_INDEX[productName] ?? '',
+    internalCode: aliasIndexFor(catalog)[productName] ?? '',
   });
 }
 
