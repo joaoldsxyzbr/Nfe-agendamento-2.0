@@ -44,8 +44,16 @@ public sealed class FiscalUsageGuard
         lock (_sync)
         {
             var now = _utcNow();
+            var stateChanged = PruneGlobalBlock(now);
+
+            if (_state.GlobalBlockedUntilUtc is { } globalBlockedUntil && globalBlockedUntil > now)
+            {
+                if (stateChanged) SaveState();
+                return new FiscalUsageDecision(false, globalBlockedUntil, "state_recovery");
+            }
+
             var entry = GetOrCreate(identity);
-            var changed = Prune(entry, now);
+            var changed = Prune(entry, now) || stateChanged;
 
             if (entry.BlockedUntilUtc is { } blockedUntil && blockedUntil > now)
             {
@@ -73,6 +81,7 @@ public sealed class FiscalUsageGuard
         lock (_sync)
         {
             var now = _utcNow();
+            PruneGlobalBlock(now);
             var entry = GetOrCreate(identity);
             Prune(entry, now);
             entry.AttemptsUtc.Add(now);
@@ -86,6 +95,7 @@ public sealed class FiscalUsageGuard
         lock (_sync)
         {
             var now = _utcNow();
+            PruneGlobalBlock(now);
             var blockedUntil = now + (duration ?? ConsumptionWindow);
             var entry = GetOrCreate(identity);
             Prune(entry, now);
@@ -101,6 +111,13 @@ public sealed class FiscalUsageGuard
         var created = new FiscalUsageEntry();
         _state.Identities[identity] = created;
         return created;
+    }
+
+    private bool PruneGlobalBlock(DateTimeOffset now)
+    {
+        if (_state.GlobalBlockedUntilUtc is not { } blockedUntil || blockedUntil > now) return false;
+        _state.GlobalBlockedUntilUtc = null;
+        return true;
     }
 
     private static bool Prune(FiscalUsageEntry entry, DateTimeOffset now)
@@ -122,27 +139,66 @@ public sealed class FiscalUsageGuard
         try
         {
             var json = File.ReadAllText(_statePath, Encoding.UTF8);
-            return JsonSerializer.Deserialize<FiscalUsageState>(json) ?? new FiscalUsageState();
+            return JsonSerializer.Deserialize<FiscalUsageState>(json) ?? throw new JsonException("Estado fiscal vazio.");
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
         {
-            return new FiscalUsageState();
+            // Falhar aberto poderia repetir uma consulta e estender um bloqueio 656. Em caso de
+            // estado ilegível, usa Portal por uma janela e regrava um estado mínimo recuperável.
+            var recoveryState = new FiscalUsageState
+            {
+                GlobalBlockedUntilUtc = _utcNow() + ConsumptionWindow,
+            };
+
+            TryPersistRecoveryState(recoveryState);
+            return recoveryState;
+        }
+    }
+
+    private void TryPersistRecoveryState(FiscalUsageState state)
+    {
+        if (_statePath is null) return;
+        try
+        {
+            WriteStateDurably(_statePath, state);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // O processo atual continua protegido pelo estado em memória. Uma próxima inicialização
+            // também tentará falhar de forma conservadora enquanto o arquivo permanecer ilegível.
         }
     }
 
     private void SaveState()
     {
         if (_statePath is null) return;
+        WriteStateDurably(_statePath, _state);
+    }
 
-        var directory = Path.GetDirectoryName(_statePath);
+    private static void WriteStateDurably(string statePath, FiscalUsageState state)
+    {
+        var directory = Path.GetDirectoryName(statePath);
         if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
 
-        var json = JsonSerializer.Serialize(_state);
-        var temporaryPath = $"{_statePath}.{Environment.ProcessId}.{Guid.NewGuid():N}.tmp";
+        var json = JsonSerializer.Serialize(state);
+        var temporaryPath = $"{statePath}.{Environment.ProcessId}.{Guid.NewGuid():N}.tmp";
         try
         {
-            File.WriteAllText(temporaryPath, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-            File.Move(temporaryPath, _statePath, overwrite: true);
+            using (var stream = new FileStream(
+                temporaryPath,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: 4096,
+                FileOptions.WriteThrough))
+            using (var writer = new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), leaveOpen: true))
+            {
+                writer.Write(json);
+                writer.Flush();
+                stream.Flush(flushToDisk: true);
+            }
+
+            File.Move(temporaryPath, statePath, overwrite: true);
         }
         finally
         {
@@ -159,7 +215,8 @@ public sealed class FiscalUsageGuard
 
     public sealed class FiscalUsageState
     {
-        public int Version { get; set; } = 1;
+        public int Version { get; set; } = 2;
+        public DateTimeOffset? GlobalBlockedUntilUtc { get; set; }
         public Dictionary<string, FiscalUsageEntry> Identities { get; set; } = new(StringComparer.Ordinal);
     }
 
