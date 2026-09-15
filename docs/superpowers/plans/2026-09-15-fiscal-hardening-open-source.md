@@ -26,6 +26,8 @@ Implementado no site, lote, Bridge, certificado A1, SOAP `NFeDistribuicaoDFe` e 
 
 A interface também foi alinhada ao novo contrato: mostra **44 caracteres**, deixa de forçar teclado numérico, remove a menção ao antigo teto fixo de 10 chaves no placeholder do lote e o diagnóstico local passa a ocultar chaves alfanuméricas de 44 posições.
 
+Como o produto é exclusivamente NF-e/DANFE, o site e o Bridge agora também rejeitam chaves estruturalmente válidas de **NFC-e modelo 65** e aceitam apenas **NF-e modelo 55**. Há regressão automatizada nos dois lados.
+
 ## Fase 2 — conformidade e impressão do DANFE
 
 **Status: implementação automatizada concluída; falta somente aceitação física A4 antes da próxima release.**
@@ -112,7 +114,9 @@ Detalhes: `docs/architecture/rtc-ibs-cbs.md`.
 Concluído:
 
 - `.gitignore` passou a bloquear preventivamente `*.pfx`, `*.p12`, `*.pem` e `*.key`;
-- etapas que recebem secrets de Authenticode agora só executam em `push` confiável para `main`, não em builds de pull request.
+- etapas que recebem secrets de Authenticode agora só executam em `push` confiável para `main`, não em builds de pull request;
+- persistência do `FiscalUsageGuard` passou a usar escrita durável (`WriteThrough` + flush físico);
+- estado fiscal local corrompido agora falha de forma conservadora: bloqueia a rota SEFAZ por uma hora e usa Portal, em vez de zerar o histórico silenciosamente.
 
 Pendente:
 
