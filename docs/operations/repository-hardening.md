@@ -1,6 +1,6 @@
 # Hardening do repositório e da distribuição
 
-Estado: implementado no código/pipeline e revisado em 14/09/2026, exceto controles que dependem de administração externa do GitHub ou de certificado real de assinatura.
+Estado: implementado no código/pipeline e revisado em 15/09/2026, exceto controles que dependem de administração externa do GitHub ou de certificado real de assinatura.
 
 ## CI e cadeia de build
 
@@ -13,9 +13,23 @@ O CI segue estas regras:
 - jobs possuem timeout;
 - Wrangler é executado a partir da dependência instalada pelo lockfile, sem fallback de download pelo `npx`;
 - Inno Setup é fixado em `6.7.1`, instalado da fonte oficial do Chocolatey com verificação de checksum obrigatória e versão conferida antes do build;
+- Playwright fica isolado em `tests/playwright`, com versão/lockfile fixos, e o job `danfe-print` gera PDFs A4 reais no Chromium;
+- o job `fiscal-compatibility` executa o POC fiscal do `Unimake.DFe` antes de liberar o empacotamento Windows;
+- `windows-package` depende de `web`, `danfe-print`, `bridge` e `fiscal-compatibility`;
 - artifacts de release continuam vindo exclusivamente do mesmo CI verde que validou o commit.
 
-Os testes `WorkflowHardeningStaticTests` impedem regressões acidentais nesses contratos.
+Os testes estáticos de workflow e os próprios jobs do CI impedem regressões acidentais nesses contratos.
+
+## Arquivos sensíveis
+
+O `.gitignore` bloqueia preventivamente, além de arquivos de ambiente:
+
+- `*.pfx`;
+- `*.p12`;
+- `*.pem`;
+- `*.key`.
+
+Isso não substitui secret scanning nem revisão de commits, mas reduz o risco de inclusão acidental de material criptográfico no repositório.
 
 ## Authenticode
 
@@ -33,6 +47,8 @@ A assinatura só é ativada quando os dois secrets abaixo existirem no repositó
 
 Nunca commitar PFX, senha ou Base64 do certificado.
 
+As etapas que recebem esses secrets têm condição explícita para executar **somente em `push` para `refs/heads/main`**. Builds de `pull_request` continuam compilando e empacotando, mas não recebem nem executam o caminho de assinatura.
+
 O script `scripts/sign-windows-artifacts.ps1`:
 
 - não falha o build quando nenhum secret de assinatura foi configurado;
@@ -43,11 +59,11 @@ O script `scripts/sign-windows-artifacts.ps1`:
 - verifica cada assinatura com `signtool verify /pa`;
 - remove o certificado importado e o PFX temporário no `finally`.
 
-Em 14/09/2026 não foi fornecido ao projeto um certificado real de code signing nem acesso aos secrets do repositório. Portanto, não é correto declarar Authenticode como concluído. O código/pipeline está pronto; a etapa restante é exclusivamente externa.
+Em 15/09/2026 não foi fornecido ao projeto um certificado real de code signing nem acesso aos secrets do repositório. Portanto, não é correto declarar Authenticode como concluído. O código/pipeline está pronto; a etapa restante é externa. Quando houver certificado real, a configuração preferível é associar os secrets a um GitHub Environment protegido usado pelo fluxo de publicação.
 
 ## Proteção da `main`
 
-Em 14/09/2026 a API do GitHub retornou `[]` para os rulesets deste repositório: não existe ruleset moderno configurado.
+Em 15/09/2026 a `main` continua com proteção desabilitada e sem ruleset moderno ativo.
 
 A integração usada pelo projeto não possui permissão administrativa de escrita para criar esse controle automaticamente. Portanto, não é possível concluir esse item a partir deste ambiente sem ação do proprietário no GitHub.
 
@@ -61,11 +77,11 @@ Configuração recomendada no GitHub para o ruleset `main-protection`:
 - para repositório mantido por uma pessoa, `0` aprovações obrigatórias é aceitável, mantendo o PR como gate técnico;
 - exigir resolução de conversas antes do merge;
 - exigir status checks antes do merge;
-- checks obrigatórios: `web`, `bridge` e `windows-package` do workflow `CI`;
+- checks obrigatórios: `web`, `danfe-print`, `bridge`, `fiscal-compatibility` e `windows-package` do workflow `CI`;
 - exigir branch atualizada antes do merge;
 - não permitir bypass, salvo conta de emergência explicitamente definida pelo proprietário.
 
-Depois de habilitar o ruleset, validar com um PR pequeno que o GitHub realmente bloqueia merge enquanto qualquer um dos três jobs estiver pendente ou falhando.
+Depois de habilitar o ruleset, validar com um PR pequeno que o GitHub realmente bloqueia merge enquanto qualquer job obrigatório estiver pendente ou falhando.
 
 ## Portal Nacional
 
