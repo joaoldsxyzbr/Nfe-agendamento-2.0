@@ -53,13 +53,37 @@ if (isManaged)
 builder.Services.AddSingleton<CertificateService>();
 builder.Services.AddSingleton<INfeDistributionTransport, SefazDistributionTransport>();
 builder.Services.AddSingleton(_ => FiscalUsageGuard.CreateDefault());
+builder.Services.AddSingleton<IFiscalUsageCoordinator>(services =>
+{
+    var configuration = services.GetRequiredService<IConfiguration>();
+    if (!configuration.GetValue("Bridge:FiscalCoordination:Enabled", true))
+    {
+        return DisabledFiscalUsageCoordinator.Instance;
+    }
+
+    var configuredBaseUrl = configuration["Bridge:FiscalCoordination:BaseUrl"];
+    var baseUri = string.IsNullOrWhiteSpace(configuredBaseUrl)
+        ? CloudFiscalUsageCoordinator.DefaultBaseUri
+        : new Uri(configuredBaseUrl, UriKind.Absolute);
+    var httpClient = new HttpClient
+    {
+        Timeout = TimeSpan.FromSeconds(5),
+    };
+    return new CloudFiscalUsageCoordinator(httpClient, baseUri);
+});
 builder.Services.AddScoped<NfeLookupService>(services =>
 {
     var transport = services.GetRequiredService<INfeDistributionTransport>();
     var certificates = services.GetRequiredService<CertificateService>();
     var usageGuard = services.GetRequiredService<FiscalUsageGuard>();
+    var sharedCoordinator = services.GetRequiredService<IFiscalUsageCoordinator>();
     var logger = services.GetRequiredService<ILogger<NfeLookupService>>();
-    return new NfeLookupService(transport, certificates.GetSelectedCertificate, usageGuard, logger);
+    return new NfeLookupService(
+        transport,
+        certificates.GetSelectedCertificate,
+        usageGuard,
+        sharedCoordinator,
+        logger);
 });
 builder.Services.AddSingleton<IPortalWindowLauncher, ProcessPortalWindowLauncher>();
 builder.Services.AddSingleton<PortalFallbackService>(services =>
@@ -194,7 +218,7 @@ api.MapPost("/nfe/lookup", async (
         return Results.BadRequest(new
         {
             error = "invalid_access_key",
-            message = "Informe uma chave NF-e válida com 44 dígitos e dígito verificador correto.",
+            message = "Informe uma chave NF-e válida com 44 caracteres e dígito verificador correto.",
         });
     }
 
@@ -212,7 +236,7 @@ api.MapPost("/portal/start", async (
         return Results.BadRequest(new
         {
             error = "invalid_access_key",
-            message = "Informe uma chave NF-e válida com 44 dígitos e dígito verificador correto.",
+            message = "Informe uma chave NF-e válida com 44 caracteres e dígito verificador correto.",
         });
     }
 

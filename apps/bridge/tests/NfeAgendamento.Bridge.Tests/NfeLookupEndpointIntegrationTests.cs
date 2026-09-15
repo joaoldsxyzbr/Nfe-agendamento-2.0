@@ -59,6 +59,8 @@ public sealed class NfeLookupEndpointIntegrationTests : IAsyncDisposable
                     services.AddSingleton(certificateService);
                     services.RemoveAll<INfeDistributionTransport>();
                     services.AddSingleton<INfeDistributionTransport>(_transport);
+                    services.RemoveAll<IFiscalUsageCoordinator>();
+                    services.AddSingleton<IFiscalUsageCoordinator>(DisabledFiscalUsageCoordinator.Instance);
                 });
             });
     }
