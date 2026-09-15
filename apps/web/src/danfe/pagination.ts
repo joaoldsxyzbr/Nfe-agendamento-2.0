@@ -7,7 +7,7 @@
  * conservadores em milímetros, deixando a impressão determinística.
  */
 const FIRST_PAGE_PRODUCT_SPACE_MM = 104;
-const CONTINUATION_PRODUCT_SPACE_MM = 218;
+const CONTINUATION_PRODUCT_SPACE_MM = 204;
 const MIN_FIRST_PAGE_PRODUCT_SPACE_MM = 58;
 
 export function paginateDanfeForPrint(container: HTMLElement): void {
@@ -67,7 +67,7 @@ function isFirstDanfePage(page: HTMLElement): boolean {
 function estimateRowHeightMm(row: HTMLTableRowElement): number {
   const description = row.querySelector<HTMLElement>('.description');
   const baseDescription = directText(description);
-  const descriptionLines = Math.max(1, Math.ceil(baseDescription.length / 52));
+  const descriptionLines = Math.max(1, Math.ceil(baseDescription.length / 43));
   const packageLines = row.querySelector('.package-detail') ? 1 : 0;
   const taxText = row.querySelector<HTMLElement>('.tax-detail')?.textContent?.trim() ?? '';
   const taxLines = taxText ? Math.max(1, Math.ceil(taxText.length / 58)) : 0;
@@ -77,7 +77,6 @@ function estimateRowHeightMm(row: HTMLTableRowElement): number {
   const quantityLines = 1 + (row.querySelector('.internal-quantity') ? 1 : 0);
   const visualLines = Math.max(descriptionBlockLines, codeLines, quantityLines);
 
-  // Aproxima a tipografia de impressão (8.15px / 1.18) + padding da célula.
   return 4.1 + Math.max(0, visualLines - 1) * 2.6;
 }
 
@@ -98,10 +97,12 @@ function estimateAdditionalPenaltyMm(page: HTMLElement): number {
 
 function createContinuationPage(page: HTMLElement): HTMLElement | null {
   const header = page.querySelector<HTMLElement>('.danfe-header');
+  const operation = page.querySelector<HTMLElement>('.operation-grid');
+  const issuerRegistry = page.querySelector<HTMLElement>('.issuer-registry');
   const table = page.querySelector<HTMLTableElement>('.products-table');
   const sectionTitle = table?.previousElementSibling;
   const footer = page.querySelector<HTMLElement>('.danfe-footer');
-  if (!header || !table || !sectionTitle || !footer) return null;
+  if (!header || !operation || !issuerRegistry || !table || !sectionTitle || !footer) return null;
 
   const next = page.cloneNode(false) as HTMLElement;
   next.removeAttribute('data-page');
@@ -117,6 +118,8 @@ function createContinuationPage(page: HTMLElement): HTMLElement | null {
 
   next.append(
     header.cloneNode(true),
+    operation.cloneNode(true),
+    issuerRegistry.cloneNode(true),
     sectionTitle.cloneNode(true),
     tableClone,
     footer.cloneNode(true),
