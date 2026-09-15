@@ -11,7 +11,7 @@ describe('Souza Cruz quantity in DANFE', () => {
     const base = parseNfeXml(basicXml, KEY);
     const nfe = {
       ...base,
-      issuer: { ...base.issuer, taxId: '33.009.911/0285-72' },
+      issuer: { ...base.issuer, name: 'SOUZA CRUZ LTDA' },
       products: [{ ...base.products[0], quantity: 0.2 }],
     };
 
@@ -29,7 +29,7 @@ describe('Souza Cruz quantity in DANFE', () => {
     const base = parseNfeXml(basicXml, KEY);
     const nfe = {
       ...base,
-      issuer: { ...base.issuer, taxId: '12.345.678/0001-90' },
+      issuer: { ...base.issuer, name: 'OUTRO FORNECEDOR LTDA' },
       products: [{ ...base.products[0], quantity: 0.2 }],
     };
 

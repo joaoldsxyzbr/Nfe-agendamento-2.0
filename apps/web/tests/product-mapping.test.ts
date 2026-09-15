@@ -29,18 +29,18 @@ describe('Fernando Klein product mapping', () => {
 
   it('maps the 17 known fixture products and preserves original cProd', async () => {
     const { resolveFernandoKleinProduct } = await import('../src/nfe/product-mapping');
-    const emitterCpf = tag(tag(fixture, 'emit'), 'CPF');
+    const emitterName = tag(tag(fixture, 'emit'), 'xNome');
     const products = parseProducts(fixture);
 
     expect(products).toHaveLength(18);
     products.slice(0, 17).forEach((product, index) => {
-      expect(resolveFernandoKleinProduct({ emitterTaxId: emitterCpf, ...product })).toEqual({
+      expect(resolveFernandoKleinProduct({ emitterName, ...product })).toEqual({
         sourceCode: product.cProd,
         internalCode: expectedCodes[index],
       });
     });
 
-    expect(resolveFernandoKleinProduct({ emitterTaxId: emitterCpf, ...products[17]! })).toEqual({
+    expect(resolveFernandoKleinProduct({ emitterName, ...products[17]! })).toEqual({
       sourceCode: 'FK999',
       internalCode: '',
     });
@@ -49,7 +49,7 @@ describe('Fernando Klein product mapping', () => {
   it('applies the full shared catalog to the additional supplier', async () => {
     const { resolveFernandoKleinProduct } = await import('../src/nfe/product-mapping');
     const resolve = (xProd: string) => resolveFernandoKleinProduct({
-      emitterTaxId: '649.433.569-15',
+      emitterName: 'DIONISIO',
       xProd,
       cProd: 'SRC',
     });
@@ -62,9 +62,9 @@ describe('Fernando Klein product mapping', () => {
   it('maps alecrim for every configured supplier', async () => {
     const { resolveFernandoKleinProduct } = await import('../src/nfe/product-mapping');
 
-    for (const emitterTaxId of ['067.277.939-05', '64943356915']) {
+    for (const emitterName of ['FERNANDO KLEIN', 'DIONISIO']) {
       expect(resolveFernandoKleinProduct({
-        emitterTaxId,
+        emitterName,
         xProd: 'ALECRIM',
         cProd: 'SRC-ALECRIM',
       })).toEqual({
@@ -77,9 +77,9 @@ describe('Fernando Klein product mapping', () => {
   it('maps COUVE FOLHA as COUVE for every configured supplier', async () => {
     const { resolveFernandoKleinProduct } = await import('../src/nfe/product-mapping');
 
-    for (const emitterTaxId of ['067.277.939-05', '64943356915']) {
+    for (const emitterName of ['FERNANDO KLEIN', 'DIONISIO']) {
       expect(resolveFernandoKleinProduct({
-        emitterTaxId,
+        emitterName,
         xProd: 'COUVE FOLHA',
         cProd: 'SRC-COUVE',
       })).toEqual({
@@ -91,10 +91,10 @@ describe('Fernando Klein product mapping', () => {
 
   it('summarizes unknown products without guessing', async () => {
     const { summarizeFernandoKleinProducts } = await import('../src/nfe/product-mapping');
-    const emitterCpf = tag(tag(fixture, 'emit'), 'CPF');
+    const emitterName = tag(tag(fixture, 'emit'), 'xNome');
     const products = parseProducts(fixture);
 
-    expect(summarizeFernandoKleinProducts({ emitterTaxId: emitterCpf, products })).toEqual({
+    expect(summarizeFernandoKleinProducts({ emitterName, products })).toEqual({
       applies: true,
       total: 18,
       mapped: 17,
@@ -106,7 +106,7 @@ describe('Fernando Klein product mapping', () => {
   it('preserves aliases, accents and VERDURAS prefix behavior', async () => {
     const { resolveFernandoKleinProduct } = await import('../src/nfe/product-mapping');
     const resolve = (xProd: string) => resolveFernandoKleinProduct({
-      emitterTaxId: '067.277.939-05',
+      emitterName: 'FERNANDO KLEIN',
       xProd,
       cProd: 'SRC',
     });
@@ -127,11 +127,11 @@ describe('Fernando Klein product mapping', () => {
     const products = [{ cProd: 'OUT001', xProd: 'ALFACE' }];
 
     expect(resolveFernandoKleinProduct({
-      emitterTaxId: '12.345.678/0001-90',
+      emitterName: 'OUTRO FORNECEDOR LTDA',
       ...products[0]!,
     })).toEqual({ sourceCode: 'OUT001', internalCode: '' });
 
-    expect(summarizeFernandoKleinProducts({ emitterTaxId: '12.345.678/0001-90', products })).toEqual({
+    expect(summarizeFernandoKleinProducts({ emitterName: 'OUTRO FORNECEDOR LTDA', products })).toEqual({
       applies: false,
       total: 1,
       mapped: 0,

@@ -336,11 +336,11 @@ function hasUsefulTransportData(transport: ParsedNfe['transport']): transport is
 
 function buildProductsTable(nfe: ParsedNfe, products: readonly ParsedNfeProduct[]): string {
   const rows = products.map((product) => {
-    const mapping = resolveFernandoKleinProduct({ emitterTaxId: nfe.issuer.taxId, xProd: product.description, cProd: product.code });
+    const mapping = resolveFernandoKleinProduct({ emitterName: nfe.issuer.name, xProd: product.description, cProd: product.code });
     const code = `<span class="source-product-code">${escapeHtml(mapping.sourceCode)}</span>${mapping.internalCode ? `<small class="internal-product-code">[${escapeHtml(mapping.internalCode)}]</small>` : ''}`;
     const packageLabel = productPackageLabel(product);
     const description = `${escapeHtml(product.description)}${packageLabel ? `<small class="package-detail">${escapeHtml(packageLabel)}</small>` : ''}${product.tax.taxNote ? `<small class="tax-detail">${escapeHtml(product.tax.taxNote)}</small>` : ''}`;
-    const internalQuantity = resolveSupplierInternalQuantity({ emitterTaxId: nfe.issuer.taxId, quantity: product.quantity });
+    const internalQuantity = resolveSupplierInternalQuantity({ emitterName: nfe.issuer.name, quantity: product.quantity });
     const quantity = `<span class="source-product-quantity">${decimal(product.quantity, 4, 4)}</span>${internalQuantity !== null ? `<small class="internal-quantity">[${internalQuantity} UN]</small>` : ''}`;
     return `<tr>
       <td class="code-col">${code}</td><td class="description">${description}</td><td class="center item-col">${product.itemNumber}</td><td class="center ncm-col">${escapeHtml(product.ncm)}</td>
@@ -402,9 +402,9 @@ function estimateProductHeight(nfe: ParsedNfe, product: ParsedNfeProduct): numbe
   const taxLines = product.tax.taxNote ? Math.max(1, Math.ceil(product.tax.taxNote.length / 58)) : 0;
   const descriptionBlockLines = descriptionLines + packageLines + taxLines;
 
-  const mapping = resolveFernandoKleinProduct({ emitterTaxId: nfe.issuer.taxId, xProd: product.description, cProd: product.code });
+  const mapping = resolveFernandoKleinProduct({ emitterName: nfe.issuer.name, xProd: product.description, cProd: product.code });
   const codeLines = 1 + (mapping.internalCode ? 1 : 0);
-  const internalQuantity = resolveSupplierInternalQuantity({ emitterTaxId: nfe.issuer.taxId, quantity: product.quantity });
+  const internalQuantity = resolveSupplierInternalQuantity({ emitterName: nfe.issuer.name, quantity: product.quantity });
   const quantityLines = 1 + (internalQuantity !== null ? 1 : 0);
   const visualLines = Math.max(descriptionBlockLines, codeLines, quantityLines);
 

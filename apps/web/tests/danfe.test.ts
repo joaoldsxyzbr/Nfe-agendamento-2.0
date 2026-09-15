@@ -129,10 +129,10 @@ describe('DANFE approved behavior', () => {
     const { renderDanfeHtml } = await import('../src/danfe/render');
     const base = parseNfeXml(basicXml, KEY);
 
-    for (const taxId of ['067.277.939-05', '649.433.569-15']) {
+    for (const name of ['FERNANDO KLEIN', 'DIONISIO']) {
       const nfe = {
         ...base,
-        issuer: { ...base.issuer, taxId },
+        issuer: { ...base.issuer, name },
         products: [{ ...base.products[0], code: 'FK001', description: 'ALFACE' }],
       };
       const html = renderDanfeHtml(nfe);

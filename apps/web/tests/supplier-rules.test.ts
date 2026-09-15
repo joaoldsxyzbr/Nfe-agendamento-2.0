@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 describe('supplier rules', () => {
-  it('keeps supplier identifiers unique and configuration valid', async () => {
+  it('keeps supplier issuer names unique and configuration valid', async () => {
     const { SUPPLIER_RULES, validateSupplierRules } = await import('../src/nfe/supplier-rules');
 
     expect(validateSupplierRules()).toBe(true);
@@ -10,22 +10,31 @@ describe('supplier rules', () => {
       'dionisio',
       'souza-cruz',
     ]);
+    expect(SUPPLIER_RULES.every((rule) => !('taxIds' in rule))).toBe(true);
   });
 
-  it('shares the green catalog between Fernando Klein and Dionisio', async () => {
+  it('shares the green catalog between Fernando Klein and Dionisio by issuer name', async () => {
     const { GREEN_SUPPLIER_CATALOG, resolveSupplierRule } = await import('../src/nfe/supplier-rules');
 
     expect(GREEN_SUPPLIER_CATALOG).toHaveLength(18);
-    expect(resolveSupplierRule('067.277.939-05')?.productCatalog).toBe(GREEN_SUPPLIER_CATALOG);
-    expect(resolveSupplierRule('649.433.569-15')?.productCatalog).toBe(GREEN_SUPPLIER_CATALOG);
+    expect(resolveSupplierRule('FERNANDO KLEIN')?.productCatalog).toBe(GREEN_SUPPLIER_CATALOG);
+    expect(resolveSupplierRule('Dionísio')?.productCatalog).toBe(GREEN_SUPPLIER_CATALOG);
   });
 
-  it('declares Souza Cruz quantity conversion without hardcoding it in rendering', async () => {
+  it('declares Souza Cruz quantity conversion without fiscal identifiers in the rule', async () => {
     const { resolveSupplierRule } = await import('../src/nfe/supplier-rules');
 
-    expect(resolveSupplierRule('33.009.911/0285-72')?.internalQuantity).toEqual({
+    expect(resolveSupplierRule('Souza Cruz Ltda.')?.internalQuantity).toEqual({
       multiplier: 50,
       unit: 'UN',
     });
+  });
+
+  it('does not match partial or unrelated issuer names', async () => {
+    const { resolveSupplierRule } = await import('../src/nfe/supplier-rules');
+
+    expect(resolveSupplierRule('Fernando')).toBeNull();
+    expect(resolveSupplierRule('Fornecedor Souza Cruz Distribuidora')).toBeNull();
+    expect(resolveSupplierRule('Outro fornecedor')).toBeNull();
   });
 });

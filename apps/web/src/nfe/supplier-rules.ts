@@ -7,7 +7,7 @@ export type SupplierCatalogItem = Readonly<{
 export type SupplierRule = Readonly<{
   id: string;
   name: string;
-  taxIds: readonly string[];
+  issuerNames: readonly string[];
   productCatalog?: readonly SupplierCatalogItem[];
   internalQuantity?: Readonly<{
     multiplier: number;
@@ -40,49 +40,56 @@ export const SUPPLIER_RULES: readonly SupplierRule[] = Object.freeze([
   Object.freeze({
     id: 'fernando-klein',
     name: 'Fernando Klein',
-    taxIds: Object.freeze(['06727793905']),
+    issuerNames: Object.freeze(['FERNANDO KLEIN']),
     productCatalog: GREEN_SUPPLIER_CATALOG,
   }),
   Object.freeze({
     id: 'dionisio',
     name: 'Dionisio',
-    taxIds: Object.freeze(['64943356915']),
+    issuerNames: Object.freeze(['DIONISIO']),
     productCatalog: GREEN_SUPPLIER_CATALOG,
   }),
   Object.freeze({
     id: 'souza-cruz',
     name: 'Souza Cruz',
-    taxIds: Object.freeze(['33009911028572']),
+    issuerNames: Object.freeze(['SOUZA CRUZ', 'SOUZA CRUZ LTDA', 'SOUZA CRUZ S A']),
     internalQuantity: Object.freeze({ multiplier: 50, unit: 'UN' }),
   }),
 ]);
 
-export function normalizeSupplierTaxId(value: unknown): string {
-  return String(value ?? '').replace(/[^A-Z0-9]/gi, '').toUpperCase();
+export function normalizeSupplierName(value: unknown): string {
+  return String(value ?? '')
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
 }
 
-export function resolveSupplierRule(emitterTaxId: unknown): SupplierRule | null {
-  const normalized = normalizeSupplierTaxId(emitterTaxId);
+export function resolveSupplierRule(emitterName: unknown): SupplierRule | null {
+  const normalized = normalizeSupplierName(emitterName);
   if (!normalized) return null;
-  return SUPPLIER_RULES.find((rule) => rule.taxIds.includes(normalized)) ?? null;
+  return SUPPLIER_RULES.find((rule) => rule.issuerNames.some((name) => normalizeSupplierName(name) === normalized)) ?? null;
 }
 
 export function validateSupplierRules(rules: readonly SupplierRule[] = SUPPLIER_RULES): true {
-  const taxIds = new Map<string, string>();
+  const issuerNames = new Map<string, string>();
 
   for (const rule of rules) {
-    if (!rule.id.trim() || !rule.name.trim() || rule.taxIds.length === 0) {
+    if (!rule.id.trim() || !rule.name.trim() || rule.issuerNames.length === 0) {
       throw new Error('Regra de fornecedor incompleta.');
     }
 
-    for (const rawTaxId of rule.taxIds) {
-      const taxId = normalizeSupplierTaxId(rawTaxId);
-      if (!taxId) throw new Error(`Fornecedor ${rule.id} possui CPF/CNPJ vazio.`);
-      const existing = taxIds.get(taxId);
+    for (const rawName of rule.issuerNames) {
+      const issuerName = normalizeSupplierName(rawName);
+      if (!issuerName) throw new Error(`Fornecedor ${rule.id} possui nome de emitente vazio.`);
+      const existing = issuerNames.get(issuerName);
       if (existing && existing !== rule.id) {
-        throw new Error(`CPF/CNPJ ${taxId} duplicado entre ${existing} e ${rule.id}.`);
+        throw new Error(`Nome de emitente ${issuerName} duplicado entre ${existing} e ${rule.id}.`);
       }
-      taxIds.set(taxId, rule.id);
+      issuerNames.set(issuerName, rule.id);
     }
 
     if (rule.internalQuantity && (!Number.isFinite(rule.internalQuantity.multiplier) || rule.internalQuantity.multiplier <= 0)) {

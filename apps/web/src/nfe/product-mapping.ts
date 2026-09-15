@@ -1,6 +1,6 @@
 import {
   GREEN_SUPPLIER_CATALOG,
-  normalizeSupplierTaxId,
+  normalizeSupplierName,
   resolveSupplierRule,
   type SupplierCatalogItem,
 } from './supplier-rules';
@@ -13,7 +13,7 @@ export type ProductPresentation = Readonly<{
 }>;
 
 export type FernandoKleinProductInput = Readonly<{
-  emitterTaxId?: string | null;
+  emitterName?: string | null;
   xProd?: string | null;
   cProd?: string | null;
 }>;
@@ -28,8 +28,8 @@ export type FernandoKleinSummary = Readonly<{
 
 export const FERNANDO_KLEIN_CATALOG = GREEN_SUPPLIER_CATALOG;
 
-export function normalizeFernandoKleinTaxId(value: unknown): string {
-  return normalizeSupplierTaxId(value);
+export function normalizeFernandoKleinSupplierName(value: unknown): string {
+  return normalizeSupplierName(value);
 }
 
 export function normalizeFernandoKleinProductName(value: unknown): string {
@@ -89,13 +89,13 @@ function aliasIndexFor(catalog: readonly FernandoKleinCatalogItem[]): Readonly<R
   return index;
 }
 
-export function isFernandoKleinEmitter(emitterTaxId: unknown): boolean {
-  return Boolean(resolveSupplierRule(emitterTaxId)?.productCatalog?.length);
+export function isFernandoKleinEmitter(emitterName: unknown): boolean {
+  return Boolean(resolveSupplierRule(emitterName)?.productCatalog?.length);
 }
 
 export function resolveFernandoKleinProduct(input: FernandoKleinProductInput): ProductPresentation {
   const sourceCode = String(input.cProd ?? '');
-  const supplier = resolveSupplierRule(input.emitterTaxId);
+  const supplier = resolveSupplierRule(input.emitterName);
   const catalog = supplier?.productCatalog;
   if (!catalog?.length) {
     return Object.freeze({ sourceCode, internalCode: '' });
@@ -109,12 +109,12 @@ export function resolveFernandoKleinProduct(input: FernandoKleinProductInput): P
 }
 
 export function summarizeFernandoKleinProducts(input: Readonly<{
-  emitterTaxId?: string | null;
+  emitterName?: string | null;
   products?: readonly Readonly<{ cProd?: string | null; xProd?: string | null }>[] | null;
 }>): FernandoKleinSummary {
   const products = Array.isArray(input.products) ? input.products : [];
 
-  if (!isFernandoKleinEmitter(input.emitterTaxId)) {
+  if (!isFernandoKleinEmitter(input.emitterName)) {
     return Object.freeze({
       applies: false,
       total: products.length,
@@ -129,7 +129,7 @@ export function summarizeFernandoKleinProducts(input: Readonly<{
 
   for (const product of products) {
     const result = resolveFernandoKleinProduct({
-      emitterTaxId: input.emitterTaxId,
+      emitterName: input.emitterName,
       xProd: product?.xProd,
       cProd: product?.cProd,
     });

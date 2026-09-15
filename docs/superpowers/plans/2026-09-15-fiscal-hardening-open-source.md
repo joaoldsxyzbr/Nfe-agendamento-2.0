@@ -65,7 +65,7 @@ Os artifacts do teste ficam disponíveis temporariamente no workflow. Esse gate 
 
 ## Fase 4 — adoção incremental do Unimake.DFe
 
-**Status: POC isolado implementado e validado no CI; biblioteca ainda não está no caminho de produção.**
+**Status: POC isolado implementado; biblioteca continua fora do caminho de produção.**
 
 Entregue:
 
@@ -74,11 +74,12 @@ Entregue:
 - comparação entre nosso `AccessKey` e `XMLUtility` para chave numérica, chave com CNPJ alfanumérico e DV inválido;
 - validação do reconhecimento de CNPJ alfanumérico e do cálculo de DV;
 - confirmação em compilação da presença dos tipos NFe `IBSCBS` e `IBSCBSTot`;
+- fixture RTC sintética submetida a desserialização e serialização com `NfeProc`, com verificação de preservação dos grupos RTC centrais;
 - job `fiscal-compatibility` obrigatório antes do pacote Windows.
 
 Próximos passos dessa fase:
 
-1. comparar serialização/desserialização de XMLs RTC representativos;
+1. ampliar a paridade para fixtures RTC/monofásicas representativas do uso real;
 2. usar a biblioteca como oráculo adicional em testes de schema/paridade;
 3. introduzir adaptador de produção somente quando um componente específico demonstrar benefício e paridade;
 4. substituir componentes manuais apenas de forma incremental.
@@ -96,7 +97,8 @@ Entregue:
 - modelo dos campos centrais de `IBSCBS`, `gIBSUF`, `gIBSMun`, `gCBS`, `IS`, `IBSCBSTot`, `ISTot` e `vNFTot`;
 - wrapper `parseNfeXmlWithRtc` que preserva o objeto NF-e existente e o XML original;
 - sinalização explícita de grupos estendidos conhecidos, como `gIBSCBSMono`, para evitar tratamento silencioso como cenário básico;
-- testes de compatibilidade com NF-e legada, chave divergente, valores RTC e grupo monofásico.
+- testes de compatibilidade com NF-e legada, chave divergente, valores RTC e grupo monofásico;
+- paridade adicional da fixture básica com desserialização/serialização do POC Unimake.
 
 Pendente:
 
@@ -109,22 +111,25 @@ Detalhes: `docs/architecture/rtc-ibs-cbs.md`.
 
 ## Fase 6 — privacidade, multi-PC e supply chain
 
-**Status: parcialmente iniciado.**
+**Status: parcialmente concluída.**
 
 Concluído:
 
 - `.gitignore` passou a bloquear preventivamente `*.pfx`, `*.p12`, `*.pem` e `*.key`;
 - etapas que recebem secrets de Authenticode agora só executam em `push` confiável para `main`, não em builds de pull request;
 - persistência do `FiscalUsageGuard` passou a usar escrita durável (`WriteThrough` + flush físico);
-- estado fiscal local corrompido agora falha de forma conservadora: bloqueia a rota SEFAZ por uma hora e usa Portal, em vez de zerar o histórico silenciosamente.
+- estado fiscal local corrompido agora falha de forma conservadora: bloqueia a rota SEFAZ por uma hora e usa Portal, em vez de zerar o histórico silenciosamente;
+- regras especiais de fornecedores deixaram de carregar CPF/CNPJ explícitos no bundle público; o frontend usa aliases exatos do `xNome` normalizado para resolver as regras de apresentação;
+- testes e fixture operacional de fornecedor foram ajustados para não manter identificadores pessoais como constantes no estado atual da `main`.
 
 Pendente:
 
-- retirar identificadores internos/pessoais do bundle público sem quebrar as regras operacionais por fornecedor;
 - tratar o limite SEFAZ por CNPJ entre vários PCs sem reintroduzir PC central;
 - configurar certificado real de Authenticode e, idealmente, ambiente protegido de release;
 - proteger `main` contra force-push/deleção e adotar checks obrigatórios quando compatível com o fluxo;
 - alinhar versão, release e artefatos após as fases fiscais restantes.
+
+Observação de privacidade: a remoção acima vale para a árvore atual e para o bundle publicado. Histórico Git anterior é um problema separado e só deve ser reescrito se houver decisão explícita de fazer uma limpeza destrutiva do histórico.
 
 ## Critério de release
 

@@ -1,20 +1,20 @@
-import { normalizeSupplierTaxId, resolveSupplierRule } from './supplier-rules';
+import { normalizeSupplierName, resolveSupplierRule } from './supplier-rules';
 
 const INTEGER_TOLERANCE = 1e-6;
 
 export type SupplierQuantityInput = Readonly<{
-  emitterTaxId?: string | null;
+  emitterName?: string | null;
   quantity?: number | null;
 }>;
 
-export { normalizeSupplierTaxId };
+export { normalizeSupplierName };
 
-export function isSouzaCruzEmitter(emitterTaxId: unknown): boolean {
-  return resolveSupplierRule(emitterTaxId)?.id === 'souza-cruz';
+export function isSouzaCruzEmitter(emitterName: unknown): boolean {
+  return resolveSupplierRule(emitterName)?.id === 'souza-cruz';
 }
 
 export function resolveSupplierInternalQuantity(input: SupplierQuantityInput): number | null {
-  const quantityRule = resolveSupplierRule(input.emitterTaxId)?.internalQuantity;
+  const quantityRule = resolveSupplierRule(input.emitterName)?.internalQuantity;
   if (!quantityRule) return null;
 
   const quantity = Number(input.quantity);
