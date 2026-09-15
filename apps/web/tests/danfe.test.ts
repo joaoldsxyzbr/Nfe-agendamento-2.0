@@ -112,6 +112,18 @@ describe('DANFE approved behavior', () => {
     expect(html).toContain('/src/danfe/zoom-direct.ts');
   });
 
+  it('keeps print pagination deterministic and independent from viewport geometry', () => {
+    const pagination = readFileSync(new URL('../src/danfe/pagination.ts', import.meta.url), 'utf8');
+    expect(pagination).not.toContain('getBoundingClientRect');
+    expect(pagination).not.toContain('getComputedStyle');
+    expect(pagination).not.toContain('danfe-measuring');
+    expect(pagination).toContain('FIRST_PAGE_PRODUCT_SPACE_MM = 104');
+    expect(pagination).toContain('CONTINUATION_PRODUCT_SPACE_MM = 218');
+    expect(pagination).toContain("row.querySelector('.internal-product-code')");
+    expect(pagination).toContain("row.querySelector('.internal-quantity')");
+    expect(pagination).toContain("body.querySelector<HTMLTableRowElement>('.products-filler')");
+  });
+
   it('keeps the approved A4 layout readable and structured like the visual reference', () => {
     const css = readFileSync(new URL('../src/danfe/styles.css', import.meta.url), 'utf8');
     for (const rule of ['width: 210mm', 'min-height: 277mm', 'font-family: Arial', '.products-table col.item', 'width: 8mm', '@media print']) {

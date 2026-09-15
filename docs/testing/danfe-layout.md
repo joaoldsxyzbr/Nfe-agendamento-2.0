@@ -133,7 +133,9 @@ Os contratos principais ficam em `apps/web/tests/danfe.test.ts`, `apps/web/tests
 - grade de 12 colunas de destinatário e transportador;
 - emitente alinhado à esquerda;
 - tipografia reforçada da impressão;
-- preenchimento do espaço livre pela linha vazia, nunca pela última linha real do produto.
+- preenchimento do espaço livre pela linha vazia, nunca pela última linha real do produto;
+- paginação de impressão sem depender de `getBoundingClientRect()`/`getComputedStyle()` no `beforeprint`;
+- preservação da linha `products-filler` em páginas de continuação criadas durante a impressão.
 
 ## Aceitação visual física
 
@@ -152,28 +154,14 @@ Ao validar em navegador/Windows real:
 11. validar uma NF-e de Fernando Klein e uma de Dionisio e confirmar `cProd` na primeira linha + `[código interno]` abaixo, incluindo `ALECRIM → 104144` e `COUVE FOLHA → 104107`;
 12. validar uma NF-e Souza Cruz e confirmar que a quantidade fiscal continua visível e a linha `[<unidades> UN]` aparece somente quando a conversão for válida.
 
+## Correção da paginação física — 15/09/2026
 
-## Correção de corte na impressão — 15/09/2026
+A tentativa anterior de corrigir cortes medindo `getBoundingClientRect()` durante o evento `beforeprint` foi removida. No Chromium, esse evento pode ocorrer antes de o `@media print` estar completamente aplicado; com isso, a geometria medida vinha do preview e a rotina interpretava páginas normais como lotadas. O efeito observado em impressão física foi a criação de várias folhas de continuação com praticamente um item por página.
 
-A estimativa de paginação do preview não é suficiente para definir a impressão: fontes,
-quebras de descrição, tributos e quantidades internas alteram a altura real das linhas.
-Antes de imprimir, `danfe/pagination.ts` mede os blocos com o CSS de impressão e move
-as últimas linhas inteiras para a folha seguinte até acomodar os produtos e o rodapé.
-Novas folhas repetem cabeçalho e colunas; a numeração é atualizada por NF-e, inclusive
-em lote. O preenchimento vazio e a margem automática do rodapé são desativados somente
-durante a medição. Depois da impressão ou cancelamento, o preview e seu zoom são restaurados,
-preservando os botões e seus listeners.
+A paginação de impressão agora é determinística e não depende da geometria momentânea do navegador. `apps/web/src/danfe/pagination.ts` calcula a ocupação das linhas pelo conteúdo realmente renderizado, considerando descrição, embalagem, observação tributária, código interno e quantidade interna. A primeira folha e as folhas de continuação usam orçamentos conservadores próprios, e linhas excedentes são movidas para a próxima folha preservando a ordem.
 
-A impressão remove os limites de altura/rolagem do modal, mantém os DANFEs em fluxo
-sequencial e deixa de esconder conteúdo excedente. Uma linha individual maior que a
-área disponível permite crescimento da folha em vez de descartar conteúdo; esse caso
-extremo ainda exige conferência da fragmentação física e da contagem de folhas.
+Páginas de continuação criadas durante esse ajuste mantêm a linha `products-filler`. Assim, o espaço vazio continua sendo absorvido pela grade vazia e nunca pela última mercadoria real, evitando linhas de produto artificialmente gigantes como as vistas na regressão de impressão.
 
-Validação: build, lint, formato e os 85 testes existentes passaram. A tentativa de
-validação com Chromium neste ambiente não concluiu (falha de inicialização do navegador).
-A conferência física/visual permanece pendente, especialmente com o XML da nota relatada.
+A rotina continua atualizando `Folha X/Y`, mantém a impressão em lote em fluxo sequencial e restaura o HTML/zoom do preview após imprimir ou cancelar. O teste automatizado impede o retorno de paginação baseada em `getBoundingClientRect()`/`getComputedStyle()` e exige a preservação do `products-filler`.
 
-Roteiro de regressão: imprimir notas com 1, 20, 60 e 120 itens, descrições longas,
-tributos complementares, conversão Souza Cruz, transporte e dados adicionais; conferir
-ordem, ausência de cortes/duplicações, cabeçalhos e numeração. Repetir em lote com duas
-notas e depois de aplicar zoom. Cancelar a impressão e conferir novamente os botões.
+Roteiro de regressão física: imprimir uma NF-e Souza Cruz com quantidade interna em várias linhas, uma NF-e curta, uma NF-e com muitos itens e um lote com duas notas. Conferir número de folhas, ordem dos itens, ausência de corte/duplicação, altura normal das linhas reais, preenchimento vazio da grade e numeração `Folha X/Y`.
