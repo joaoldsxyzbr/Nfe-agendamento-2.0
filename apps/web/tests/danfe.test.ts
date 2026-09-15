@@ -62,7 +62,9 @@ describe('DANFE approved behavior', () => {
 
     const base = parseNfeXml(basicXml, KEY);
     const html = renderDanfeHtml({ ...base, accessKey: ALPHA_KEY });
-    expect(html).toContain('PC3D');
+    expect(html).toContain('09PC');
+    expect(html).toContain('3D31');
+    expect(html).toContain('5K00');
     expect(html).toContain('Código de barras da chave de acesso');
   });
 
