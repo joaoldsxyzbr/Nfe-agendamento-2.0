@@ -11,6 +11,8 @@ export type BatchInputSummary = {
   exceedsLimit: boolean;
 };
 
+const ACCESS_KEY_IN_TEXT = /(?<![A-Z0-9])[0-9]{6}[A-Z0-9]{12}[0-9]{26}(?![A-Z0-9])/gi;
+
 export function parseBatchInput(raw: string, maxItems = MAX_BATCH_ITEMS): BatchInputSummary {
   const candidates = extractCandidates(raw);
   const validKeys: string[] = [];
@@ -51,27 +53,23 @@ function extractCandidates(raw: string): string[] {
   const candidates: string[] = [];
 
   for (const segment of segments) {
-    const exactMatches = segment.match(/(?<!\d)\d{44}(?!\d)/g) ?? [];
+    const exactMatches = segment.match(ACCESS_KEY_IN_TEXT) ?? [];
     if (exactMatches.length > 0) {
-      candidates.push(...exactMatches);
-      const remainingDigits = segment
-        .replace(/(?<!\d)\d{44}(?!\d)/g, '')
-        .replace(/\D/g, '');
-      if (remainingDigits) candidates.push(remainingDigits);
+      candidates.push(...exactMatches.map((match) => match.toUpperCase()));
       continue;
     }
 
-    const digits = segment.replace(/\D/g, '');
-    if (!digits) continue;
+    const compact = segment.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+    if (!compact) continue;
 
-    if (digits.length > 44 && digits.length % 44 === 0) {
-      for (let offset = 0; offset < digits.length; offset += 44) {
-        candidates.push(digits.slice(offset, offset + 44));
+    if (compact.length > 44 && compact.length % 44 === 0) {
+      for (let offset = 0; offset < compact.length; offset += 44) {
+        candidates.push(compact.slice(offset, offset + 44));
       }
       continue;
     }
 
-    candidates.push(digits);
+    candidates.push(compact);
   }
 
   return candidates;

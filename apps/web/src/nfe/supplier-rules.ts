@@ -58,7 +58,7 @@ export const SUPPLIER_RULES: readonly SupplierRule[] = Object.freeze([
 ]);
 
 export function normalizeSupplierTaxId(value: unknown): string {
-  return String(value ?? '').replace(/\D/g, '');
+  return String(value ?? '').replace(/[^A-Z0-9]/gi, '').toUpperCase();
 }
 
 export function resolveSupplierRule(emitterTaxId: unknown): SupplierRule | null {

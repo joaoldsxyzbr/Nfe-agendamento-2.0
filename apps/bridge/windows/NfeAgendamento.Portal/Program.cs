@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using Microsoft.Web.WebView2.Core;
+using NfeAgendamento.Bridge.Fiscal;
 
 namespace NfeAgendamento.Portal;
 
@@ -196,8 +197,8 @@ internal static class PortalArguments
         }
 
         if (!values.TryGetValue("--access-key", out var accessKey) ||
-            accessKey.Length != 44 ||
-            accessKey.Any(character => !char.IsAsciiDigit(character)))
+            !AccessKey.TryParse(accessKey, out var parsedAccessKey) ||
+            parsedAccessKey is null)
         {
             error = "Chave NF-e inválida para o Portal.";
             return false;
@@ -240,7 +241,7 @@ internal static class PortalArguments
             return false;
         }
 
-        options = new PortalOptions(accessKey, normalizedThumbprint, resultPath, errorPath);
+        options = new PortalOptions(parsedAccessKey.Value, normalizedThumbprint, resultPath, errorPath);
         return true;
     }
 

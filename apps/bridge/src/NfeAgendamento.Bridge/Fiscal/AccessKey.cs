@@ -15,17 +15,32 @@ public sealed record AccessKey
     public static bool TryParse(string? value, out AccessKey? accessKey)
     {
         accessKey = null;
+        if (string.IsNullOrWhiteSpace(value)) return false;
 
-        if (value is null || value.Length != 44 || value.Any(character => character is < '0' or > '9'))
+        var normalized = value.Trim().ToUpperInvariant();
+        if (normalized.Length != 44) return false;
+
+        for (var index = 0; index < normalized.Length; index++)
         {
-            return false;
+            var character = normalized[index];
+            var alphaNumericCnpjPosition = index is >= 6 and < 18;
+
+            if (alphaNumericCnpjPosition)
+            {
+                if (!char.IsAsciiDigit(character) && character is not (>= 'A' and <= 'Z')) return false;
+            }
+            else if (!char.IsAsciiDigit(character))
+            {
+                return false;
+            }
         }
 
         var sum = 0;
         var weight = 2;
         for (var index = 42; index >= 0; index--)
         {
-            sum += (value[index] - '0') * weight;
+            // NT Conjunta DFe 2025.001: caracteres alfanuméricos usam valor ASCII - 48.
+            sum += (normalized[index] - '0') * weight;
             weight = weight == 9 ? 2 : weight + 1;
         }
 
@@ -35,12 +50,12 @@ public sealed record AccessKey
             checkDigit = 0;
         }
 
-        if (value[43] - '0' != checkDigit)
+        if (normalized[43] - '0' != checkDigit)
         {
             return false;
         }
 
-        accessKey = new AccessKey(value);
+        accessKey = new AccessKey(normalized);
         return true;
     }
 

@@ -8,6 +8,7 @@ namespace NfeAgendamento.Bridge.Tests;
 public sealed class NfeDistributionProtocolTests
 {
     private const string AccessKey = "35260812345678000195550010000000011000000018";
+    private const string AlphanumericAccessKey = "41260612ABC34501DE35550010000001231876543214";
 
     [Fact]
     public void BuildSoap_contains_only_consChNFe_query()
@@ -19,6 +20,18 @@ public sealed class NfeDistributionProtocolTests
         Assert.Contains("<CNPJ>12345678000195</CNPJ>", soap);
         Assert.Contains($"<consChNFe><chNFe>{AccessKey}</chNFe></consChNFe>", soap);
         Assert.DoesNotContain("<distNSU>", soap);
+    }
+
+    [Fact]
+    public void BuildSoap_accepts_alphanumeric_cnpj_and_access_key()
+    {
+        var soap = NfeDistributionProtocol.BuildSoap(
+            AlphanumericAccessKey.ToLowerInvariant(),
+            "12abc34501de35",
+            "41");
+
+        Assert.Contains("<CNPJ>12ABC34501DE35</CNPJ>", soap);
+        Assert.Contains($"<consChNFe><chNFe>{AlphanumericAccessKey}</chNFe></consChNFe>", soap);
     }
 
     [Fact]
@@ -59,6 +72,24 @@ public sealed class NfeDistributionProtocolTests
             """);
 
         var parsed = NfeDistributionProtocol.ParseResponse(response, AccessKey);
+
+        Assert.Equal("138", parsed.CStat);
+        Assert.Equal(xml, parsed.Xml);
+    }
+
+    [Fact]
+    public void ParseResponse_decompresses_matching_alphanumeric_procNFe()
+    {
+        var xml = $"<nfeProc xmlns=\"http://www.portalfiscal.inf.br/nfe\"><NFe><infNFe Id=\"NFe{AlphanumericAccessKey}\" /></NFe></nfeProc>";
+        var docZip = GzipBase64(xml);
+        var response = Envelope($$"""
+            <retDistDFeInt xmlns="http://www.portalfiscal.inf.br/nfe" versao="1.01">
+              <tpAmb>1</tpAmb><verAplic>1</verAplic><cStat>138</cStat><xMotivo>Documento localizado</xMotivo>
+              <loteDistDFeInt><docZip NSU="000000000000001" schema="procNFe_v4.00.xsd">{{docZip}}</docZip></loteDistDFeInt>
+            </retDistDFeInt>
+            """);
+
+        var parsed = NfeDistributionProtocol.ParseResponse(response, AlphanumericAccessKey.ToLowerInvariant());
 
         Assert.Equal("138", parsed.CStat);
         Assert.Equal(xml, parsed.Xml);

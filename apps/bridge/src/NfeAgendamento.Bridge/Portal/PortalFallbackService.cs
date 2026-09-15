@@ -29,7 +29,7 @@ public sealed class PortalFallbackService
 
     public Task<string> StartAsync(string accessKey, CancellationToken cancellationToken = default)
     {
-        if (!AccessKey.TryParse(accessKey, out _))
+        if (!AccessKey.TryParse(accessKey, out var parsedAccessKey) || parsedAccessKey is null)
             throw new ArgumentException("Chave NF-e inválida.", nameof(accessKey));
 
         var thumbprint = _selectedThumbprint();
@@ -55,7 +55,7 @@ public sealed class PortalFallbackService
             null);
 
         _ = RunOperationAsync(
-            new PortalLaunchRequest(operationId, accessKey, thumbprint),
+            new PortalLaunchRequest(operationId, parsedAccessKey.Value, thumbprint),
             operationCancellation.Token);
         return Task.FromResult(operationId);
     }

@@ -1,5 +1,6 @@
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
+using NfeAgendamento.Bridge.Fiscal;
 
 namespace NfeAgendamento.Bridge.Certificates;
 
@@ -15,8 +16,12 @@ public sealed class CertificateIdentityException : InvalidOperationException
 
 public static class CertificateIdentityReader
 {
-    private static readonly Regex CnpjRegex = new(@"(?<!\d)\d{14}(?!\d)", RegexOptions.Compiled);
-    private static readonly Regex CommonNameCnpjRegex = new(@"(?:^|,)\s*CN\s*=\s*[^,]*?:(\d{14})", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex CnpjRegex = new(
+        @"(?<![A-Z0-9])([A-Z0-9]{12}[0-9]{2})(?![A-Z0-9])",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    private static readonly Regex CommonNameCnpjRegex = new(
+        @"(?:^|,)\s*CN\s*=\s*[^,]*?:([A-Z0-9]{12}[0-9]{2})(?:,|$)",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex StateRegex = new(@"(?:^|[,;])\s*(?:S|ST|State|UF)\s*=\s*([A-Z]{2})(?:[,;]|$)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private static readonly IReadOnlyDictionary<string, string> StateCodes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -31,14 +36,17 @@ public static class CertificateIdentityReader
         ArgumentNullException.ThrowIfNull(certificate);
 
         var subject = certificate.Subject ?? string.Empty;
-        var commonNameCnpj = CommonNameCnpjRegex.Match(subject).Groups[1].Value;
-        if (commonNameCnpj.Length == 14)
+        var commonNameCandidate = CommonNameCnpjRegex.Match(subject).Groups[1].Value;
+        if (Cnpj.TryNormalize(commonNameCandidate, out var commonNameCnpj))
         {
             return commonNameCnpj;
         }
 
         var matches = CnpjRegex.Matches(subject)
-            .Select(match => match.Value)
+            .Select(match => match.Groups[1].Value)
+            .Select(candidate => Cnpj.TryNormalize(candidate, out var normalized) ? normalized : null)
+            .Where(static candidate => candidate is not null)
+            .Select(static candidate => candidate!)
             .Distinct(StringComparer.Ordinal)
             .ToArray();
 

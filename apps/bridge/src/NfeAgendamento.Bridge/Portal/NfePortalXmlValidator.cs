@@ -11,7 +11,7 @@ public static class NfePortalXmlValidator
 
     public static string Validate(string xml, string accessKey)
     {
-        if (!AccessKey.TryParse(accessKey, out _))
+        if (!AccessKey.TryParse(accessKey, out var parsedAccessKey) || parsedAccessKey is null)
             throw new ArgumentException("Chave NF-e inválida.", nameof(accessKey));
         if (string.IsNullOrWhiteSpace(xml))
             throw new InvalidDataException("O Portal da NF-e retornou um XML vazio.");
@@ -43,7 +43,7 @@ public static class NfePortalXmlValidator
             ?? throw new InvalidDataException("O XML baixado não contém a identificação da NF-e.");
         var id = infNFe.Attribute("Id")?.Value;
 
-        if (!string.Equals(id, "NFe" + accessKey, StringComparison.Ordinal))
+        if (!string.Equals(id, "NFe" + parsedAccessKey.Value, StringComparison.Ordinal))
             throw new InvalidDataException("O XML baixado não corresponde à chave NF-e consultada.");
 
         return xml;

@@ -8,7 +8,7 @@ namespace NfeAgendamento.Bridge.Tests;
 public sealed class CertificateIdentityReaderTests
 {
     [Fact]
-    public void ReadCnpj_prefers_14_digits_after_common_name_colon()
+    public void ReadCnpj_prefers_valid_cnpj_after_common_name_colon()
     {
         using var certificate = CreateCertificate("CN=EMPRESA TESTE:12345678000195, O=Empresa Teste, C=BR");
 
@@ -18,19 +18,29 @@ public sealed class CertificateIdentityReaderTests
     }
 
     [Fact]
-    public void ReadCnpj_accepts_single_unambiguous_14_digit_value_in_subject()
+    public void ReadCnpj_accepts_valid_alphanumeric_cnpj_after_common_name_colon()
     {
-        using var certificate = CreateCertificate("CN=EMPRESA TESTE, OU=12345678000195, O=Empresa Teste, C=BR");
+        using var certificate = CreateCertificate("CN=EMPRESA TESTE:12ABC34501DE35, O=Empresa Teste, C=BR");
 
         var cnpj = CertificateIdentityReader.ReadCnpj(certificate);
 
-        Assert.Equal("12345678000195", cnpj);
+        Assert.Equal("12ABC34501DE35", cnpj);
     }
 
     [Fact]
-    public void ReadCnpj_rejects_subject_without_unambiguous_cnpj()
+    public void ReadCnpj_accepts_single_unambiguous_value_in_subject()
     {
-        using var certificate = CreateCertificate("CN=EMPRESA TESTE, O=Empresa Teste, C=BR");
+        using var certificate = CreateCertificate("CN=EMPRESA TESTE, OU=PC3D315K000193, O=Empresa Teste, C=BR");
+
+        var cnpj = CertificateIdentityReader.ReadCnpj(certificate);
+
+        Assert.Equal("PC3D315K000193", cnpj);
+    }
+
+    [Fact]
+    public void ReadCnpj_rejects_subject_without_unambiguous_valid_cnpj()
+    {
+        using var certificate = CreateCertificate("CN=EMPRESA TESTE, OU=12ABC34501DE34, O=Empresa Teste, C=BR");
 
         var exception = Assert.Throws<CertificateIdentityException>(() =>
             CertificateIdentityReader.ReadCnpj(certificate));

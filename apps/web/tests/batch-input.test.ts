@@ -3,6 +3,7 @@ import { MAX_BATCH_ITEMS, parseBatchInput } from '../src/batch/input';
 
 const KEY_A = '42260812345678000123550010000012341000012342';
 const KEY_B = '35260812345678000195550010000000011000000018';
+const ALPHANUMERIC_KEY = '41260612ABC34501DE35550010000001231876543214';
 
 describe('batch input', () => {
   it('preserves valid order and removes duplicates', () => {
@@ -13,12 +14,20 @@ describe('batch input', () => {
     expect(summary.invalidCount).toBe(0);
   });
 
-  it('accepts formatted keys and reports invalid candidates', () => {
-    const formatted = KEY_A.replace(/(\d{4})/g, '$1 ').trim();
-    const summary = parseBatchInput(`${formatted}; 12345`);
+  it('accepts formatted numeric and alphanumeric keys', () => {
+    const formattedNumeric = KEY_A.replace(/(.{4})/g, '$1 ').trim();
+    const formattedAlpha = ALPHANUMERIC_KEY.toLowerCase().replace(/(.{4})/g, '$1 ').trim();
+    const summary = parseBatchInput(`${formattedNumeric}; ${formattedAlpha}; 12345`);
 
-    expect(summary.validKeys).toEqual([KEY_A]);
+    expect(summary.validKeys).toEqual([KEY_A, ALPHANUMERIC_KEY]);
     expect(summary.invalidCount).toBe(1);
+  });
+
+  it('extracts an alphanumeric key surrounded by ordinary text', () => {
+    const summary = parseBatchInput(`NF-e: ${ALPHANUMERIC_KEY}`);
+
+    expect(summary.validKeys).toEqual([ALPHANUMERIC_KEY]);
+    expect(summary.invalidCount).toBe(0);
   });
 
   it('accepts more than ten valid keys without a rigid batch cap', () => {
@@ -38,11 +47,11 @@ function createValidKey(sequence: number): string {
   let weight = 2;
 
   for (let index = 42; index >= 0; index -= 1) {
-    sum += Number(prefix[index]) * weight;
+    sum += (prefix.charCodeAt(index) - 48) * weight;
     weight = weight === 9 ? 2 : weight + 1;
   }
 
-  let checkDigit = 11 - (sum % 11);
-  if (checkDigit >= 10) checkDigit = 0;
+  const candidate = 11 - (sum % 11);
+  const checkDigit = candidate >= 10 ? 0 : candidate;
   return `${prefix}${checkDigit}`;
 }

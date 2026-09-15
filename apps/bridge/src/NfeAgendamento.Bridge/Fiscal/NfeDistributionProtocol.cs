@@ -11,12 +11,12 @@ public static class NfeDistributionProtocol
 
     public static string BuildSoap(string accessKey, string cnpj, string? ufAutor = null)
     {
-        if (!AccessKey.TryParse(accessKey, out _))
+        if (!AccessKey.TryParse(accessKey, out var parsedAccessKey) || parsedAccessKey is null)
         {
             throw new ArgumentException("Chave NF-e inválida.", nameof(accessKey));
         }
 
-        if (cnpj.Length != 14 || cnpj.Any(c => c is < '0' or > '9'))
+        if (!Cnpj.TryNormalize(cnpj, out var normalizedCnpj))
         {
             throw new ArgumentException("CNPJ inválido.", nameof(cnpj));
         }
@@ -46,8 +46,8 @@ public static class NfeDistributionProtocol
                     <distDFeInt xmlns="http://www.portalfiscal.inf.br/nfe" versao="1.01">
                       <tpAmb>1</tpAmb>
                       {ufElement}
-                      <CNPJ>{cnpj}</CNPJ>
-                      <consChNFe><chNFe>{accessKey}</chNFe></consChNFe>
+                      <CNPJ>{normalizedCnpj}</CNPJ>
+                      <consChNFe><chNFe>{parsedAccessKey.Value}</chNFe></consChNFe>
                     </distDFeInt>
                   </nfeDadosMsg>
                 </nfeDistDFeInteresse>
@@ -58,7 +58,7 @@ public static class NfeDistributionProtocol
 
     public static TransportResult ParseResponse(string responseXml, string accessKey)
     {
-        if (!AccessKey.TryParse(accessKey, out _))
+        if (!AccessKey.TryParse(accessKey, out var parsedAccessKey) || parsedAccessKey is null)
         {
             throw new ArgumentException("Chave NF-e inválida.", nameof(accessKey));
         }
@@ -91,7 +91,7 @@ public static class NfeDistributionProtocol
             var xmlDocument = ParseSafe(xml);
             var infNFe = xmlDocument.Descendants().FirstOrDefault(e => e.Name.LocalName == "infNFe");
             var id = infNFe?.Attribute("Id")?.Value;
-            if (!string.Equals(id, "NFe" + accessKey, StringComparison.Ordinal))
+            if (!string.Equals(id, "NFe" + parsedAccessKey.Value, StringComparison.Ordinal))
             {
                 continue;
             }
