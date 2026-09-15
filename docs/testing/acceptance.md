@@ -13,7 +13,7 @@ Este checklist cobre o que o CI não consegue provar: instalação real no Windo
 - site oficial disponível exatamente em `https://nfeagendamento.joaolds.xyz.br`;
 - acesso à Internet para SEFAZ, GitHub Releases e Portal Nacional da NF-e.
 
-Versão canônica atual: **`0.0.13`**. Para validar a release pública, use `NFeAgendamentoBridge-Setup-v0.0.13.exe` e registre o SHA/tag correspondentes.
+Versão canônica atual: **`0.0.14`**. Para validar a release pública, use `NFeAgendamentoBridge-Setup-v0.0.14.exe` e registre o SHA/tag correspondentes.
 
 > O publish é self-contained: não exige instalação prévia do .NET 10. O WebView2 Runtime continua necessário somente para o fallback Portal.
 
@@ -25,7 +25,7 @@ Registre antes de começar:
 | --- | --- |
 | Data | |
 | Commit SHA | |
-| Versão canônica | `0.0.13` |
+| Versão canônica | `0.0.14` |
 | Run CI / artifact | |
 | URL do site | `https://nfeagendamento.joaolds.xyz.br` |
 | Windows | |
@@ -85,7 +85,7 @@ Resultado: ☐ aprovado
 4. Com WebView2 Runtime disponível, confirme **Portal / WebView2: Disponível**; sem Runtime, confirme **Indisponível**.
 5. Clique em **Atualizar** e confirme atualização do horário da última verificação.
 6. Pare o Bridge, clique em **Atualizar** e confirme estado **Indisponível** com erro legível.
-7. Confirme que uma mensagem de erro contendo uma sequência de 44 dígitos não exibe essa sequência integralmente.
+7. Confirme que uma mensagem de erro contendo uma sequência alfanumérica de 44 caracteres não exibe essa sequência integralmente.
 
 Resultado: ☐ aprovado
 
@@ -101,10 +101,12 @@ Resultado: ☐ aprovado
 
 ## 4. Validação da chave
 
-- menos de 44 dígitos: rejeitar sem consulta fiscal;
-- caracteres não numéricos: rejeitar;
+- menos de 44 caracteres: rejeitar sem consulta fiscal;
+- caracteres fora da estrutura permitida: rejeitar;
 - DV incorreto: rejeitar;
-- chave válida conhecida: aceitar.
+- chave NF-e modelo 55 numérica válida: aceitar;
+- chave NF-e modelo 55 com CNPJ/chave alfanuméricos válidos: aceitar;
+- chave NFC-e modelo 65: rejeitar explicitamente.
 
 Resultado: ☐ aprovado
 
@@ -130,7 +132,7 @@ Resultado: ☐ aprovado
 8. Feche por botão, `Esc` e backdrop.
 9. Use `Imprimir / PDF` e confira A4/paginação.
 10. Confirme que transporte/volumes não aparece sem conteúdo útil.
-11. Confirme que o atalho de download do app aponta para `NFeAgendamentoBridge-Setup-v0.0.13.exe`.
+11. Confirme que o atalho de download do app aponta para `NFeAgendamentoBridge-Setup-v0.0.14.exe`.
 
 Resultado: ☐ aprovado
 
@@ -191,11 +193,11 @@ Resultado: ☐ aprovado
 
 ## 10. Atualizador manual
 
-1. Em uma instalação v0.0.12, clique em **Verificar atualizações**.
-2. Confirme descoberta da v0.0.13.
+1. Em uma instalação v0.0.13, clique em **Verificar atualizações**.
+2. Confirme descoberta da v0.0.14.
 3. Confirme exibição da versão e pedido de confirmação.
 4. Confirme que asset/tamanho/SHA-256 inválidos impedem execução.
-5. Após confirmação válida, confirme que o Setup v0.0.13 inicia e App/Bridge encerram para substituição.
+5. Após confirmação válida, confirme que o Setup v0.0.14 inicia e App/Bridge encerram para substituição.
 6. Após atualizar, confirme que nova verificação informa que a versão está atualizada.
 
 Detalhes: `docs/testing/bridge-updater.md`.
@@ -213,11 +215,12 @@ Resultado: ☐ aprovado
 
 ## 12. Segundo PC independente
 
-1. Instale o mesmo Setup v0.0.13 validado.
+1. Instale o mesmo Setup v0.0.14 validado.
 2. Confirme início na bandeja sem console.
 3. Use o A1 instalado nesse segundo PC.
 4. Abra o site oficial e faça consulta normal.
 5. Confirme ausência de Central, pareamento, pasta compartilhada ou dependência do primeiro PC.
+6. Se o segundo PC usar uma cópia do mesmo A1 RSA, confirme que a proteção fiscal compartilhada não permite ultrapassar o teto coordenado entre os PCs.
 
 Resultado: ☐ aprovado
 
@@ -240,7 +243,7 @@ Uma release só deve ser declarada fisicamente validada depois de:
 - etapas 0–7 aprovadas;
 - etapa 8 aprovada em ocorrência real/controlada;
 - lifecycle/recovery aprovado;
-- atualização v0.0.12 → v0.0.13 validada;
+- atualização v0.0.13 → v0.0.14 validada;
 - segundo PC aprovado quando fizer parte da implantação;
 - divergências registradas e corrigidas.
 
