@@ -2,6 +2,8 @@ namespace NfeAgendamento.Bridge.Fiscal;
 
 public sealed record AccessKey
 {
+    private const string NfeModel = "55";
+
     private AccessKey(string value)
     {
         Value = value;
@@ -33,6 +35,11 @@ public sealed record AccessKey
             {
                 return false;
             }
+        }
+
+        if (!normalized.AsSpan(20, 2).SequenceEqual(NfeModel))
+        {
+            return false;
         }
 
         var sum = 0;
