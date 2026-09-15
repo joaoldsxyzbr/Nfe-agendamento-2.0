@@ -151,3 +151,29 @@ Ao validar em navegador/Windows real:
 10. na impressão física, confirmar que rótulos fiscais, valores e linhas da tabela de produtos podem ser lidos confortavelmente sem zoom ou aproximação excessiva;
 11. validar uma NF-e de Fernando Klein e uma de Dionisio e confirmar `cProd` na primeira linha + `[código interno]` abaixo, incluindo `ALECRIM → 104144` e `COUVE FOLHA → 104107`;
 12. validar uma NF-e Souza Cruz e confirmar que a quantidade fiscal continua visível e a linha `[<unidades> UN]` aparece somente quando a conversão for válida.
+
+
+## Correção de corte na impressão — 15/09/2026
+
+A estimativa de paginação do preview não é suficiente para definir a impressão: fontes,
+quebras de descrição, tributos e quantidades internas alteram a altura real das linhas.
+Antes de imprimir, `danfe/pagination.ts` mede os blocos com o CSS de impressão e move
+as últimas linhas inteiras para a folha seguinte até acomodar os produtos e o rodapé.
+Novas folhas repetem cabeçalho e colunas; a numeração é atualizada por NF-e, inclusive
+em lote. O preenchimento vazio e a margem automática do rodapé são desativados somente
+durante a medição. Depois da impressão ou cancelamento, o preview e seu zoom são restaurados,
+preservando os botões e seus listeners.
+
+A impressão remove os limites de altura/rolagem do modal, mantém os DANFEs em fluxo
+sequencial e deixa de esconder conteúdo excedente. Uma linha individual maior que a
+área disponível permite crescimento da folha em vez de descartar conteúdo; esse caso
+extremo ainda exige conferência da fragmentação física e da contagem de folhas.
+
+Validação: build, lint, formato e os 85 testes existentes passaram. A tentativa de
+validação com Chromium neste ambiente não concluiu (falha de inicialização do navegador).
+A conferência física/visual permanece pendente, especialmente com o XML da nota relatada.
+
+Roteiro de regressão: imprimir notas com 1, 20, 60 e 120 itens, descrições longas,
+tributos complementares, conversão Souza Cruz, transporte e dados adicionais; conferir
+ordem, ausência de cortes/duplicações, cabeçalhos e numeração. Repetir em lote com duas
+notas e depois de aplicar zoom. Cancelar a impressão e conferir novamente os botões.

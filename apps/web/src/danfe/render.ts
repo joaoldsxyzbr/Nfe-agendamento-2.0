@@ -1,4 +1,5 @@
 import { resolveFernandoKleinProduct } from '../nfe/product-mapping';
+import { paginateDanfeForPrint } from './pagination';
 import { resolveSupplierInternalQuantity } from '../nfe/supplier-quantity';
 import type { ParsedNfe, ParsedNfeParty, ParsedNfeProduct } from '../nfe/xml';
 
@@ -109,14 +110,19 @@ export function attachDanfeZoom(container: HTMLElement): () => void {
     scroll.scrollTop = contentY * ratio - pointerY;
   };
 
+  let screenPages: Array<[HTMLElement, string]> | null = null;
   const beforePrint = () => {
+    if (screenPages !== null) return;
+    screenPages = Array.from(container.querySelectorAll<HTMLElement>('.danfe-pages'), (group) => [group, group.innerHTML]);
     for (const page of pages()) {
       page.dataset.screenZoom = page.style.getPropertyValue('zoom') || String(zoom);
       page.style.setProperty('zoom', '1');
     }
+    paginateDanfeForPrint(container);
   };
   const afterPrint = () => {
-    for (const page of pages()) page.style.setProperty('zoom', page.dataset.screenZoom || String(zoom));
+    for (const [group, html] of screenPages ?? []) group.innerHTML = html;
+    screenPages = null;
   };
 
   apply(1);

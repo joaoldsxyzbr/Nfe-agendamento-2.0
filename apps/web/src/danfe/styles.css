@@ -109,9 +109,20 @@
   @page { size: A4 portrait; margin: 0; }
   body * { visibility: hidden; }
   .danfe-pages, .danfe-pages * { visibility: visible; }
-  .danfe-pages { position: absolute; inset: 0; gap: 0; }
-  .danfe-page { width: 210mm; min-height: 297mm; height: 297mm; padding: 3.5mm; overflow: hidden; box-shadow: none; font-size: 8.9px; line-height: 1.17; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .danfe-page:last-child { break-after: auto; }
+  body.danfe-open { overflow: visible; }
+  body > :not(#app) { display: none; }
+  #app > :not(.danfe) { display: none; }
+  .danfe, .danfe-modal, .danfe-scroll, #danfe-content { position: static; display: block; width: auto; height: auto; max-height: none; overflow: visible; margin: 0; padding: 0; border: 0; box-shadow: none; backdrop-filter: none; }
+  .danfe-toolbar { display: none; }
+  .danfe-pages { position: static; display: block; gap: 0; }
+  .danfe-page > * { flex-shrink: 0; }
+  .danfe-measuring .products-table { flex: 0 0 auto; }
+  .danfe-measuring .products-filler { display: none; }
+  .danfe-measuring .danfe-footer { margin-top: 0; }
+  .danfe-page.danfe-oversized { height: auto; overflow: visible; }
+  .products-table thead { display: table-header-group; }
+  .danfe-page { width: 210mm; min-height: 297mm; height: 297mm; padding: 3.5mm; overflow: visible; break-after: page; zoom: 1 !important; box-shadow: none; font-size: 8.9px; line-height: 1.17; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .danfe-pages:last-child .danfe-page:last-child { break-after: auto; }
   .danfe-section-title { font-size: 7.8px; }
   .fiscal-label { font-size: 6.35px; font-weight: 700; }
   .fiscal-value { font-size: 8.65px; }
