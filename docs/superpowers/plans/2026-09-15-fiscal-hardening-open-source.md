@@ -24,9 +24,11 @@ Arquitetura preservada: **site estático + App/Bridge local por PC**. O objetivo
 
 Implementado no site, lote, Bridge, certificado A1, SOAP `NFeDistribuicaoDFe` e helper Portal, preservando compatibilidade com chaves/CNPJs numéricos.
 
+A interface também foi alinhada ao novo contrato: mostra **44 caracteres**, deixa de forçar teclado numérico, remove a menção ao antigo teto fixo de 10 chaves no placeholder do lote e o diagnóstico local passa a ocultar chaves alfanuméricas de 44 posições.
+
 ## Fase 2 — conformidade e impressão do DANFE
 
-**Status: implementada; aguardando CI e validação física.**
+**Status: implementação automatizada concluída; falta somente aceitação física A4 antes da próxima release.**
 
 Entregue:
 
@@ -41,24 +43,27 @@ Entregue:
 - CSS morto de `.danfe-measuring` removido;
 - regressões unitárias atualizadas.
 
-Critério para fechar a fase: `web`, `bridge` e `windows-package` verdes no mesmo SHA e checklist físico A4 executado.
+Critério restante para fechar fisicamente a fase: executar o checklist A4 em Windows/impressora real.
 
 ## Fase 3 — teste real de impressão com Playwright
 
-**Próxima etapa.**
+**Status: concluída e validada no CI.**
 
-Adicionar `@playwright/test` em versão fixa ao workspace e ao `package-lock.json`. O CI deverá instalar apenas Chromium e gerar PDF A4 com fixtures representativas para verificar:
+Implementado Playwright em versão fixa e isolado em `tests/playwright`, com lockfile próprio. O CI instala somente Chromium e executa o job `danfe-print` para gerar PDFs A4 e validar:
 
 1. número de folhas;
 2. ordem dos itens;
 3. cabeçalhos obrigatórios nas continuações;
 4. NCM/SH e código de barras;
 5. ausência de overflow/cortes;
-6. NF-e curta, longa, fornecedor com linhas internas e lote.
+6. NF-e curta e longa;
+7. chave alfanumérica.
 
-Não usar `npx` flutuante. A dependência entra somente com lockfile revisado.
+Os artifacts do teste ficam disponíveis temporariamente no workflow. Esse gate encontrou e evitou uma diferença real de paginação durante a implantação. A validação física continua obrigatória porque driver e margens não imprimíveis variam por impressora.
 
 ## Fase 4 — adoção incremental do Unimake.DFe
+
+**Status: pendente de POC isolado; não entra no caminho de produção antes de paridade comprovada.**
 
 1. criar testes de paridade entre nossas rotinas e a biblioteca;
 2. validar explicitamente CNPJ/chave alfanuméricos e schemas vigentes;
@@ -70,6 +75,8 @@ Bridge, Portal, UI, regras de fornecedores e renderer DANFE permanecem sob nosso
 
 ## Fase 5 — RTC / IBS / CBS
 
+**Status: pendente.**
+
 - adicionar fixtures dos grupos atuais;
 - ampliar o modelo XML sem remover campos existentes;
 - mapear o que o DANFE vigente exige antes de exibir novos campos;
@@ -77,12 +84,20 @@ Bridge, Portal, UI, regras de fornecedores e renderer DANFE permanecem sob nosso
 
 ## Fase 6 — privacidade, multi-PC e supply chain
 
-- retirar identificadores internos/pessoais do bundle público;
+**Status: parcialmente iniciado.**
+
+Concluído:
+
+- `.gitignore` passou a bloquear preventivamente `*.pfx`, `*.p12`, `*.pem` e `*.key`;
+- etapas que recebem secrets de Authenticode agora só executam em `push` confiável para `main`, não em builds de pull request.
+
+Pendente:
+
+- retirar identificadores internos/pessoais do bundle público sem quebrar as regras operacionais por fornecedor;
 - tratar o limite SEFAZ por CNPJ entre vários PCs sem reintroduzir PC central;
-- configurar Authenticode em fluxo de release confiável;
-- isolar segredos de assinatura de builds de PR;
+- configurar certificado real de Authenticode e, idealmente, ambiente protegido de release;
 - proteger `main` contra force-push/deleção e adotar checks obrigatórios quando compatível com o fluxo;
-- alinhar versão, release e artefatos.
+- alinhar versão, release e artefatos após as fases fiscais restantes.
 
 ## Critério de release
 
