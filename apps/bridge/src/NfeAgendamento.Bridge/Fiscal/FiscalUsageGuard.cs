@@ -191,7 +191,11 @@ public sealed class FiscalUsageGuard
                 FileShare.None,
                 bufferSize: 4096,
                 FileOptions.WriteThrough))
-            using (var writer = new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), leaveOpen: true))
+            using (var writer = new StreamWriter(
+                stream,
+                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+                bufferSize: 4096,
+                leaveOpen: true))
             {
                 writer.Write(json);
                 writer.Flush();
