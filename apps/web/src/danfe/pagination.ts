@@ -2,9 +2,9 @@
  * Ajusta a paginação de impressão sem depender do layout momentâneo do navegador.
  *
  * O evento `beforeprint` pode ocorrer antes de o Chromium aplicar `@media print`.
- * Medir `getBoundingClientRect()` nesse ponto faz uma página saudável parecer cheia e
- * pode empurrar praticamente um item por folha. Aqui usamos apenas o conteúdo das
- * linhas e limites conservadores em milímetros, deixando a impressão determinística.
+ * Medir a geometria nesse ponto faz uma página saudável parecer cheia e pode empurrar
+ * praticamente um item por folha. Aqui usamos apenas o conteúdo das linhas e limites
+ * conservadores em milímetros, deixando a impressão determinística.
  */
 const FIRST_PAGE_PRODUCT_SPACE_MM = 104;
 const CONTINUATION_PRODUCT_SPACE_MM = 218;
