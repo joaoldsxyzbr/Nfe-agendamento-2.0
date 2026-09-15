@@ -13,7 +13,7 @@ NFe Agendamento é um aplicativo interno para consultar NF-e, baixar XML e gerar
 - **Helper Portal:** WinForms/WebView2 persistente para o fallback pelo Portal Nacional; hCaptcha continua sempre manual.
 - **Certificado A1:** descoberto em `CurrentUser/My`; PFX, senha e chave privada nunca são enviados ao site ou ao Cloudflare.
 - **Persistência local:** thumbprint selecionado em `%LOCALAPPDATA%/NfeAgendamentoBridge/settings.json` e metadados da proteção fiscal em `fiscal-usage.json`.
-- **Versão pública atual:** `0.0.13`. A `main` contém hardening posterior ainda não publicado em nova release.
+- **Versão canônica atual:** `0.0.14`; a publicação da release é automatizada somente após o CI do commit `release: v0.0.14` ficar verde.
 
 Não existem Central, pareamento, servidor LAN, mDNS ou pasta compartilhada na arquitetura atual. Cada PC usa seu próprio Bridge.
 
@@ -103,11 +103,11 @@ Jobs obrigatórios do pipeline:
 - `fiscal-compatibility` — POC Unimake e paridade fiscal;
 - `windows-package` — empacotamento Windows somente depois dos gates anteriores.
 
-## Dependências externas ainda necessárias
+## Validações/configurações externas ainda pendentes
 
-O código pode ser concluído no repositório, mas três validações/configurações não podem ser simuladas:
+O código e a release podem ser produzidos no repositório, mas três controles continuam dependendo do ambiente real:
 
-- **A4 físico:** imprimir o checklist em Windows/impressora real antes da próxima release;
+- **A4 físico:** executar o checklist em Windows/impressora real para declarar a release fisicamente validada;
 - **Authenticode:** fornecer/configurar certificado real de code signing e secrets do ambiente de release;
 - **proteção da `main`:** habilitar ruleset/branch protection e checks obrigatórios com permissão administrativa no GitHub.
 
@@ -149,12 +149,12 @@ O CI usa o Wrangler do lockfile e executa `./node_modules/.bin/wrangler deploy -
 
 ## Distribuição Windows
 
-Release pública atual: **v0.0.13**.
+Versão canônica da release: **v0.0.14**.
 
 Asset principal:
 
 ```text
-NFeAgendamentoBridge-Setup-v0.0.13.exe
+NFeAgendamentoBridge-Setup-v0.0.14.exe
 ```
 
 O instalador é por usuário, não pede administrador, mantém App + Bridge + helper Portal lado a lado, cria atalho no Menu Iniciar, registra início automático e preserva `%LOCALAPPDATA%\NfeAgendamentoBridge`.
@@ -163,7 +163,7 @@ O Microsoft Edge WebView2 Runtime é necessário para o fallback pelo Portal Nac
 
 ## Fluxo de release
 
-1. concluir os critérios técnicos e a validação física aplicável;
+1. concluir os critérios técnicos aplicáveis;
 2. atualizar a versão em `Directory.Build.props`;
 3. adicionar `docs/releases/v<versão>.md`;
 4. fazer o commit final `release: v<versão>`;
@@ -172,7 +172,7 @@ O Microsoft Edge WebView2 Runtime é necessário para o fallback pelo Portal Nac
 
 ## Validação física
 
-O CI não consegue provar interação real com certificado A1, SEFAZ, Portal/hCaptcha ou uma impressora específica. Antes da próxima release executar:
+O CI não consegue provar interação real com certificado A1, SEFAZ, Portal/hCaptcha ou uma impressora específica. Para declarar a v0.0.14 fisicamente validada, executar:
 
 - `docs/testing/acceptance.md`;
 - `docs/testing/batch-query.md`;
@@ -197,4 +197,4 @@ Não provoque bloqueio `656` repetindo consultas artificialmente apenas para tes
 - atualizador: `docs/testing/bridge-updater.md`;
 - DANFE: `docs/testing/danfe-layout.md`;
 - tela de consulta: `docs/ui/consultation-screen.md`;
-- release pública atual: `docs/releases/v0.0.13.md`.
+- release atual: `docs/releases/v0.0.14.md`.
