@@ -3,27 +3,67 @@ import { describe, expect, it } from 'vitest';
 import { parseNfeXml } from '../src/nfe/xml';
 
 const KEY = '42260812345678000123550010000012341000012342';
+const ALPHA_KEY = '422609PC3D315K000193550010000012341000012341';
 const basicXml = readFileSync(new URL('./fixtures/nfe-basic.xml', import.meta.url), 'utf8');
 const fullXml = readFileSync(new URL('./fixtures/nfe-danfe-full.xml', import.meta.url), 'utf8');
 
 describe('DANFE approved behavior', () => {
-  it('renders fiscal blocks, item first and useful transport', async () => {
+  it('renders fiscal blocks, mandatory product columns and useful transport', async () => {
     const { renderDanfeHtml } = await import('../src/danfe/render');
     const html = renderDanfeHtml(parseNfeXml(fullXml, KEY));
 
     for (const text of ['DANFE', 'Destinatário / Remetente', 'Cálculo do imposto', 'FATURA / DUPLICATA', 'PAGAMENTO', 'Dados dos produtos / serviços', 'RESERVADO AO FISCO']) {
       expect(html).toContain(text);
     }
-    expect(html.indexOf('<th>Item</th>')).toBeLessThan(html.indexOf('<th>Código produto</th>'));
-    for (const column of ['<th>NCM/SH</th>', '<th>Valor IPI</th>', '<th>Alíq. IPI</th>']) {
-      expect(html).not.toContain(column);
-    }
-    for (const column of ['<th>Descrição do produto / serviço</th>', '<th>Quant.</th>', '<th>Valor unit.</th>', '<th>Valor total</th>', '<th>Valor ICMS</th>']) {
+
+    expect(html.indexOf('<th>Código produto</th>')).toBeLessThan(html.indexOf('<th>Descrição do produto / serviço</th>'));
+    expect(html.indexOf('<th>Descrição do produto / serviço</th>')).toBeLessThan(html.indexOf('<th>Item</th>'));
+    expect(html.indexOf('<th>Item</th>')).toBeLessThan(html.indexOf('<th>NCM/SH</th>'));
+
+    for (const column of ['<th>Código produto</th>', '<th>Descrição do produto / serviço</th>', '<th>NCM/SH</th>', '<th>Quant.</th>', '<th>Valor unit.</th>', '<th>Valor total</th>', '<th>Valor ICMS</th>', '<th>Alíq. ICMS</th>']) {
       expect(html).toContain(column);
+    }
+    for (const column of ['<th>Valor IPI</th>', '<th>Alíq. IPI</th>']) {
+      expect(html).not.toContain(column);
     }
     expect(html).toContain('ABC-001');
     expect(html).toContain('TRANSPORTADORA TESTE');
     expect(html).toContain('class="products-filler"');
+  });
+
+  it('repeats the mandatory fiscal header fields on continuation pages', async () => {
+    const { renderDanfeHtml } = await import('../src/danfe/render');
+    const base = parseNfeXml(fullXml, KEY);
+    const longNfe = {
+      ...base,
+      products: Array.from({ length: 80 }, (_, index) => ({
+        ...base.products[index % base.products.length],
+        itemNumber: index + 1,
+        description: `${base.products[index % base.products.length].description} PRODUTO DE TESTE COM DESCRIÇÃO ESTENDIDA ${index + 1}`,
+      })),
+    };
+    const html = renderDanfeHtml(longNfe);
+    const pages = countOccurrences(html, 'class="danfe-page"');
+
+    expect(pages).toBeGreaterThan(1);
+    expect(countOccurrences(html, 'Natureza da operação')).toBe(pages);
+    expect(countOccurrences(html, 'Inscrição estadual do subst. tributário')).toBe(pages);
+    expect(countOccurrences(html, 'Código de barras da chave de acesso')).toBe(pages);
+  });
+
+  it('encodes alphanumeric access keys using hybrid Code 128 C/A and preserves letters in display', async () => {
+    const { encodeAccessKeyCode128, renderDanfeHtml } = await import('../src/danfe/render');
+    const encoded = encodeAccessKeyCode128(ALPHA_KEY);
+
+    expect(encoded[0]).toBe(105);
+    expect(encoded).toContain(101);
+    expect(encoded).toContain(99);
+    expect(encoded.at(-1)).toBe(106);
+
+    const base = parseNfeXml(basicXml, KEY);
+    const html = renderDanfeHtml({ ...base, accessKey: ALPHA_KEY });
+    expect(html).toContain('PC3D');
+    expect(html).toContain('Código de barras da chave de acesso');
   });
 
   it('shows authentication guidance and issuer phone in the fiscal header', async () => {
@@ -112,23 +152,26 @@ describe('DANFE approved behavior', () => {
     expect(html).toContain('/src/danfe/zoom-direct.ts');
   });
 
-  it('keeps print pagination deterministic and independent from viewport geometry', () => {
+  it('keeps print pagination deterministic and continuation headers complete', () => {
     const pagination = readFileSync(new URL('../src/danfe/pagination.ts', import.meta.url), 'utf8');
     expect(pagination).not.toContain('getBoundingClientRect');
     expect(pagination).not.toContain('getComputedStyle');
     expect(pagination).not.toContain('danfe-measuring');
     expect(pagination).toContain('FIRST_PAGE_PRODUCT_SPACE_MM = 104');
-    expect(pagination).toContain('CONTINUATION_PRODUCT_SPACE_MM = 218');
+    expect(pagination).toContain('CONTINUATION_PRODUCT_SPACE_MM = 204');
     expect(pagination).toContain("row.querySelector('.internal-product-code')");
     expect(pagination).toContain("row.querySelector('.internal-quantity')");
+    expect(pagination).toContain("page.querySelector<HTMLElement>('.operation-grid')");
+    expect(pagination).toContain("page.querySelector<HTMLElement>('.issuer-registry')");
     expect(pagination).toContain("body.querySelector<HTMLTableRowElement>('.products-filler')");
   });
 
-  it('keeps the approved A4 layout readable and structured like the visual reference', () => {
+  it('keeps the approved A4 layout readable and compliant with product columns', () => {
     const css = readFileSync(new URL('../src/danfe/styles.css', import.meta.url), 'utf8');
-    for (const rule of ['width: 210mm', 'min-height: 277mm', 'font-family: Arial', '.products-table col.item', 'width: 8mm', '@media print']) {
+    for (const rule of ['width: 210mm', 'min-height: 277mm', 'font-family: Arial', '.products-table col.item', '.products-table col.ncm', '@media print']) {
       expect(css).toContain(rule);
     }
+    expect(css).toContain('grid-template-columns: 60mm 27mm 1fr');
     expect(css).toContain('min-height: 40px');
     expect(css).toContain('min-height: 94px');
     expect(css).toContain('min-height: 92px');
@@ -136,14 +179,18 @@ describe('DANFE approved behavior', () => {
     expect(css).toContain('font-size: 8.9px');
     expect(css).toContain('.fiscal-label { font-size: 6.35px; font-weight: 700; }');
     expect(css).toContain('.products-table td { font-size: 8.15px; line-height: 1.18; }');
-    expect(css).toContain('.products-table col.description { width: 62mm; }');
+    expect(css).toContain('.products-table col.description { width: 48mm; }');
     expect(css).toContain('grid-template-columns: repeat(12, minmax(0, 1fr));');
     expect(css).toContain('align-items: flex-start; justify-content: center; padding: 5px 8px; text-align: left;');
     expect(css).toContain('.products-table.danfe-products-fill { width: 100%; flex: 1 1 auto; border-collapse: collapse; table-layout: fixed; }');
     expect(css).toContain('.products-table .products-filler { height: 100%; }');
     expect(css).toContain('.products-table .products-filler td { height: 100%; padding: 0; }');
     expect(css).toContain('.danfe-footer { margin-top: auto;');
-    expect(css).not.toContain('.products-table col.ncm');
+    expect(css).not.toContain('.danfe-measuring');
     expect(css).not.toContain('tbody tr:last-child td { height: 100%; }');
   });
 });
+
+function countOccurrences(value: string, needle: string): number {
+  return value.split(needle).length - 1;
+}
