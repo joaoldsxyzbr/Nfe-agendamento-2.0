@@ -7,6 +7,7 @@ public sealed class AccessKeyTests
 {
     private const string ValidNumericKey = "42260812345678000123550010000012341000012342";
     private const string ValidAlphanumericKey = "41260612ABC34501DE35550010000001231876543214";
+    private const string ValidNfceKey = "42260812345678000123650010000012341000012345";
 
     [Fact]
     public void Valid_numeric_key_is_parsed()
@@ -28,6 +29,13 @@ public sealed class AccessKeyTests
         Assert.NotNull(accessKey);
         Assert.Equal(ValidAlphanumericKey, accessKey.Value);
         Assert.Equal("41", accessKey.UfAutor);
+    }
+
+    [Fact]
+    public void Valid_nfce_model_65_key_is_rejected()
+    {
+        Assert.False(AccessKey.TryParse(ValidNfceKey, out var accessKey));
+        Assert.Null(accessKey);
     }
 
     [Theory]
