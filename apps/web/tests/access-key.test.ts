@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 const VALID_NUMERIC_KEY = '42260812345678000123550010000012341000012342';
 const VALID_ALPHANUMERIC_KEY = '41260612ABC34501DE35550010000001231876543214';
+const VALID_NFCE_KEY = '42260812345678000123650010000012341000012345';
 
 describe('validateAccessKey', () => {
   it('accepts the legacy numeric 44-character NF-e key', async () => {
@@ -22,6 +23,12 @@ describe('validateAccessKey', () => {
       value: VALID_ALPHANUMERIC_KEY,
       ufAutor: '41',
     });
+  });
+
+  it('rejects a structurally valid NFC-e model 65 key', async () => {
+    await expect(
+      import('../src/nfe/access-key').then(({ validateAccessKey }) => validateAccessKey(VALID_NFCE_KEY)),
+    ).resolves.toEqual({ valid: false, error: 'Este sistema aceita somente NF-e modelo 55.' });
   });
 
   it.each([
