@@ -16,5 +16,6 @@
 
   <ItemGroup>
     <Compile Include="../../apps/bridge/src/NfeAgendamento.Bridge/Fiscal/AccessKey.cs" Link="Production/AccessKey.cs" />
+    <None Include="../../apps/web/tests/fixtures/nfe-rtc.xml" Link="Fixtures/nfe-rtc.xml" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

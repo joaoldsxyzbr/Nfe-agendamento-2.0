@@ -28,7 +28,11 @@ O executável de compatibilidade compara o comportamento do nosso `AccessKey` co
 - reconhecimento explícito de CNPJ alfanumérico;
 - cálculo do DV da chave alfanumérica de referência.
 
-O POC também exige em tempo de compilação a presença dos tipos `Unimake.Business.DFe.Xml.NFe.IBSCBS` e `IBSCBSTot`, confirmando que a versão avaliada já expõe modelo para os grupos de RTC usados na próxima fase de estudo.
+O POC também exige em tempo de compilação a presença dos tipos `Unimake.Business.DFe.Xml.NFe.IBSCBS` e `IBSCBSTot`.
+
+Além disso, a fixture sintética `apps/web/tests/fixtures/nfe-rtc.xml` é copiada para o POC e passa por desserialização e serialização com `NfeProc`. O gate falha se o round-trip perder os grupos centrais que já modelamos no site: `IBSCBS`, `gIBSCBS`, `IBSCBSTot`, `ISTot`, `vNFTot` ou a classificação tributária de referência.
+
+Isso transforma o Unimake de uma checagem apenas estrutural para um **oráculo adicional de compatibilidade RTC**, ainda sem colocá-lo no caminho de produção.
 
 ## Critério de adoção
 
@@ -37,15 +41,17 @@ A existência do POC **não autoriza** trocar nosso fluxo SEFAZ, parser ou DANFE
 Ordem recomendada:
 
 1. usar a biblioteca como oráculo adicional em testes fiscais;
-2. comparar serialização/desserialização de XMLs atuais, inclusive CNPJ alfanumérico e IBS/CBS;
-3. introduzir uma interface/adaptador próprio somente quando houver benefício claro;
-4. migrar uma responsabilidade por vez;
-5. manter Portal, UI, regras operacionais e renderer DANFE sob controle do projeto.
+2. ampliar as fixtures RTC para os cenários efetivamente usados, incluindo grupos monofásicos quando necessários;
+3. comparar serialização/desserialização desses XMLs com schemas oficiais vigentes;
+4. introduzir uma interface/adaptador próprio somente quando houver benefício claro;
+5. migrar uma responsabilidade por vez;
+6. manter Portal, UI, regras operacionais e renderer DANFE sob controle do projeto.
 
 ## Limites conhecidos
 
 - o POC ainda não executa consulta real à SEFAZ;
 - não usa certificado A1;
 - não substitui validação contra schemas oficiais;
-- não prova que todo o modelo IBS/CBS necessário ao nosso DANFE esteja mapeado corretamente;
+- o round-trip atual cobre a fixture RTC básica, não todos os grupos opcionais/monofásicos;
+- não prova que todo o modelo IBS/CBS necessário ao DANFE esteja mapeado corretamente;
 - não remove a necessidade de fixtures oficiais/representativas da RTC.

@@ -1,5 +1,6 @@
 using NfeAgendamento.Bridge.Fiscal;
 using Unimake.Business.DFe.Utility;
+using Unimake.Business.DFe.Xml.NFe;
 
 var cases = new[]
 {
@@ -40,12 +41,14 @@ if (XMLUtility.CalcularDVChave(alphaWithoutDv) != 4)
     throw new InvalidOperationException("Unimake.DFe calculou DV inesperado para a chave alfanumérica de referência.");
 }
 
-if (typeof(Unimake.Business.DFe.Xml.NFe.IBSCBS) is null || typeof(Unimake.Business.DFe.Xml.NFe.IBSCBSTot) is null)
+if (typeof(IBSCBS) is null || typeof(IBSCBSTot) is null)
 {
     throw new InvalidOperationException("Tipos RTC IBS/CBS esperados não estão disponíveis no pacote avaliado.");
 }
 
-Console.WriteLine("Unimake.DFe POC: paridade de chave alfanumérica e tipos RTC disponíveis.");
+ValidateRtcFixtureRoundTrip();
+
+Console.WriteLine("Unimake.DFe POC: paridade de chave alfanumérica e round-trip RTC validados.");
 return;
 
 static bool IsValidInUnimake(string accessKey)
@@ -58,5 +61,41 @@ static bool IsValidInUnimake(string accessKey)
     catch
     {
         return false;
+    }
+}
+
+static void ValidateRtcFixtureRoundTrip()
+{
+    var fixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "nfe-rtc.xml");
+    if (!File.Exists(fixturePath))
+    {
+        throw new InvalidOperationException("Fixture RTC não foi copiada para o POC Unimake.DFe.");
+    }
+
+    var sourceXml = File.ReadAllText(fixturePath);
+    var parsed = new NfeProc().LoadFromXML(sourceXml)
+        ?? throw new InvalidOperationException("Unimake.DFe não desserializou a fixture RTC.");
+    var roundTripXml = parsed.GerarXML().OuterXml;
+
+    var requiredTags = new[]
+    {
+        "<IBSCBS>",
+        "<gIBSCBS>",
+        "<IBSCBSTot>",
+        "<ISTot>",
+        "<vNFTot>",
+    };
+
+    foreach (var tag in requiredTags)
+    {
+        if (!roundTripXml.Contains(tag, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException($"Round-trip RTC do Unimake.DFe perdeu a tag {tag}.");
+        }
+    }
+
+    if (!roundTripXml.Contains("<cClassTrib>000001</cClassTrib>", StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("Round-trip RTC do Unimake.DFe perdeu a classificação tributária esperada.");
     }
 }
