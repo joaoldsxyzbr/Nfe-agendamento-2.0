@@ -59,6 +59,12 @@ describe('settings panel', () => {
     expect(styles).toContain('.diagnostics-error-row');
   });
 
+  it('redacts numeric and alphanumeric access keys from diagnostic errors', () => {
+    const settings = readIfExists(settingsModuleUrl);
+    expect(settings).toContain("replace(/\\b[A-Z0-9]{44}\\b/gi, '[chave omitida]')");
+    expect(settings).not.toContain("replace(/\\b\\d{44}\\b/g, '[chave omitida]')");
+  });
+
   it('opens and closes the popup while preserving the existing certificate controls', () => {
     const settings = readIfExists(settingsModuleUrl);
     expect(settings).toContain("settingsTrigger.addEventListener('click'");
