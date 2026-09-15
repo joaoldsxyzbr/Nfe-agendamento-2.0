@@ -192,5 +192,5 @@ function requireChild<T extends Element>(root: ParentNode, selector: string): T 
 
 function diagnosticErrorMessage(error: unknown): string {
   const raw = error instanceof Error ? error.message : 'Não foi possível acessar o Bridge local.';
-  return raw.replace(/\b\d{44}\b/g, '[chave omitida]').slice(0, 240);
+  return raw.replace(/\b[A-Z0-9]{44}\b/gi, '[chave omitida]').slice(0, 240);
 }
