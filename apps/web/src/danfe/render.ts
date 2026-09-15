@@ -7,7 +7,8 @@ const DANFE_ZOOM_MIN = 0.6;
 const DANFE_ZOOM_MAX = 2;
 const DANFE_ZOOM_STEP = 0.1;
 const FIRST_PAGE_PRODUCT_SPACE_MM = 108;
-const CONTINUATION_PRODUCT_SPACE_MM = 224;
+const CONTINUATION_PRODUCT_SPACE_MM = 204;
+const ACCESS_KEY_BARCODE_PATTERN = /^[0-9]{6}[A-Z0-9]{12}[0-9]{26}$/;
 
 const PAYMENT_NAMES: Readonly<Record<string, string>> = {
   '01': 'Dinheiro', '02': 'Cheque', '03': 'Cartão de Crédito', '04': 'Cartão de Débito',
@@ -68,6 +69,8 @@ export function renderDanfeHtml(nfe: ParsedNfe): string {
 
     return `<article class="danfe-page" data-page="${page}">
       ${buildHeader(nfe, page, totalPages)}
+      ${buildOperation(nfe)}
+      ${buildIssuerRegistry(nfe)}
       ${buildProductsTable(nfe, products)}
       ${buildFooter(nfe)}
     </article>`;
@@ -77,6 +80,45 @@ export function renderDanfeHtml(nfe: ParsedNfe): string {
 export function nextDanfeZoom(current: number, deltaY: number): number {
   const direction = deltaY < 0 ? 1 : -1;
   return clamp(Number((current + direction * DANFE_ZOOM_STEP).toFixed(2)), DANFE_ZOOM_MIN, DANFE_ZOOM_MAX);
+}
+
+export function encodeAccessKeyCode128(text: string): number[] {
+  const clean = alphanumerics(text);
+  if (!ACCESS_KEY_BARCODE_PATTERN.test(clean)) return [];
+
+  const values: number[] = [];
+  let mode: 'A' | 'C' = 'C';
+  let index = 0;
+
+  while (index < clean.length) {
+    if (mode === 'C') {
+      const pair = clean.slice(index, index + 2);
+      if (/^\d{2}$/.test(pair)) {
+        values.push(Number(pair));
+        index += 2;
+        continue;
+      }
+      values.push(101);
+      mode = 'A';
+      continue;
+    }
+
+    const pair = clean.slice(index, index + 2);
+    if (/^\d{2}$/.test(pair)) {
+      values.push(99);
+      mode = 'C';
+      continue;
+    }
+
+    const code = clean.charCodeAt(index) - 32;
+    if (code < 0 || code > 95) return [];
+    values.push(code);
+    index += 1;
+  }
+
+  let checksum = 105;
+  values.forEach((value, valueIndex) => { checksum += value * (valueIndex + 1); });
+  return [105, ...values, checksum % 103, 106];
 }
 
 export function attachDanfeZoom(container: HTMLElement): () => void {
@@ -301,19 +343,19 @@ function buildProductsTable(nfe: ParsedNfe, products: readonly ParsedNfeProduct[
     const internalQuantity = resolveSupplierInternalQuantity({ emitterTaxId: nfe.issuer.taxId, quantity: product.quantity });
     const quantity = `<span class="source-product-quantity">${decimal(product.quantity, 4, 4)}</span>${internalQuantity !== null ? `<small class="internal-quantity">[${internalQuantity} UN]</small>` : ''}`;
     return `<tr>
-      <td class="center item-col">${product.itemNumber}</td><td class="code-col">${code}</td><td class="description">${description}</td>
+      <td class="code-col">${code}</td><td class="description">${description}</td><td class="center item-col">${product.itemNumber}</td><td class="center ncm-col">${escapeHtml(product.ncm)}</td>
       <td class="center">${escapeHtml(product.tax.cst)}</td><td class="center">${escapeHtml(product.cfop)}</td><td class="center">${escapeHtml(product.unit)}</td>
       <td class="numeric">${quantity}</td><td class="numeric">${decimal(product.unitPrice, 4, 4)}</td><td class="numeric">${moneyFiscal(product.totalPrice)}</td><td class="numeric">${moneyFiscal(product.discount)}</td>
       <td class="numeric">${moneyFiscal(product.tax.icmsBase)}</td><td class="numeric">${moneyFiscal(product.tax.icms)}</td><td class="numeric">${decimal(product.tax.icmsRate)}</td>
     </tr>`;
   }).join('');
-  const filler = rows ? '<tr class="products-filler" aria-hidden="true"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>' : '';
+  const filler = rows ? '<tr class="products-filler" aria-hidden="true"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>' : '';
 
   return `<div class="danfe-section-title">Dados dos produtos / serviços</div>
     <table class="products-table danfe-products-fill">
-      <colgroup><col class="item"><col class="code"><col class="description"><col class="cst"><col class="cfop"><col class="unit"><col class="qty"><col class="unit-value"><col class="total-value"><col class="discount"><col class="bc"><col class="icms"><col class="rate"></colgroup>
-      <thead><tr><th>Item</th><th>Código produto</th><th>Descrição do produto / serviço</th><th>O/CST</th><th>CFOP</th><th>UN</th><th>Quant.</th><th>Valor unit.</th><th>Valor total</th><th>Valor desc.</th><th>B.Cálc ICMS</th><th>Valor ICMS</th><th>Alíq. ICMS</th></tr></thead>
-      <tbody>${rows || '<tr><td colspan="13">Nenhum produto informado no XML.</td></tr>'}${filler}</tbody>
+      <colgroup><col class="code"><col class="description"><col class="item"><col class="ncm"><col class="cst"><col class="cfop"><col class="unit"><col class="qty"><col class="unit-value"><col class="total-value"><col class="discount"><col class="bc"><col class="icms"><col class="rate"></colgroup>
+      <thead><tr><th>Código produto</th><th>Descrição do produto / serviço</th><th>Item</th><th>NCM/SH</th><th>O/CST</th><th>CFOP</th><th>UN</th><th>Quant.</th><th>Valor unit.</th><th>Valor total</th><th>Valor desc.</th><th>B.Cálc ICMS</th><th>Valor ICMS</th><th>Alíq. ICMS</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="14">Nenhum produto informado no XML.</td></tr>'}${filler}</tbody>
     </table>`;
 }
 
@@ -354,7 +396,7 @@ function paginateProductsByAvailableSpace(products: readonly ParsedNfeProduct[],
 }
 
 function estimateProductHeight(product: ParsedNfeProduct): number {
-  const descriptionLines = Math.max(1, Math.ceil(product.description.length / 52));
+  const descriptionLines = Math.max(1, Math.ceil(product.description.length / 43));
   const packageLines = productPackageLabel(product) ? 1 : 0;
   const taxLines = product.tax.taxNote ? Math.max(1, Math.ceil(product.tax.taxNote.length / 58)) : 0;
   return 3.4 + (descriptionLines - 1) * 1.8 + packageLines * 1.7 + taxLines * 1.7;
@@ -388,13 +430,8 @@ function fiscalCell(label: string, content: string, extraClass = ''): string {
 }
 
 function barcodeSvg(text: string): string {
-  const clean = digits(text);
-  if (!clean || clean.length % 2 !== 0) return '';
-  const values: number[] = [];
-  for (let index = 0; index < clean.length; index += 2) values.push(Number(clean.slice(index, index + 2)));
-  let checksum = 105;
-  values.forEach((item, index) => { checksum += item * (index + 1); });
-  const encoded = [105, ...values, checksum % 103, 106];
+  const encoded = encodeAccessKeyCode128(text);
+  if (!encoded.length) return '';
   const modules = encoded.map((code) => CODE128_PATTERNS[code] || '').join('');
   let x = 10;
   let black = true;
@@ -420,8 +457,9 @@ function joinAddress(address: ParsedNfeParty['address']): string {
 }
 
 function formatDocument(text: string): string {
+  const alpha = alphanumerics(text);
+  if (/^[A-Z0-9]{12}\d{2}$/.test(alpha)) return alpha.replace(/^(.{2})(.{3})(.{3})(.{4})(.{2})$/, '$1.$2.$3/$4-$5');
   const clean = digits(text);
-  if (clean.length === 14) return clean.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
   if (clean.length === 11) return clean.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
   return text;
 }
@@ -443,7 +481,7 @@ function formatSeries(text: string): string {
 }
 
 function formatKey(text: string): string {
-  return digits(text).replace(/(.{4})/g, '$1 ').trim();
+  return alphanumerics(text).replace(/(.{4})/g, '$1 ').trim();
 }
 
 function datePart(value: string | null): string {
@@ -485,6 +523,10 @@ function decimal(value: number, minimumFractionDigits = 2, maximumFractionDigits
 
 function digits(text: string): string {
   return String(text || '').replace(/\D/g, '');
+}
+
+function alphanumerics(text: string): string {
+  return String(text || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 }
 
 function escapeHtml(text: unknown): string {
