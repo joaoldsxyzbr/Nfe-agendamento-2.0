@@ -55,6 +55,39 @@ public sealed class FiscalUsageGuardTests
         }
     }
 
+    [Fact]
+    public void Corrupted_state_fails_safe_and_persists_recovery_cooldown()
+    {
+        var path = TemporaryPath();
+        var now = new DateTimeOffset(2026, 9, 15, 12, 0, 0, TimeSpan.Zero);
+        try
+        {
+            File.WriteAllText(path, "{arquivo-corrompido");
+
+            var guard = new FiscalUsageGuard(path, () => now);
+            var decision = guard.Check(Cnpj);
+
+            Assert.False(decision.AllowDirectLookup);
+            Assert.Equal("state_recovery", decision.Reason);
+            Assert.Equal(now.AddHours(1), decision.BlockedUntilUtc);
+
+            var recoveredState = File.ReadAllText(path);
+            Assert.DoesNotContain(Cnpj, recoveredState);
+            Assert.Contains("GlobalBlockedUntilUtc", recoveredState);
+
+            var restarted = new FiscalUsageGuard(path, () => now);
+            Assert.False(restarted.Check(Cnpj).AllowDirectLookup);
+            Assert.Equal(now.AddHours(1), restarted.Check(Cnpj).BlockedUntilUtc);
+
+            now = now.AddHours(1).AddSeconds(1);
+            Assert.True(restarted.Check(Cnpj).AllowDirectLookup);
+        }
+        finally
+        {
+            DeleteIfExists(path);
+        }
+    }
+
     private static string TemporaryPath() => Path.Combine(
         Path.GetTempPath(),
         $"nfe-agendamento-fiscal-usage-{Guid.NewGuid():N}.json");
