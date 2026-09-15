@@ -15,42 +15,46 @@ Reescrita limpa do NFe Agendamento com **site estático + App/Bridge Windows loc
 - **Regras por fornecedor:** catálogo declarativo centralizado em `apps/web/src/nfe/supplier-rules.ts`, sem condicionais de fornecedor espalhadas no renderizador do DANFE.
 - **Fallback Portal:** helper Windows separado com WebView2, Portal Nacional fixo, hCaptcha sempre manual e processo persistente reutilizado entre consultas.
 - **Distribuição Windows:** instalador Inno Setup por usuário, sem administrador, com início automático do app na bandeja no login.
-- **Versão canônica publicada:** `0.0.13` em `Directory.Build.props`.
+- **Versão pública atual:** `0.0.13`. A `main` contém melhorias posteriores ainda não publicadas em uma nova release.
 
-## Estado funcional — 14/09/2026
+## Estado funcional — 15/09/2026
 
 Implementado na `main` e coberto pelos gates automatizados aplicáveis do projeto:
 
 - Vite/TypeScript no frontend e .NET 10 no Bridge/App/Portal;
 - TypeScript em modo `strict`, lint adicional e verificação determinística de formato no CI;
-- dependências npm fixadas por `package-lock.json`, `npm ci` e `npm audit --audit-level=high` no CI;
-- dependências NuGet em locked mode;
+- dependências npm fixadas por lockfile, `npm ci` e `npm audit --audit-level=high` no CI;
+- dependências NuGet em locked mode onde fazem parte da aplicação; POC fiscal isolado com pacote fixado e NuGet Audit;
 - GitHub Actions do CI/release fixadas por SHA imutável, checkout sem persistência de credencial e permissões mínimas;
 - runners com versão explícita e timeout por job;
 - Inno Setup do empacotamento fixado em `6.7.1`, com checksums obrigatórios e validação da versão instalada;
-- pipeline preparado para Authenticode opcional, sem armazenar PFX/senha no repositório;
+- pipeline preparado para Authenticode opcional; etapas que recebem secrets de assinatura executam somente em `push` confiável para `main`;
+- `.gitignore` bloqueia preventivamente PFX/P12/PEM/KEY e arquivos de ambiente;
 - tema dark e DANFE A4 branco/fiscal;
 - preview DANFE em modal com `Ctrl + scroll`, impressão/PDF e download XML;
+- DANFE mantém NCM/SH, coluna operacional `Item` após a descrição, cabeçalhos fiscais nas folhas adicionais e código de barras híbrido CODE-128C/CODE-128A para chave alfanumérica;
+- paginação de impressão determinística, com `products-filler` e sem medição frágil de viewport durante `beforeprint`;
+- Playwright/Chromium gera PDFs A4 reais no CI e valida paginação, overflow, ordem de itens, NCM/SH, cabeçalhos de continuação, `Folha X/Y` e chave alfanumérica;
 - DANFE mostra a composição da embalagem (ex.: `CX C/ 20 UN`) quando ela pode ser determinada diretamente por `uCom/qCom` e `uTrib/qTrib` da NF-e;
-- Fernando Klein e Dionisio preservam o `cProd` fiscal e mostram o código interno compacto entre colchetes;
-- Souza Cruz preserva a quantidade fiscal e mostra a quantidade operacional compacta entre colchetes quando a conversão declarada for válida;
-- regras de fornecedores centralizadas em configuração declarativa validada, com catálogo compartilhado e conversão de quantidade fora do renderizador;
+- regras por fornecedor preservam os dados fiscais originais e aplicam apenas apresentação operacional declarativa;
 - painel de configurações para certificado A1;
 - painel de diagnóstico local com conexão do Bridge, versão, certificado selecionado, disponibilidade do WebView2, horário da última verificação e último erro da verificação;
+- mensagens do diagnóstico ocultam chaves numéricas ou alfanuméricas de 44 posições;
 - interface de consulta única com resultado integrado e ação **Nova consulta**;
 - modo **Lote** na mesma tela, sem limite rígido de quantidade, com validação/deduplicação, processamento sequencial e todas as chaves visíveis em linhas individuais;
 - cada NF-e concluída no lote libera imediatamente **Visualizar DANFE** e **Baixar XML**, com indicação da origem `SEFAZ` ou `Portal`;
 - lote híbrido **SEFAZ → Portal**: `217` usa Portal apenas naquela NF-e; `656`/429/`consumption_limit` muda a rota restante para Portal sem nova tentativa fiscal;
 - ações gerais do lote para cancelar, baixar somente XMLs concluídos em ZIP e imprimir somente DANFEs concluídos;
-- `FiscalUsageGuard` local com gate serial, janela de uma hora, proteção após limite e persistência por hash SHA-256 do CNPJ;
+- `FiscalUsageGuard` local com gate serial, janela de uma hora, limite local, persistência por hash SHA-256 do CNPJ e gravação durável;
+- estado fiscal local corrompido falha de forma conservadora: protege a rota SEFAZ por uma hora e direciona para o Portal em vez de zerar silenciosamente o histórico;
 - cabeçalho com marca e nome **NF-e / Agendamento** como conteúdo semântico real no `<h1>`;
-- atalho no topo do site para baixar o Setup Windows da release atual;
+- atalho no topo do site para baixar o Setup Windows da release pública atual;
 - `GET /api/v1/health`, certificados, seleção de A1, lookup NF-e e endpoints do Portal;
-- validação completa de chave NF-e de 44 dígitos;
+- chave de acesso NF-e de 44 caracteres com CNPJ numérico ou alfanumérico, DV conforme a regra vigente e rejeição explícita de NFC-e modelo 65; o produto aceita somente NF-e modelo 55;
 - transporte autenticado para `NFeDistribuicaoDFe` usando o A1 selecionado;
 - categorias normalizadas `success`, `fiscal_status`, `consumption_limit`, `certificate_error`, `transport_unavailable` e `technical_error`;
 - tratamento de `137`, `138`, `656`, HTTP 429, timeout e falhas ambíguas sem retry fiscal automático;
-- XML limitado a 10 MiB, DTD proibido, `XmlResolver = null` e validação contra a chave consultada;
+- XML limitado a 10 MiB, DTD proibido, `XmlResolver = null` no Bridge e validação contra a chave consultada;
 - fallback automático após `consumption_limit` ou retorno SEFAZ `217` (`fiscal_status`), sem repetir a consulta fiscal direta;
 - helper Portal continua observando o resultado após o hCaptcha e reconhece `Download do Documento` mesmo quando o Portal acrescenta sufixos visuais como `*`;
 - clique em **Download do Documento** é automático;
@@ -70,11 +74,13 @@ Implementado na `main` e coberto pelos gates automatizados aplicáveis do projet
 - tray com **Abrir NFe Agendamento**, **Verificar atualizações** e **Sair**;
 - atualizador manual valida release estável, nome/URL do asset, tamanho e SHA-256 antes de executar o Setup;
 - App, Bridge e Portal publicados como **self-contained win-x64**;
-- instalador por usuário em `%LOCALAPPDATA%\NFe Agendamento Bridge`, sem UAC/admin;
-- CI com jobs `web`, `bridge` e `windows-package`;
+- POC isolado de `Unimake.DFe` compara nosso validador fiscal com a biblioteca para chave numérica/alfanumérica e confirma a disponibilidade dos modelos RTC usados no estudo;
+- parser RTC complementar modela o núcleo de IBS/CBS/IS sem substituir o parser de produção nem alterar o DANFE antes do mapeamento fiscal de impressão;
+- CI com jobs `web`, `danfe-print`, `bridge`, `fiscal-compatibility` e `windows-package`;
+- `windows-package` só roda depois dos quatro gates anteriores;
 - release criada somente a partir dos artifacts do mesmo CI verde do commit marcador `release: v<versão>`.
 
-A **release pública v0.0.13 inclui a consulta em lote**. A `main` posterior à publicação remove o teto rígido de 10 chaves da interface; o processamento continua sequencial e, quando a proteção fiscal entra em ação, o restante segue pelo Portal com hCaptcha manual por operação. O Portal não é tratado como serviço oficialmente ilimitado. A publicação automatizada valida código, testes, build e empacotamento, mas não substitui a validação física com certificado A1/SEFAZ/Portal. Para essa validação, usar `docs/testing/acceptance.md` e `docs/testing/batch-query.md`. O desenho/contrato implementado está em `docs/superpowers/specs/2026-09-14-batch-query-design.md`.
+A **release pública v0.0.13 inclui a consulta em lote**. A `main` posterior à publicação contém o hardening fiscal/alfanumérico, melhorias do DANFE, Playwright, o POC Unimake e o suporte estrutural inicial de RTC descritos acima. Essas mudanças ainda não foram publicadas como nova versão.
 
 ## Fallback pelo Portal Nacional
 
@@ -118,18 +124,29 @@ Detalhes: `docs/testing/portal-post-hcaptcha.md`.
 - CORS sem wildcard;
 - chave privada/PFX/senha do A1 não são enviados ao site;
 - logs locais não persistem chave NF-e, XML, PFX, senha, chave privada nem detalhes textuais de exceções;
-- proteção fiscal persiste somente hash do CNPJ, timestamps UTC e prazo de bloqueio; não persiste chaves NF-e/XML;
+- proteção fiscal persiste somente hash do CNPJ, timestamps UTC e prazos de proteção; não persiste chaves NF-e/XML;
+- arquivos comuns de chave/certificado privado são ignorados preventivamente pelo Git;
 - WebView2 navega apenas em HTTPS no host oficial `www.nfe.fazenda.gov.br`;
 - navegação externa e popups externos são bloqueados;
 - download fora do endpoint XML oficial é cancelado;
 - IPC do helper e controle App → Bridge usam Named Pipe local restrito ao usuário atual;
 - cadeia de build do GitHub Actions usa referências imutáveis para Actions e ferramenta de instalador versionada;
+- secrets de Authenticode não são injetados no caminho de build de pull requests;
 - não existem Central, pareamento, servidor LAN, mDNS ou pasta compartilhada nesta arquitetura.
 
-Dois controles externos permanecem dependentes de configuração fora do código:
+Controles externos ainda dependentes de configuração fora do código:
 
-- **Authenticode:** o pipeline está pronto para assinar App/Bridge/Portal/Setup com SHA-256 quando `CODE_SIGNING_PFX_BASE64` e `CODE_SIGNING_PFX_PASSWORD` forem configurados; sem certificado real de code signing, os artifacts permanecem sem publisher assinado;
-- **proteção da `main`:** verificado em 14/09/2026: não há ruleset moderno configurado. A integração usada pelo projeto não possui permissão administrativa de escrita para criá-lo. A configuração recomendada está em `docs/operations/repository-hardening.md`.
+- **Authenticode:** o pipeline está pronto para assinar App/Bridge/Portal/Setup com SHA-256 quando existir certificado real de code signing e os secrets forem configurados; sem isso os artifacts permanecem sem publisher assinado;
+- **proteção da `main`:** a branch continua sem ruleset/branch protection ativo; a integração usada pelo projeto não possui permissão administrativa de escrita para criá-lo. A configuração recomendada está em `docs/operations/repository-hardening.md`.
+
+## Pendências antes da próxima release
+
+- executar o checklist físico A4 em Windows/impressora real; Playwright cobre Chromium/PDF, mas não margens e comportamento de driver físico;
+- ampliar a validação RTC/IBS/CBS para cenários efetivamente necessários antes de conectar o wrapper novo ao fluxo principal ou imprimir campos novos;
+- remover identificadores pessoais/internos do bundle público sem quebrar as regras operacionais de fornecedores; não substituir isso por hash simples de CPF em JavaScript;
+- definir uma coordenação segura do limite SEFAZ por CNPJ entre vários PCs sem reintroduzir o antigo PC central;
+- configurar Authenticode real e proteção administrativa da `main`;
+- somente depois alinhar versão, notas e artifacts de uma nova release.
 
 ## Desenvolvimento
 
@@ -145,12 +162,19 @@ npm run build:web
 npm run format:web
 
 dotnet run --project apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeAgendamento.Bridge.Tests.csproj -c Release
-dotnet build apps/bridge/src/NfeAgendamento.Bridge/NfeAgendamento.Bridge.csproj -c Release
+dotnet build apps/bridge/src/NfeAgendamento.Bridge/NfeAgendamento.Bridge.csproj -c Release --no-restore
 dotnet build apps/bridge/windows/NfeAgendamento.Portal/NfeAgendamento.Portal.csproj -c Release
 dotnet build apps/bridge/windows/NfeAgendamento.App/NfeAgendamento.App.csproj -c Release
+
+# POC fiscal isolado; não faz parte do caminho de produção
+dotnet run --project tests/unimake-poc/UnimakePoc.csproj -c Release
+
+# regressão real de impressão Chromium/PDF
+npm ci --prefix tests/playwright
+npm test --prefix tests/playwright
 ```
 
-O SDK esperado está em `global.json`. Mudanças de `PackageReference` devem atualizar e revisar o `packages.lock.json` correspondente.
+O SDK esperado está em `global.json`. Mudanças de `PackageReference` de projetos com lockfile devem atualizar e revisar o `packages.lock.json` correspondente. O POC Unimake permanece deliberadamente isolado da aplicação.
 
 ## Deploy Cloudflare
 
@@ -188,17 +212,18 @@ O Microsoft Edge WebView2 Runtime é necessário somente para o fallback pelo Po
 
 ## Fluxo de release
 
-1. atualizar a versão apenas em `Directory.Build.props`;
-2. adicionar `docs/releases/v<versão>.md`;
-3. fazer o commit final com mensagem exata `release: v<versão>`;
-4. aguardar o CI testar, compilar e empacotar;
-5. `release.yml` publica somente os artifacts daquele mesmo CI verde e fixa a tag no SHA validado.
+1. concluir os critérios técnicos e a validação física aplicável;
+2. atualizar a versão apenas em `Directory.Build.props`;
+3. adicionar `docs/releases/v<versão>.md`;
+4. fazer o commit final com mensagem exata `release: v<versão>`;
+5. aguardar o CI testar, compilar e empacotar;
+6. `release.yml` publica somente os artifacts daquele mesmo CI verde e fixa a tag no SHA validado.
 
 ## Validação física
 
-O CI valida código, builds e empacotamento, mas não consegue provar a interação externa real com Portal Nacional, hCaptcha, certificado A1 e SEFAZ.
+O CI valida código, builds, empacotamento, compatibilidade fiscal do POC e PDF A4 em Chromium, mas não consegue provar a interação externa real com Portal Nacional, hCaptcha, certificado A1, SEFAZ nem uma impressora física específica.
 
-Antes de declarar o comportamento atual fisicamente validado, executar `docs/testing/acceptance.md`, `docs/testing/batch-query.md` e, para o fluxo pós-hCaptcha, `docs/testing/portal-post-hcaptcha.md`.
+Antes de declarar o comportamento atual fisicamente validado, executar `docs/testing/acceptance.md`, `docs/testing/batch-query.md`, `docs/testing/danfe-layout.md` e, para o fluxo pós-hCaptcha, `docs/testing/portal-post-hcaptcha.md`.
 
 Não provoque bloqueio `656` repetindo consultas artificialmente apenas para testar o fallback.
 
@@ -206,14 +231,17 @@ Não provoque bloqueio `656` repetindo consultas artificialmente apenas para tes
 
 - arquitetura/segurança geral: `docs/architecture/bridge-security.md`;
 - proteção fiscal local: `docs/architecture/fiscal-usage-guard.md`;
+- POC fiscal Unimake.DFe: `docs/architecture/unimake-poc.md`;
+- RTC / IBS / CBS: `docs/architecture/rtc-ibs-cbs.md`;
 - regras declarativas de fornecedores: `docs/architecture/supplier-rules.md`;
 - desenho/implementação da consulta em lote: `docs/superpowers/specs/2026-09-14-batch-query-design.md`;
+- plano atual de hardening fiscal: `docs/superpowers/plans/2026-09-15-fiscal-hardening-open-source.md`;
 - hardening do repositório/distribuição: `docs/operations/repository-hardening.md`;
 - logging local do Bridge: `docs/operations/local-logging.md`;
 - aceitação física geral: `docs/testing/acceptance.md`;
 - aceitação física do lote: `docs/testing/batch-query.md`;
 - automação pós-hCaptcha: `docs/testing/portal-post-hcaptcha.md`;
 - atualizador manual: `docs/testing/bridge-updater.md`;
-- layout DANFE: `docs/testing/danfe-layout.md`;
+- layout DANFE e regressão de impressão: `docs/testing/danfe-layout.md`;
 - tela de consulta/configurações: `docs/ui/consultation-screen.md`;
 - notas da release pública atual: `docs/releases/v0.0.13.md`.
