@@ -6,7 +6,7 @@ import type { ParsedNfe, ParsedNfeParty, ParsedNfeProduct } from '../nfe/xml';
 const DANFE_ZOOM_MIN = 0.6;
 const DANFE_ZOOM_MAX = 2;
 const DANFE_ZOOM_STEP = 0.1;
-const FIRST_PAGE_PRODUCT_SPACE_MM = 108;
+const FIRST_PAGE_PRODUCT_SPACE_MM = 104;
 const CONTINUATION_PRODUCT_SPACE_MM = 204;
 const ACCESS_KEY_BARCODE_PATTERN = /^[0-9]{6}[A-Z0-9]{12}[0-9]{26}$/;
 
@@ -46,7 +46,7 @@ export function renderDanfe(nfe: ParsedNfe): HTMLElement {
 }
 
 export function renderDanfeHtml(nfe: ParsedNfe): string {
-  const pages = paginateProductsByAvailableSpace(nfe.products, nfe.additional.contributor);
+  const pages = paginateProductsByAvailableSpace(nfe);
   const totalPages = pages.length;
 
   return pages.map((products, index) => {
@@ -373,15 +373,16 @@ function buildFooter(nfe: ParsedNfe): string {
   return `<footer class="danfe-footer">NF-e ${escapeHtml(formatInvoiceNumber(nfe.number))} · Chave ${escapeHtml(formatKey(nfe.accessKey))}</footer>`;
 }
 
-function paginateProductsByAvailableSpace(products: readonly ParsedNfeProduct[], additionalText: string): ParsedNfeProduct[][] {
+function paginateProductsByAvailableSpace(nfe: ParsedNfe): ParsedNfeProduct[][] {
+  const products = nfe.products;
   if (!products.length) return [[]];
   const pages: ParsedNfeProduct[][] = [];
   let current: ParsedNfeProduct[] = [];
-  let available = Math.max(58, FIRST_PAGE_PRODUCT_SPACE_MM - estimateAdditionalPenaltyMm(additionalText));
+  let available = Math.max(58, FIRST_PAGE_PRODUCT_SPACE_MM - estimateAdditionalPenaltyMm(nfe.additional.contributor));
   let used = 0;
 
   for (const product of products) {
-    const height = estimateProductHeight(product);
+    const height = estimateProductHeight(nfe, product);
     if (current.length && used + height > available) {
       pages.push(current);
       current = [];
@@ -395,11 +396,19 @@ function paginateProductsByAvailableSpace(products: readonly ParsedNfeProduct[],
   return pages;
 }
 
-function estimateProductHeight(product: ParsedNfeProduct): number {
+function estimateProductHeight(nfe: ParsedNfe, product: ParsedNfeProduct): number {
   const descriptionLines = Math.max(1, Math.ceil(product.description.length / 43));
   const packageLines = productPackageLabel(product) ? 1 : 0;
   const taxLines = product.tax.taxNote ? Math.max(1, Math.ceil(product.tax.taxNote.length / 58)) : 0;
-  return 3.4 + (descriptionLines - 1) * 1.8 + packageLines * 1.7 + taxLines * 1.7;
+  const descriptionBlockLines = descriptionLines + packageLines + taxLines;
+
+  const mapping = resolveFernandoKleinProduct({ emitterTaxId: nfe.issuer.taxId, xProd: product.description, cProd: product.code });
+  const codeLines = 1 + (mapping.internalCode ? 1 : 0);
+  const internalQuantity = resolveSupplierInternalQuantity({ emitterTaxId: nfe.issuer.taxId, quantity: product.quantity });
+  const quantityLines = 1 + (internalQuantity !== null ? 1 : 0);
+  const visualLines = Math.max(descriptionBlockLines, codeLines, quantityLines);
+
+  return 4.1 + Math.max(0, visualLines - 1) * 2.6;
 }
 
 function productPackageLabel(product: ParsedNfeProduct): string {
