@@ -25,7 +25,8 @@ O estado contém somente:
 - versão do formato;
 - SHA-256 do CNPJ como chave interna;
 - timestamps UTC das tentativas diretas recentes;
-- `blockedUntilUtc` quando houver proteção ativa.
+- `blockedUntilUtc` quando houver proteção ativa;
+- `globalBlockedUntilUtc` somente quando for necessário recuperar de estado local ilegível.
 
 Não são persistidos:
 
@@ -37,7 +38,9 @@ Não são persistidos:
 - chave privada;
 - conteúdo de exceções fiscais.
 
-A escrita usa arquivo temporário seguido de substituição do estado. Estado ausente ou JSON inválido inicia vazio.
+A escrita usa arquivo temporário, `FileOptions.WriteThrough`, flush explícito até o disco e substituição do estado somente depois da gravação concluída.
+
+Se o JSON existente estiver corrompido ou ilegível, o guard **não falha aberto**. Ele entra em proteção conservadora por uma janela de uma hora (`state_recovery`), tenta regravar um estado mínimo recuperável e faz a consulta seguir pelo Portal em vez de arriscar uma nova tentativa fiscal que poderia prolongar um bloqueio `656`.
 
 ## Janela e limite local
 
@@ -47,11 +50,12 @@ Antes de uma chamada fiscal:
 
 1. lê a identidade fiscal do A1 selecionado;
 2. adquire o gate;
-3. remove timestamps expirados;
-4. verifica `blockedUntilUtc`;
-5. verifica o número de tentativas recentes;
-6. se permitido, registra a tentativa;
-7. somente então chama `INfeDistributionTransport`.
+3. remove timestamps/bloqueios expirados;
+4. verifica uma eventual proteção global de recuperação;
+5. verifica `blockedUntilUtc` da identidade;
+6. verifica o número de tentativas recentes;
+7. se permitido, registra a tentativa;
+8. somente então chama `INfeDistributionTransport`.
 
 Se a proteção já estiver ativa, `NfeLookupService` retorna `consumption_limit` sem tocar na SEFAZ.
 
@@ -59,9 +63,10 @@ Se a proteção já estiver ativa, `NfeLookupService` retorna `consumption_limit
 
 - HTTP 429 do transporte;
 - `cStat 656` da SEFAZ;
-- atingimento do limite local de tentativas na janela.
+- atingimento do limite local de tentativas na janela;
+- estado persistido local corrompido/ilegível (`state_recovery`).
 
-Para 429/656 o prazo salvo é de uma hora a partir do evento observado. O limite local usa a expiração da tentativa mais antiga da janela.
+Para 429/656 o prazo salvo é de uma hora a partir do evento observado. O limite local usa a expiração da tentativa mais antiga da janela. A recuperação de estado também usa uma hora por segurança.
 
 ## Integração com consulta única
 
@@ -80,17 +85,17 @@ O teto local de 20 tentativas diretas por hora é uma proteção da rota SEFAZ, 
 
 ## Limitação multi-PC
 
-O arquivo é local. Se dois PCs usam certificados do mesmo CNPJ, cada um conhece somente as próprias tentativas. Essa limitação continua existindo mesmo sem teto rígido de itens no lote.
+O arquivo é local. Se dois PCs usam certificados do mesmo CNPJ, cada um conhece somente as próprias tentativas. Essa limitação continua existindo e é o principal ponto de proteção fiscal ainda não resolvido estruturalmente.
 
 O Portal não é tratado como serviço oficialmente ilimitado. A aplicação apenas deixa de impor um limite artificial de quantidade; o fluxo continua sequencial, sujeito ao hCaptcha manual e ao comportamento do Portal Nacional.
 
-`distNSU` continua fora desta arquitetura. Caso o volume futuro exija coordenação real por CNPJ, isso deve ser projetado separadamente sem mover certificado/chave privada para um coordenador remoto.
+`distNSU` continua fora desta arquitetura. Caso o volume futuro exija coordenação real por CNPJ, isso deve ser projetado separadamente sem mover certificado/chave privada para um coordenador remoto e sem reintroduzir o antigo PC central.
 
 ## Testes
 
 Cobertura relevante:
 
-- `apps/bridge/tests/NfeAgendamento.Bridge.Tests/FiscalUsageGuardTests.cs`;
+- `apps/bridge/tests/NfeAgendamento.Bridge.Tests/FiscalUsageGuardTests.cs` — limite, persistência, reinício, expiração e recuperação conservadora de estado corrompido;
 - `apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeLookupUsageGuardTests.cs`;
 - `apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeLookupServiceTests.cs`.
 
