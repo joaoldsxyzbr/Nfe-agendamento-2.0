@@ -16,7 +16,7 @@ Arquitetura preservada: **site estático + App/Bridge local por PC**. O objetivo
 - NT 2026.004 v1.01 — CNPJ e Chave de Acesso alfanuméricos;
 - NT Conjunta DFe 2025.001 — DV alfanumérico e código de barras híbrido CODE-128C/CODE-128A;
 - MOC 7.0 / Manual do DANFE e FAQ oficial da NF-e — colunas e conteúdo mínimo das folhas adicionais;
-- NT 2025.002 e versões posteriores — Reforma Tributária do Consumo (IBS/CBS).
+- NT 2025.002 v1.51 e schemas oficiais vigentes — Reforma Tributária do Consumo (IBS/CBS).
 
 ## Fase 1 — CNPJ e chave de acesso alfanuméricos
 
@@ -63,24 +63,47 @@ Os artifacts do teste ficam disponíveis temporariamente no workflow. Esse gate 
 
 ## Fase 4 — adoção incremental do Unimake.DFe
 
-**Status: pendente de POC isolado; não entra no caminho de produção antes de paridade comprovada.**
+**Status: POC isolado implementado e validado no CI; biblioteca ainda não está no caminho de produção.**
 
-1. criar testes de paridade entre nossas rotinas e a biblioteca;
-2. validar explicitamente CNPJ/chave alfanuméricos e schemas vigentes;
-3. introduzir a biblioteca atrás de interface própria;
-4. comparar com XMLs já aceitos pelo sistema;
-5. substituir componentes manuais apenas onde houver paridade comprovada.
+Entregue:
+
+- `Unimake.DFe` fixado na versão `20260908.1441.34` dentro de `tests/unimake-poc`;
+- auditoria NuGet habilitada no POC;
+- comparação entre nosso `AccessKey` e `XMLUtility` para chave numérica, chave com CNPJ alfanumérico e DV inválido;
+- validação do reconhecimento de CNPJ alfanumérico e do cálculo de DV;
+- confirmação em compilação da presença dos tipos NFe `IBSCBS` e `IBSCBSTot`;
+- job `fiscal-compatibility` obrigatório antes do pacote Windows.
+
+Próximos passos dessa fase:
+
+1. comparar serialização/desserialização de XMLs RTC representativos;
+2. usar a biblioteca como oráculo adicional em testes de schema/paridade;
+3. introduzir adaptador de produção somente quando um componente específico demonstrar benefício e paridade;
+4. substituir componentes manuais apenas de forma incremental.
 
 Bridge, Portal, UI, regras de fornecedores e renderer DANFE permanecem sob nosso controle.
 
 ## Fase 5 — RTC / IBS / CBS
 
-**Status: pendente.**
+**Status: suporte estrutural inicial implementado; integração visual/fiscal avançada ainda pendente.**
 
-- adicionar fixtures dos grupos atuais;
-- ampliar o modelo XML sem remover campos existentes;
-- mapear o que o DANFE vigente exige antes de exibir novos campos;
-- impedir perda silenciosa de informação fiscal relevante.
+Entregue:
+
+- fixture sintética RTC sem dados pessoais reais;
+- parser complementar `apps/web/src/nfe/rtc.ts`;
+- modelo dos campos centrais de `IBSCBS`, `gIBSUF`, `gIBSMun`, `gCBS`, `IS`, `IBSCBSTot`, `ISTot` e `vNFTot`;
+- wrapper `parseNfeXmlWithRtc` que preserva o objeto NF-e existente e o XML original;
+- sinalização explícita de grupos estendidos conhecidos, como `gIBSCBSMono`, para evitar tratamento silencioso como cenário básico;
+- testes de compatibilidade com NF-e legada, chave divergente, valores RTC e grupo monofásico.
+
+Pendente:
+
+- ampliar fixtures para cenários RTC/monofásicos realmente necessários ao uso do projeto;
+- comparar esses XMLs com schemas oficiais e com o POC Unimake;
+- mapear exatamente o que o DANFE vigente exige antes de imprimir novos campos;
+- conectar o wrapper RTC ao fluxo principal somente depois dessa validação.
+
+Detalhes: `docs/architecture/rtc-ibs-cbs.md`.
 
 ## Fase 6 — privacidade, multi-PC e supply chain
 
