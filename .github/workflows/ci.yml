@@ -100,6 +100,7 @@ jobs:
       - name: Publish tray app
         run: dotnet publish apps/bridge/windows/NfeAgendamento.App/NfeAgendamento.App.csproj -c Release -r win-x64 --self-contained true -o artifacts/NfeAgendamentoBridge
       - name: Sign packaged executables when Authenticode is configured
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: pwsh
         env:
           CODE_SIGNING_PFX_BASE64: ${{ secrets.CODE_SIGNING_PFX_BASE64 }}
@@ -141,6 +142,7 @@ jobs:
             throw "Setup não gerado em $setup"
           }
       - name: Sign installer when Authenticode is configured
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: pwsh
         env:
           CODE_SIGNING_PFX_BASE64: ${{ secrets.CODE_SIGNING_PFX_BASE64 }}
