@@ -39,7 +39,7 @@ export function paginateDanfeForPrint(container: HTMLElement): void {
 
       if (splitIndex >= rows.length) continue;
 
-      let next = pages[index + 1];
+      let next: HTMLElement | null = pages[index + 1] ?? null;
       if (!next) {
         next = createContinuationPage(page);
         if (!next) continue;
