@@ -3,6 +3,7 @@ export type AccessKeyValidation =
   | { valid: false; error: string };
 
 const ACCESS_KEY_PATTERN = /^[0-9]{6}[A-Z0-9]{12}[0-9]{26}$/;
+const NFE_MODEL = '55';
 
 export function validateAccessKey(value: string): AccessKeyValidation {
   const normalized = value.trim().toUpperCase();
@@ -16,6 +17,10 @@ export function validateAccessKey(value: string): AccessKeyValidation {
       valid: false,
       error: 'A chave da NF-e não está no formato oficial (A-Z e 0-9).',
     };
+  }
+
+  if (normalized.slice(20, 22) !== NFE_MODEL) {
+    return { valid: false, error: 'Este sistema aceita somente NF-e modelo 55.' };
   }
 
   const checkDigit = calculateCheckDigit(normalized.slice(0, 43));
