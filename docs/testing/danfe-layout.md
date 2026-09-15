@@ -107,6 +107,10 @@ Identificação de fornecedor, códigos internos e conversões operacionais perm
 - remoção do CSS morto `.danfe-measuring`;
 - dimensões A4 e proporções do cabeçalho/tabela.
 
+Além dos testes unitários, o CI possui o job **`danfe-print`** com Playwright em versão fixa. Ele instala somente Chromium, renderiza fixtures representativas, gera PDFs A4 reais pelo navegador e valida paginação, overflow, ordem dos itens, NCM/SH, cabeçalhos de continuação, `Folha X/Y` e chave alfanumérica. Os PDFs e resultados ficam disponíveis como artifact temporário do workflow para inspeção quando necessário.
+
+Esse gate já detectou uma diferença real entre a estimativa inicial e a paginação do Chromium durante a implantação; a estimativa foi recalibrada antes de a fase ser considerada automatizada.
+
 ## Aceitação física obrigatória
 
 Antes de publicar nova release, validar em Windows/navegador real:
@@ -122,6 +126,6 @@ Antes de publicar nova release, validar em Windows/navegador real:
 
 Conferir número de folhas, ordem dos itens, ausência de corte/duplicação, leitura do NCM, código de barras, `Folha X/Y`, cabeçalho obrigatório nas continuações e altura normal das linhas reais.
 
-## Próxima camada de regressão
+## Limite do teste automatizado
 
-A fase seguinte adicionará Playwright pinado ao workspace/lockfile para gerar PDF A4 em Chromium no CI. Esse teste automatizado complementará, mas não substituirá, a validação em impressora física porque margens não imprimíveis e drivers variam por equipamento.
+Playwright reduz fortemente o risco de regressão de layout no Chromium, mas não substitui a validação em impressora física. Margens não imprimíveis, escala automática e comportamento do driver continuam variando por equipamento, portanto a publicação de uma nova release ainda exige o checklist A4 real.
