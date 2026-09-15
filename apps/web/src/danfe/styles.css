@@ -13,7 +13,7 @@
 .receipt-signature { grid-column: 1 / -1; display: grid; grid-template-columns: 165px 1fr; min-height: 16px; border-top: 1px solid #111; font-size: 6.2px; text-transform: uppercase; }
 .receipt-signature > div { padding: 3px 5px; }
 .receipt-signature > div + div { border-left: 1px solid #111; }
-.danfe-header { display: grid; grid-template-columns: 1.12fr .52fr 1.18fr; min-height: 94px; flex-shrink: 0; }
+.danfe-header { display: grid; grid-template-columns: 60mm 27mm 1fr; min-height: 94px; flex-shrink: 0; }
 .danfe-header > div + div { border-left: 1px solid #111; }
 .issuer-identification { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: 5px 8px; text-align: left; }
 .issuer-identification .issuer-title { width: 100%; margin-bottom: 5px; font-size: 6.2px; font-weight: 800; text-transform: uppercase; }
@@ -29,7 +29,7 @@
 .invoice-id { margin-top: 1px; font-size: 8px; line-height: 1.1; }
 .invoice-id strong { display: block; margin: 1px 0; font-size: 11.2px; }
 .barcode-area { display: grid; grid-template-rows: 43px auto auto 1fr; }
-.barcode-wrap { padding: 4px 8px 0; }
+.barcode-wrap { padding: 4px 0 0; }
 .barcode-wrap svg { width: 100%; height: 35px; fill: #000; }
 .access-key, .authenticity-box, .protocol-box { padding: 3px 5px; border-top: 1px solid #111; text-align: center; }
 .access-key strong { font-size: 8.1px; letter-spacing: .08px; }
@@ -82,13 +82,15 @@
 .products-table .products-filler { height: 100%; }
 .products-table .products-filler td { height: 100%; padding: 0; }
 .products-table .description { font-size: 8px; }
-.products-table col.item { width: 8mm; }
-.products-table col.code { width: 20mm; }
-.products-table col.description { width: 62mm; }
-.products-table col.cst { width: 11mm; }
-.products-table col.cfop { width: 11mm; }
-.products-table col.unit { width: 8mm; }
-.products-table .item-col, .products-table thead th:first-child, .products-table .code-col, .products-table thead th:nth-child(2) { white-space: nowrap; word-break: normal; overflow-wrap: normal; }
+.products-table col.code { width: 16mm; }
+.products-table col.description { width: 48mm; }
+.products-table col.item { width: 7mm; }
+.products-table col.ncm { width: 13mm; }
+.products-table col.cst { width: 9mm; }
+.products-table col.cfop { width: 10mm; }
+.products-table col.unit { width: 7mm; }
+.products-table col.qty { width: 12mm; }
+.products-table .item-col, .products-table .code-col, .products-table .ncm-col { white-space: nowrap; word-break: normal; overflow-wrap: normal; }
 .center { text-align: center; }
 .numeric { text-align: right; white-space: nowrap; }
 .source-product-code { display: block; }
@@ -116,9 +118,6 @@
   .danfe-toolbar { display: none; }
   .danfe-pages { position: static; display: block; gap: 0; }
   .danfe-page > * { flex-shrink: 0; }
-  .danfe-measuring .products-table { flex: 0 0 auto; }
-  .danfe-measuring .products-filler { display: none; }
-  .danfe-measuring .danfe-footer { margin-top: 0; }
   .danfe-page.danfe-oversized { height: auto; overflow: visible; }
   .products-table thead { display: table-header-group; }
   .danfe-page { width: 210mm; min-height: 297mm; height: 297mm; padding: 3.5mm; overflow: visible; break-after: page; zoom: 1 !important; box-shadow: none; font-size: 8.9px; line-height: 1.17; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
