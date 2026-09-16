@@ -14,7 +14,7 @@ O atalho de download aponta para o Setup da versão canônica publicada (`v0.0.1
 
 O cabeçalho usa um único bloco visual à esquerda: símbolo da aplicação e, ao lado, o nome quebrado em duas linhas, **NF-e** e **Agendamento**, separados por uma divisória vertical discreta. A frase de apoio fica logo abaixo do conjunto.
 
-## Identidade visual
+## Identidade visual e tipografia
 
 A marca usa azul vibrante e amarelo vibrante, com fundo transparente e símbolo composto por documento NF-e, relógio/agendamento e confirmação.
 
@@ -22,6 +22,14 @@ A marca usa azul vibrante e amarelo vibrante, com fundo transparente e símbolo 
 - o nome **NF-e / Agendamento** existe como conteúdo real dentro do `<h1>`;
 - a aba usa `apps/web/public/favicon.ico`;
 - App/Bridge Windows usam `apps/bridge/assets/nfe-agendamento-bridge.ico`.
+
+A interface usa uma pilha tipográfica local, sem dependência de fonte web externa:
+
+- texto geral: **Segoe UI Variable Text**, com fallback para Segoe UI, Roboto, Helvetica Neue e Arial;
+- títulos: **Segoe UI Variable Display**, com fallbacks equivalentes;
+- chaves NF-e: **Cascadia Mono / Cascadia Code**, com fallback para Consolas e outras monoespaçadas.
+
+Isso mantém o visual mais moderno especialmente no Windows atual sem adicionar download de fonte, dependência externa ou impacto no funcionamento offline/local.
 
 ## Consulta unificada
 
@@ -76,11 +84,13 @@ Quando a entrada contém zero ou uma chave válida, a própria interface aplica 
 - **Consultar** aparece antes da execução e é substituído por **Nova consulta** quando a tentativa termina;
 - **Visualizar DANFE** e **Baixar XML** continuam disponíveis normalmente quando existe XML validado.
 
+Quando a única NF-e termina com sucesso, o resultado é reduzido novamente para priorizar apenas a informação útil: número/série da NF-e, emitente, valor e as ações **Visualizar DANFE** / **Baixar XML**. Nesse estado, ordem, chave abreviada, badges de status/origem e a barra de progresso são ocultados visualmente. Os dados continuam presentes no estado da aplicação; a mudança é apenas de apresentação.
+
 Ao informar duas ou mais chaves válidas, a tela volta automaticamente ao layout expandido e exibe novamente as ações coletivas. A mudança de compactação é somente visual, controlada pela classe `is-compact-single`; processamento, fila, fallback e proteção fiscal não são alterados.
 
 ## Linha de cada NF-e
 
-Cada linha contém:
+No fluxo com várias NF-e, cada linha contém:
 
 - número de ordem;
 - chave abreviada visualmente, com a chave completa associada ao elemento;
@@ -102,7 +112,7 @@ O bloco de processamento mostra `concluídos/total`, rota atual e:
 - **Baixar XMLs (.zip)**;
 - **Imprimir DANFEs**.
 
-ZIP e impressão usam somente NF-e concluídas. Cancelar não apaga resultados já concluídos. No modo compacto de uma NF-e, ZIP e impressão conjunta são ocultados por não trazerem benefício para uma única nota.
+ZIP e impressão usam somente NF-e concluídas. Cancelar não apaga resultados já concluídos. No modo compacto de uma NF-e, ZIP e impressão conjunta são ocultados por não trazerem benefício para uma única nota. Depois do sucesso de uma única NF-e, o bloco de progresso também é ocultado para manter o resultado dentro de uma área menor.
 
 ## Fluxo híbrido SEFAZ → Portal
 
