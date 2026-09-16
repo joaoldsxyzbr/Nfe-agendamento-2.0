@@ -17,11 +17,11 @@ NFe Agendamento é um aplicativo interno para consultar NF-e, baixar XML e gerar
 
 Não existem Central, pareamento, servidor LAN, mDNS ou pasta compartilhada na arquitetura atual. Cada PC usa seu próprio Bridge.
 
-## Estado funcional — 15/09/2026
+## Estado funcional — 16/09/2026
 
 Implementado e coberto pelos gates automatizados aplicáveis:
 
-- consulta única e em lote;
+- consulta unificada para uma ou várias NF-e, com layout compacto para uma única NF-e;
 - chave NF-e de **44 caracteres**, incluindo CNPJ/chave alfanuméricos e DV vigente;
 - rejeição explícita de NFC-e modelo 65; o produto aceita somente NF-e modelo 55;
 - seleção local de certificado A1;
