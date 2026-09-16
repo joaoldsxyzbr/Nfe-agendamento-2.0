@@ -1,6 +1,6 @@
-# Aceitação física — consulta em lote
+# Aceitação física — consulta unificada
 
-Este roteiro valida a consulta em lote incluída na release v0.0.13 e o comportamento atual da `main`, que remove o teto rígido de 10 chaves. Ele complementa `docs/testing/acceptance.md` e `docs/testing/portal-post-hcaptcha.md`.
+Este roteiro valida a interface unificada de consulta da `main`. O mesmo campo aceita uma ou várias chaves e o processamento continua reutilizando o fluxo sequencial já usado pela consulta em lote. Ele complementa `docs/testing/acceptance.md` e `docs/testing/portal-post-hcaptcha.md`.
 
 ## Pré-condições
 
@@ -8,34 +8,48 @@ Este roteiro valida a consulta em lote incluída na release v0.0.13 e o comporta
 - certificado A1 válido selecionado;
 - WebView2 Runtime disponível para cenários de Portal;
 - usar NF-e reais cuja consulta seja autorizada pelo certificado;
-- começar com lote pequeno de 2 a 5 chaves;
+- começar com 1 a 5 chaves;
 - não provocar `656` deliberadamente repetindo consultas.
 
-## Entrada e lista
+## Interface unificada
 
-1. Abrir a tela principal e selecionar **Lote**.
-2. Colar duas ou mais chaves válidas, uma por linha.
-3. Confirmar que todas aparecem imediatamente na lista abaixo do campo e na mesma ordem.
-4. Confirmar que **Visualizar DANFE** e **Baixar XML** começam desabilitados.
-5. Repetir uma chave e confirmar que a duplicada é contabilizada e não vira uma segunda linha.
-6. Inserir uma chave inválida e confirmar a contagem de inválidas.
-7. Colar mais de 10 chaves válidas e confirmar que todas continuam aceitas, aparecem na lista e **Iniciar lote** permanece disponível.
+1. Abrir a tela principal.
+2. Confirmar que não existe mais a alternância **Uma NF-e | Lote**.
+3. Confirmar que o botão principal se chama **Consultar** e fica alinhado à esquerda.
+4. Confirmar que **Nova consulta** aparece ao lado de **Consultar**.
+5. Colar uma chave válida e confirmar que uma única linha aparece abaixo.
+6. Usar **Nova consulta** e confirmar que entrada e lista são limpas e o foco volta ao campo.
+7. Colar duas ou mais chaves válidas, uma por linha.
+8. Confirmar que todas aparecem imediatamente na lista abaixo do campo e na mesma ordem.
+9. Confirmar que **Visualizar DANFE** e **Baixar XML** começam desabilitados.
+10. Repetir uma chave e confirmar que a duplicada é contabilizada e não vira uma segunda linha.
+11. Inserir uma chave inválida e confirmar a contagem de inválidas.
+12. Colar mais de 10 chaves válidas e confirmar que todas continuam aceitas e **Consultar** permanece disponível.
 
-## Processamento normal pela SEFAZ
+## Processamento de uma NF-e
 
-1. Iniciar um lote pequeno válido.
-2. Confirmar que apenas uma linha fica em consulta por vez.
-3. Para cada sucesso:
+1. Informar uma única chave válida.
+2. Clicar em **Consultar**.
+3. Confirmar que somente uma linha é processada.
+4. Em caso de sucesso, confirmar origem **SEFAZ**, dados da NF-e e liberação de **Visualizar DANFE** e **Baixar XML**.
+5. Confirmar que fallback Portal e proteção fiscal continuam funcionando pelas mesmas regras quando ocorrerem naturalmente.
+
+## Processamento de várias NF-e
+
+1. Informar um conjunto pequeno de chaves válidas.
+2. Clicar em **Consultar**.
+3. Confirmar que apenas uma linha fica em consulta por vez.
+4. Para cada sucesso:
    - a linha muda para **Concluída**;
-   - a origem mostra **SEFAZ**;
+   - a origem mostra **SEFAZ** ou **Portal**;
    - número/série, emitente e valor aparecem quando existentes no XML;
    - **Visualizar DANFE** e **Baixar XML** ficam disponíveis imediatamente.
-4. Abrir o DANFE de duas linhas diferentes e confirmar que cada modal corresponde à NF-e correta.
-5. Baixar o XML de duas linhas e confirmar que cada arquivo pertence à chave da própria linha.
+5. Abrir o DANFE de duas linhas diferentes e confirmar que cada modal corresponde à NF-e correta.
+6. Baixar o XML de duas linhas e confirmar que cada arquivo pertence à chave da própria linha.
 
-## Lote grande sem teto artificial
+## Volume acima de 10 chaves
 
-1. Montar um lote com quantidade superior a 10 chaves válidas.
+1. Montar uma consulta com quantidade superior a 10 chaves válidas.
 2. Confirmar que nenhuma chave válida é descartada por quantidade.
 3. Confirmar que o processamento continua estritamente sequencial.
 4. Se a proteção fiscal local for ativada durante uso real, confirmar que o restante segue pelo Portal sem nova tentativa direta à SEFAZ.
@@ -55,7 +69,7 @@ Depois de pelo menos duas NF-e concluídas:
 
 ## Cancelamento
 
-1. Iniciar um lote com mais de uma chave.
+1. Iniciar uma consulta com mais de uma chave.
 2. Cancelar enquanto uma operação estiver em andamento.
 3. Confirmar que nenhuma nova linha começa depois do cancelamento.
 4. Confirmar que itens ainda não iniciados ficam cancelados.
@@ -90,16 +104,6 @@ Não force `656` para teste. Se o Bridge já estiver naturalmente em proteção,
 3. Confirmar que aparece **Tentar pelo Portal**.
 4. Usar a ação manual e confirmar que apenas aquela NF-e é reaberta.
 
-## Regressão da consulta única
-
-Depois dos testes do lote:
-
-1. voltar para **Uma NF-e**;
-2. consultar uma chave válida;
-3. confirmar DANFE, download XML e fallback existentes;
-4. confirmar que o certificado selecionado continua o mesmo;
-5. confirmar que a tela de Configurações/Diagnóstico continua funcionando.
-
 ## Critério de aprovação física
 
-A consulta em lote está fisicamente validada quando o fluxo normal, lote acima de 10 chaves, ações individuais, ZIP, impressão, cancelamento e regressão da consulta única passam em um PC real. Cenários `217` e limite fiscal devem ser registrados quando ocorrerem naturalmente, sem gerar consumo indevido apenas para testar.
+A interface unificada está fisicamente validada quando consulta com uma chave, consulta com várias chaves, volume acima de 10, ações individuais, ZIP, impressão, cancelamento e **Nova consulta** passam em um PC real. Cenários `217` e limite fiscal devem ser registrados quando ocorrerem naturalmente, sem gerar consumo indevido apenas para testar.

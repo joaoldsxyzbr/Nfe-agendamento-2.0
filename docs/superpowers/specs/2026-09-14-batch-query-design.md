@@ -1,7 +1,7 @@
 # Consulta em lote — desenho implementado
 
 **Data:** 2026-09-14  
-**Estado:** implementado e incluído na release v0.0.13; a `main` posterior remove o teto rígido de 10 chaves; validação física real pendente  
+**Estado:** implementado e incluído na release v0.0.13; a `main` posterior remove o teto rígido de 10 chaves e unifica a interface de uma/várias NF-e; validação física real pendente  
 **Base:** arquitetura `site estático + App/Bridge local por PC`
 
 ## Objetivo
@@ -12,12 +12,14 @@ A implementação privilegia segurança fiscal e previsibilidade: sem limite rí
 
 ## Arquitetura implementada
 
-O lote é um **orquestrador no site sobre o endpoint unitário `POST /api/v1/nfe/lookup`**. Não existe endpoint fiscal `/nfe/batch` que dispare várias consultas em paralelo.
+O processamento de várias chaves é um **orquestrador no site sobre o endpoint unitário `POST /api/v1/nfe/lookup`**. Não existe endpoint fiscal `/nfe/batch` que dispare várias consultas em paralelo.
+
+Na interface atual da `main`, esse mesmo orquestrador é o fluxo visível único: uma chave forma uma fila com um item; várias chaves formam a fila sequencial completa.
 
 Fluxo:
 
 ```text
-Usuário cola várias chaves
+Usuário cola uma ou várias chaves
   -> validação local das 44 posições/DV
   -> remoção de duplicadas
   -> pré-checagem Bridge + A1
@@ -38,15 +40,15 @@ Usuário cola várias chaves
 
 ## Quantidade e serialização
 
-- não existe teto rígido de quantidade de NF-e por lote na interface;
-- uma única consulta/fallback fica ativa por vez no lote;
+- não existe teto rígido de quantidade de NF-e na interface;
+- uma única consulta/fallback fica ativa por vez;
 - sem paralelismo contra a SEFAZ;
 - sem duas operações Portal simultâneas;
 - nenhuma repetição automática de uma consulta fiscal ambígua;
-- cancelar o lote aborta a operação corrente quando possível e não inicia a próxima;
+- cancelar o processamento aborta a operação corrente quando possível e não inicia a próxima;
 - resultados já concluídos permanecem disponíveis após cancelamento.
 
-A remoção do teto de 10 não altera as regras de proteção fiscal. Lotes grandes apenas mantêm a fila sequencial por mais tempo. Como os PCs continuam independentes, o Bridge não conhece consumo feito por outro computador que use o mesmo CNPJ.
+A remoção do teto de 10 não altera as regras de proteção fiscal. Conjuntos grandes apenas mantêm a fila sequencial por mais tempo. Em produção, a rota direta continua protegida pelo guard local e pela coordenação multi-PC entre computadores que usam cópias do mesmo A1 RSA, conforme `docs/architecture/fiscal-usage-guard.md`.
 
 ## Proteção fiscal no Bridge
 
@@ -69,13 +71,13 @@ A persistência contém somente:
 
 Ela **não contém** chave NF-e, XML, PFX, senha, chave privada ou o CNPJ em texto puro.
 
-Durante uma proteção ativa, `NfeLookupService` devolve `consumption_limit` localmente **sem chamar o transporte SEFAZ**. No lote isso faz a interface mudar a rota para Portal. A consulta única continua usando o mesmo fallback já existente.
+Durante uma proteção ativa, `NfeLookupService` devolve `consumption_limit` localmente **sem chamar o transporte SEFAZ**. Na fila isso faz a interface mudar a rota para Portal.
 
-O limite local de 20 tentativas diretas por hora protege somente a rota SEFAZ e não limita a quantidade total de itens do lote. Depois que a proteção entra em ação, os itens restantes continuam pelo Portal.
+O limite local de 20 tentativas diretas por hora protege somente a rota SEFAZ e não limita a quantidade total de itens. Depois que a proteção entra em ação, os itens restantes continuam pelo Portal.
 
 ## Comportamento do Portal
 
-O Portal mantém as mesmas garantias da consulta única:
+O Portal mantém as mesmas garantias:
 
 - uma operação por vez;
 - hCaptcha sempre manual;
@@ -95,30 +97,34 @@ Ao atingir limite:
 
 1. o Bridge registra a proteção antes de permitir nova consulta direta;
 2. a NF-e atual passa para o Portal;
-3. a rota geral do lote muda para Portal;
+3. a rota geral muda para Portal;
 4. as chaves restantes são processadas pelo Portal, uma por vez;
 5. cada hCaptcha continua manual;
-6. nenhuma NF-e restante volta à SEFAZ naquele lote.
+6. nenhuma NF-e restante volta à SEFAZ naquela execução.
 
 Uma consulta iniciada enquanto o Bridge já está em proteção faz uma chamada local ao endpoint unitário, recebe `consumption_limit` sem comunicação fiscal e passa imediatamente para a rota Portal.
 
 ## Interface implementada
 
-A tela principal possui alternância discreta **Uma NF-e | Lote**.
+A tela principal possui **uma interface de consulta**, sem alternância visível **Uma NF-e | Lote**.
 
-No modo **Lote** existem:
+Existem:
 
-- textarea para colar as chaves;
+- textarea para colar uma ou várias chaves;
 - extração de chaves formatadas ou separadas por linha/vírgula/ponto e vírgula;
 - validação de DV antes de iniciar;
 - contadores de válidas, inválidas e duplicadas;
 - ausência de bloqueio artificial por quantidade de chaves válidas;
 - lista das chaves válidas preservando a ordem original;
+- botão **Consultar** alinhado à esquerda;
+- botão **Nova consulta** ao lado de **Consultar**;
 - progresso geral;
 - indicação da rota atual (`SEFAZ` ou `Portal`);
-- **Cancelar lote**;
+- **Cancelar lote** durante processamento de várias chaves;
 - **Baixar XMLs (.zip)**;
 - **Imprimir DANFEs**.
+
+Uma única chave usa o mesmo fluxo com apenas uma linha. **Nova consulta** limpa entrada e resultados e devolve o foco ao campo, ficando indisponível enquanto a fila está ativa.
 
 ### Linha de cada NF-e
 
@@ -132,20 +138,20 @@ Cada linha mostra:
 - **Visualizar DANFE**;
 - **Baixar XML**.
 
-**Visualizar DANFE** e **Baixar XML** são habilitados imediatamente quando o XML daquela linha foi validado, sem esperar o lote inteiro terminar.
+**Visualizar DANFE** e **Baixar XML** são habilitados imediatamente quando o XML daquela linha foi validado, sem esperar as demais.
 
-O DANFE individual reutiliza o mesmo renderer/modal da consulta única, inclusive `Ctrl + scroll`, regras por fornecedor e impressão/PDF.
+O DANFE individual reutiliza o mesmo renderer/modal, inclusive `Ctrl + scroll`, regras por fornecedor e impressão/PDF.
 
 Se uma operação Portal falhar, a linha fica em `portal_error` e oferece **Tentar pelo Portal**. Não existe retry automático infinito.
 
 ## XML, ZIP e impressão
 
 - XMLs ficam somente em memória na página;
-- fechar/recarregar a página descarta o lote;
+- fechar/recarregar a página descarta os resultados;
 - download individual usa exatamente o XML validado daquela linha;
 - ZIP é gerado no navegador sem dependência externa e contém somente XMLs concluídos;
 - impressão conjunta agrega somente DANFEs concluídos e reutiliza o renderer fiscal existente;
-- Bridge não persiste XMLs do lote.
+- Bridge não persiste XMLs da consulta.
 
 ## Estados por item
 
@@ -159,13 +165,13 @@ Se uma operação Portal falhar, a linha fica em `portal_error` e oferece **Tent
 - `portal_error` — Portal não concluiu;
 - `cancelled` — cancelado.
 
-## Testes automatizados adicionados
+## Testes automatizados
 
 ### Web
 
 - `apps/web/tests/batch-input.test.ts`: entrada, formatação, deduplicação e aceitação de mais de 10 chaves sem teto rígido;
 - `apps/web/tests/batch-zip.test.ts`: geração do ZIP local;
-- `apps/web/tests/shell.test.ts`: wiring da interface híbrida, copy sem teto fixo, ações individuais e ações em massa.
+- `apps/web/tests/shell.test.ts`: wiring da interface unificada, ações individuais e ações em massa.
 
 ### Bridge
 
@@ -181,7 +187,7 @@ Para declarar o comportamento atual fisicamente validado, executar `docs/testing
 
 ## Evolução para volume alto
 
-`distNSU` continua fora desta versão. A consulta em lote não possui teto rígido, mas `distNSU` pode continuar sendo estudado futuramente caso o uso real de dezenas/centenas de NF-e mostre necessidade de uma estratégia mais eficiente de distribuição.
+`distNSU` continua fora desta versão. A consulta não possui teto rígido, mas `distNSU` pode continuar sendo estudado futuramente caso o uso real de dezenas/centenas de NF-e mostre necessidade de uma estratégia mais eficiente de distribuição.
 
 Antes de usar `distNSU`, ainda será necessário resolver a coordenação do `ultNSU` por CNPJ entre PCs. Opções futuras continuam sendo:
 
@@ -193,10 +199,11 @@ Antes de usar `distNSU`, ainda será necessário resolver a coordenação do `ul
 A funcionalidade pode ser declarada fisicamente validada quando:
 
 - CI `web`, `bridge` e `windows-package` estiver verde no HEAD correspondente;
-- lote pequeno real for validado com certificado A1;
-- um lote com mais de 10 chaves for aceito sem bloqueio artificial e continuar sequencial;
+- consulta real com uma chave for validada com certificado A1;
+- consulta pequena com várias chaves for validada;
+- um conjunto com mais de 10 chaves for aceito sem bloqueio artificial e continuar sequencial;
+- **Consultar** e **Nova consulta** forem confirmados no fluxo unificado;
 - ações **Visualizar DANFE** e **Baixar XML** forem confirmadas por linha;
 - ZIP e impressão conjunta forem confirmados;
 - `217` for validado quando ocorrer naturalmente;
-- proteção fiscal/fallback não fizer retry contra a SEFAZ;
-- consulta única continuar funcionando sem regressão.
+- proteção fiscal/fallback não fizer retry contra a SEFAZ.

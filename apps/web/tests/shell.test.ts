@@ -79,7 +79,7 @@ describe('application shell', () => {
     expect(downloadIndex).toBeGreaterThan(parseIndex);
   });
 
-  it('wires the hybrid batch flow with per-item DANFE and XML actions', () => {
+  it('uses one visible consultation flow with per-item DANFE and XML actions', () => {
     const main = readFileSync(fromWeb('src/main.ts'), 'utf8');
     const batchUi = readFileSync(fromWeb('src/batch/ui.ts'), 'utf8');
 
@@ -96,6 +96,11 @@ describe('application shell', () => {
     expect(main).toContain('createStoredZip(');
     expect(batchUi).toContain("batchKeysInput.placeholder = 'Cole as chaves, uma por linha'");
     expect(batchUi).toContain('Sem limite fixo de quantidade');
+    expect(batchUi).toContain('modeBatch.click()');
+    expect(batchUi).toContain("modeControl.style.display = 'none'");
+    expect(batchUi).toContain("batchStart.textContent = 'Consultar'");
+    expect(batchUi).toContain("reset.textContent = 'Nova consulta'");
+    expect(batchUi).toContain('actions.append(batchStart, reset)');
   });
 
   it('shows a clear message for cancelled NF-e status 653', () => {

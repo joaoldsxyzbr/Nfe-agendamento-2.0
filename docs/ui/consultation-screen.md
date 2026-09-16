@@ -23,48 +23,43 @@ A marca usa azul vibrante e amarelo vibrante, com fundo transparente e símbolo 
 - a aba usa `apps/web/public/favicon.ico`;
 - App/Bridge Windows usam `apps/bridge/assets/nfe-agendamento-bridge.ico`.
 
-## Modos de consulta
+## Consulta unificada
 
-A tela principal possui alternância **Uma NF-e | Lote** no card de consulta. O modo Lote entrou na release pública v0.0.13.
+A interface visível não possui mais a alternância **Uma NF-e | Lote**.
 
-Trocar o modo não muda certificado, Bridge, regras do DANFE ou segurança fiscal. Durante uma operação ativa, a alternância fica bloqueada para evitar duas rotas concorrentes pela mesma tela.
+Existe um único campo de consulta:
 
-## Consulta única
+- com uma chave válida, o fluxo processa uma NF-e;
+- com várias chaves válidas, o mesmo fluxo monta a lista e processa uma NF-e por vez;
+- duplicadas e inválidas continuam sendo contabilizadas antes da consulta;
+- não existe teto rígido de quantidade imposto pela interface;
+- certificado, Bridge, DANFE, fallback e proteção fiscal continuam compartilhando as mesmas regras.
 
-O formulário da chave e o resultado continuam no mesmo card visual. Os controles ficam agrupados abaixo do campo na ordem **Nova consulta** → **Consultar**.
+O fluxo visível reutiliza o orquestrador sequencial já usado pelo lote. O endpoint fiscal continua unitário: cada NF-e é consultada individualmente, sem chamada fiscal paralela.
 
-O estado inicial informa que nenhuma NF-e foi carregada. Depois de uma consulta, **Nova consulta** limpa chave, resultado, DANFE/XML temporário e devolve foco ao campo.
+### Ações principais
 
-### Retorno de NF-e cancelada
+Abaixo da entrada ficam, alinhados à esquerda:
 
-Quando a consulta direta retorna `fiscal_status` com `cStat 653`, a interface apresenta:
+1. **Consultar**;
+2. **Nova consulta**.
 
-- título **NF-e cancelada**;
-- mensagem informando que o XML não está disponível;
-- código **SEFAZ 653** como informação técnica.
+**Nova consulta** limpa a entrada e a lista/resultados atuais e devolve o foco ao campo. Durante uma operação ativa, a ação fica indisponível para não alterar a fila em processamento.
 
-O `cStat 217` continua elegível ao fallback Portal Nacional.
-
-## Consulta em lote
-
-O modo **Lote** não aplica limite rígido de quantidade de NF-e por execução e continua processando uma por vez.
-
-### Entrada
+## Entrada
 
 A área contém:
 
-- textarea para colar chaves;
+- textarea para colar uma ou várias chaves;
 - aceitação de chaves em linhas separadas, com vírgula ou ponto e vírgula, além de chave formatada com separadores;
 - validação local do DV;
 - remoção de duplicadas válidas;
 - resumo `válidas · inválidas · duplicadas`;
-- botão **Iniciar lote**.
+- botão **Consultar**.
 
-Não existe bloqueio artificial por quantidade de chaves válidas. Lotes grandes continuam estritamente sequenciais e podem levar mais tempo, principalmente depois que a rota muda para o Portal e cada operação exige hCaptcha manual.
+As chaves válidas aparecem abaixo do campo antes de iniciar, preservando a ordem original.
 
-As chaves válidas aparecem abaixo do campo **antes de iniciar**, preservando a ordem original.
-
-### Linha de cada NF-e
+## Linha de cada NF-e
 
 Cada linha contém:
 
@@ -76,32 +71,32 @@ Cada linha contém:
 - **Visualizar DANFE**;
 - **Baixar XML**.
 
-Enquanto não existe XML validado, as duas ações ficam desabilitadas. Assim que aquela linha conclui, ficam disponíveis imediatamente, mesmo que o restante do lote ainda esteja processando.
+Enquanto não existe XML validado, as duas ações ficam desabilitadas. Assim que aquela linha conclui, ficam disponíveis imediatamente, mesmo que outras NF-e ainda estejam processando.
 
-**Visualizar DANFE** reutiliza o mesmo modal da consulta única, incluindo `Ctrl + scroll`, impressão/PDF e regras específicas de fornecedores.
+**Visualizar DANFE** reutiliza o mesmo modal existente, incluindo `Ctrl + scroll`, impressão/PDF e regras específicas de fornecedores.
 
-### Progresso e ações gerais
+## Progresso e ações gerais
 
-O bloco do lote mostra `concluídos/total`, rota atual e:
+O bloco de processamento mostra `concluídos/total`, rota atual e:
 
-- **Cancelar lote**;
+- **Cancelar lote** durante o processamento;
 - **Baixar XMLs (.zip)**;
 - **Imprimir DANFEs**.
 
 ZIP e impressão usam somente NF-e concluídas. Cancelar não apaga resultados já concluídos.
 
-### Fluxo híbrido SEFAZ → Portal
+## Fluxo híbrido SEFAZ → Portal
 
-O lote começa pela SEFAZ e nunca processa duas chaves em paralelo.
+A consulta começa pela SEFAZ e nunca processa duas chaves em paralelo.
 
 - sucesso direto: a linha conclui com origem **SEFAZ**;
 - `217`: somente aquela linha usa Portal, depois a fila pode voltar à SEFAZ;
-- `656`, HTTP 429 ou `consumption_limit`: a proteção fiscal local é ativada e o restante do lote segue pelo **Portal**, uma chave por vez;
+- `656`, HTTP 429 ou `consumption_limit`: a proteção fiscal local é ativada e as chaves restantes seguem pelo **Portal**, uma por vez;
 - hCaptcha continua sendo resolvido manualmente em cada operação Portal;
 - erro ambíguo de transporte não é repetido automaticamente;
 - falha Portal deixa a linha em erro e oferece ação manual **Tentar pelo Portal**.
 
-A ausência de limite rígido no lote não significa que o Portal seja tratado como serviço oficialmente ilimitado. A interface apenas deixa de impor um teto artificial; o processamento continua sequencial, sujeito ao hCaptcha e ao comportamento do Portal Nacional.
+A ausência de limite rígido não significa que o Portal seja tratado como serviço oficialmente ilimitado. A interface apenas deixa de impor um teto artificial; o processamento continua sequencial, sujeito ao hCaptcha e ao comportamento do Portal Nacional.
 
 Detalhes de arquitetura e aceitação: `docs/superpowers/specs/2026-09-14-batch-query-design.md` e `docs/testing/batch-query.md`.
 
@@ -122,7 +117,7 @@ O diagnóstico não lê PFX, senha, chave privada ou XML. Mensagens exibidas rem
 
 ## Dados temporários
 
-Tanto na consulta única quanto no lote, XML/DANFE ficam em memória no navegador. Recarregar/fechar a página descarta esses resultados. O Bridge não é usado como armazenamento de XML.
+XML/DANFE ficam em memória no navegador. Recarregar/fechar a página descarta esses resultados. O Bridge não é usado como armazenamento de XML.
 
 ## Arquivos relacionados
 
