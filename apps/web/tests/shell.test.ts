@@ -29,6 +29,7 @@ describe('application shell', () => {
     const html = readFileSync(fromWeb('index.html'), 'utf8').toLowerCase();
     const main = readFileSync(fromWeb('src/main.ts'), 'utf8').toLowerCase();
     const brandCss = readFileSync(fromWeb('src/brand.css'), 'utf8').toLowerCase();
+    const stylesCss = readFileSync(fromWeb('src/styles.css'), 'utf8');
     const activeSource = `${html}\n${main}`;
 
     expect(activeSource).toContain('nfe agendamento');
@@ -42,6 +43,9 @@ describe('application shell', () => {
     expect(main).toContain('aria-hidden="true"');
     expect(brandCss).not.toContain("content: 'nf-e'");
     expect(brandCss).not.toContain("content: 'agendamento'");
+    expect(stylesCss).toContain('--font-sans: "Segoe UI Variable Text"');
+    expect(stylesCss).toContain('--font-display: "Segoe UI Variable Display"');
+    expect(stylesCss).toContain('--font-mono: "Cascadia Mono"');
     expect(activeSource).not.toContain('pareamento');
     expect(activeSource).not.toContain('standby');
     expect(activeSource).not.toContain('login');
@@ -108,11 +112,16 @@ describe('application shell', () => {
     expect(batchUi).toContain('reset.hidden = !singleConsultationCompleted');
     expect(batchUi).toContain("batchForm.addEventListener('submit'");
     expect(batchUi).toContain('capture: true');
+    expect(batchUi).toContain('batchKeysInput.focus()');
     expect(batchUi).toContain('actions.append(batchStart, reset)');
     expect(batchUi).toContain("batchPanel.classList.toggle('is-compact-single', getValidKeyCount() <= 1)");
     expect(batchCss).toContain('#batch-consultation-panel.is-compact-single #batch-form textarea');
     expect(batchCss).toContain('#batch-consultation-panel.is-compact-single .batch-toolbar-actions #batch-zip');
     expect(batchCss).toContain('#batch-consultation-panel.is-compact-single .batch-toolbar-actions #batch-print');
+    expect(batchCss).toContain(":has(.batch-item[data-state='success']) .batch-run-toolbar");
+    expect(batchCss).toContain(".batch-item[data-state='success'] .batch-order");
+    expect(batchCss).toContain(".batch-item[data-state='success'] .batch-status");
+    expect(batchCss).toContain(".batch-item[data-state='success'] .batch-details");
   });
 
   it('shows a clear message for cancelled NF-e status 653', () => {
