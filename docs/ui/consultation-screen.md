@@ -59,6 +59,18 @@ A área contém:
 
 As chaves válidas aparecem abaixo do campo antes de iniciar, preservando a ordem original.
 
+### Modo compacto para uma NF-e
+
+Quando a entrada contém zero ou uma chave válida, a própria interface aplica um layout compacto para reduzir a altura da página:
+
+- o campo de chave reduz para a altura necessária a uma única linha;
+- o texto auxiliar detalhado é ocultado;
+- margens e espaçamentos do formulário, progresso e linha de resultado ficam menores;
+- **Baixar XMLs (.zip)** e **Imprimir DANFEs** ficam ocultos, pois são ações de várias NF-e;
+- **Consultar**, **Nova consulta**, **Visualizar DANFE** e **Baixar XML** permanecem disponíveis normalmente.
+
+Ao informar duas ou mais chaves válidas, a tela volta automaticamente ao layout expandido e exibe novamente as ações coletivas.
+
 ## Linha de cada NF-e
 
 Cada linha contém:
@@ -83,7 +95,7 @@ O bloco de processamento mostra `concluídos/total`, rota atual e:
 - **Baixar XMLs (.zip)**;
 - **Imprimir DANFEs**.
 
-ZIP e impressão usam somente NF-e concluídas. Cancelar não apaga resultados já concluídos.
+ZIP e impressão usam somente NF-e concluídas. Cancelar não apaga resultados já concluídos. No modo compacto de uma NF-e, ZIP e impressão conjunta são ocultados por não trazerem benefício para uma única nota.
 
 ## Fluxo híbrido SEFAZ → Portal
 

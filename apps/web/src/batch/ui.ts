@@ -1,4 +1,7 @@
+import { parseBatchInput } from './input';
+
 function applyUnifiedConsultationUi(): boolean {
+  const batchPanel = document.querySelector<HTMLElement>('#batch-consultation-panel');
   const batchKeysInput = document.querySelector<HTMLTextAreaElement>('#batch-keys');
   const batchHelp = document.querySelector<HTMLElement>('#batch-help');
   const batchStart = document.querySelector<HTMLButtonElement>('#batch-start');
@@ -6,7 +9,7 @@ function applyUnifiedConsultationUi(): boolean {
   const modeBatch = document.querySelector<HTMLButtonElement>('#mode-batch');
   const modeControl = document.querySelector<HTMLElement>('.consultation-mode');
 
-  if (!batchKeysInput || !batchHelp || !batchStart || !batchFooter || !modeBatch) {
+  if (!batchPanel || !batchKeysInput || !batchHelp || !batchStart || !batchFooter || !modeBatch) {
     return false;
   }
 
@@ -20,6 +23,14 @@ function applyUnifiedConsultationUi(): boolean {
     modeControl.hidden = true;
     modeControl.style.display = 'none';
   }
+
+  const syncCompactMode = () => {
+    const validKeyCount = parseBatchInput(batchKeysInput.value).validKeys.length;
+    batchPanel.classList.toggle('is-compact-single', validKeyCount <= 1);
+  };
+
+  batchKeysInput.addEventListener('input', syncCompactMode);
+  syncCompactMode();
 
   if (!batchFooter.querySelector('.batch-actions')) {
     const actions = document.createElement('div');

@@ -18,21 +18,25 @@ Este roteiro valida a interface unificada de consulta da `main`. O mesmo campo a
 3. Confirmar que o botão principal se chama **Consultar** e fica alinhado à esquerda.
 4. Confirmar que **Nova consulta** aparece ao lado de **Consultar**.
 5. Colar uma chave válida e confirmar que uma única linha aparece abaixo.
-6. Usar **Nova consulta** e confirmar que entrada e lista são limpas e o foco volta ao campo.
-7. Colar duas ou mais chaves válidas, uma por linha.
-8. Confirmar que todas aparecem imediatamente na lista abaixo do campo e na mesma ordem.
-9. Confirmar que **Visualizar DANFE** e **Baixar XML** começam desabilitados.
-10. Repetir uma chave e confirmar que a duplicada é contabilizada e não vira uma segunda linha.
-11. Inserir uma chave inválida e confirmar a contagem de inválidas.
-12. Colar mais de 10 chaves válidas e confirmar que todas continuam aceitas e **Consultar** permanece disponível.
+6. Confirmar que a tela entra em modo compacto: campo baixo, espaçamento reduzido e ações coletivas **Baixar XMLs (.zip)** / **Imprimir DANFEs** ocultas.
+7. Confirmar que, em resolução desktop normal, o fluxo de uma NF-e fica visível sem necessidade de rolagem excessiva.
+8. Usar **Nova consulta** e confirmar que entrada e lista são limpas e o foco volta ao campo.
+9. Colar duas ou mais chaves válidas, uma por linha.
+10. Confirmar que o campo volta automaticamente ao layout expandido e as ações coletivas reaparecem.
+11. Confirmar que todas aparecem imediatamente na lista abaixo do campo e na mesma ordem.
+12. Confirmar que **Visualizar DANFE** e **Baixar XML** começam desabilitados.
+13. Repetir uma chave e confirmar que a duplicada é contabilizada e não vira uma segunda linha.
+14. Inserir uma chave inválida e confirmar a contagem de inválidas.
+15. Colar mais de 10 chaves válidas e confirmar que todas continuam aceitas e **Consultar** permanece disponível.
 
 ## Processamento de uma NF-e
 
 1. Informar uma única chave válida.
 2. Clicar em **Consultar**.
 3. Confirmar que somente uma linha é processada.
-4. Em caso de sucesso, confirmar origem **SEFAZ**, dados da NF-e e liberação de **Visualizar DANFE** e **Baixar XML**.
-5. Confirmar que fallback Portal e proteção fiscal continuam funcionando pelas mesmas regras quando ocorrerem naturalmente.
+4. Confirmar que o layout compacto permanece durante e depois da consulta.
+5. Em caso de sucesso, confirmar origem **SEFAZ**, dados da NF-e e liberação de **Visualizar DANFE** e **Baixar XML**.
+6. Confirmar que fallback Portal e proteção fiscal continuam funcionando pelas mesmas regras quando ocorrerem naturalmente.
 
 ## Processamento de várias NF-e
 
@@ -106,4 +110,4 @@ Não force `656` para teste. Se o Bridge já estiver naturalmente em proteção,
 
 ## Critério de aprovação física
 
-A interface unificada está fisicamente validada quando consulta com uma chave, consulta com várias chaves, volume acima de 10, ações individuais, ZIP, impressão, cancelamento e **Nova consulta** passam em um PC real. Cenários `217` e limite fiscal devem ser registrados quando ocorrerem naturalmente, sem gerar consumo indevido apenas para testar.
+A interface unificada está fisicamente validada quando consulta com uma chave em modo compacto, consulta com várias chaves, expansão automática, volume acima de 10, ações individuais, ZIP, impressão, cancelamento e **Nova consulta** passam em um PC real. Cenários `217` e limite fiscal devem ser registrados quando ocorrerem naturalmente, sem gerar consumo indevido apenas para testar.

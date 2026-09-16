@@ -233,6 +233,52 @@
   color: #9dc1ff;
 }
 
+#batch-consultation-panel.is-compact-single #batch-form textarea {
+  min-height: 58px;
+  height: 58px;
+}
+
+#batch-consultation-panel.is-compact-single #batch-help {
+  display: none;
+}
+
+#batch-consultation-panel.is-compact-single .batch-form-footer {
+  gap: 6px;
+  margin-top: 6px;
+}
+
+#batch-consultation-panel.is-compact-single .batch-actions {
+  margin-top: 6px;
+}
+
+#batch-consultation-panel.is-compact-single .batch-actions #batch-start,
+#batch-consultation-panel.is-compact-single .batch-actions .batch-reset {
+  min-height: 40px;
+}
+
+#batch-consultation-panel.is-compact-single .batch-run-toolbar {
+  margin-top: 10px;
+  padding: 8px 0;
+}
+
+#batch-consultation-panel.is-compact-single .batch-toolbar-actions #batch-zip,
+#batch-consultation-panel.is-compact-single .batch-toolbar-actions #batch-print {
+  display: none;
+}
+
+#batch-consultation-panel.is-compact-single .batch-list {
+  margin-top: 8px;
+}
+
+#batch-consultation-panel.is-compact-single .batch-empty {
+  min-height: 72px;
+}
+
+#batch-consultation-panel.is-compact-single .batch-item {
+  gap: 10px;
+  padding: 9px 10px;
+}
+
 @media (max-width: 900px) {
   .batch-item {
     grid-template-columns: 34px minmax(0, 1fr) auto;

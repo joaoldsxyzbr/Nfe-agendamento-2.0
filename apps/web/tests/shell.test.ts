@@ -82,6 +82,7 @@ describe('application shell', () => {
   it('uses one visible consultation flow with per-item DANFE and XML actions', () => {
     const main = readFileSync(fromWeb('src/main.ts'), 'utf8');
     const batchUi = readFileSync(fromWeb('src/batch/ui.ts'), 'utf8');
+    const batchCss = readFileSync(fromWeb('src/batch.css'), 'utf8');
 
     expect(main).toContain('id="mode-batch"');
     expect(main).toContain('id="batch-keys"');
@@ -101,6 +102,10 @@ describe('application shell', () => {
     expect(batchUi).toContain("batchStart.textContent = 'Consultar'");
     expect(batchUi).toContain("reset.textContent = 'Nova consulta'");
     expect(batchUi).toContain('actions.append(batchStart, reset)');
+    expect(batchUi).toContain("batchPanel.classList.toggle('is-compact-single', validKeyCount <= 1)");
+    expect(batchCss).toContain('#batch-consultation-panel.is-compact-single #batch-form textarea');
+    expect(batchCss).toContain('#batch-consultation-panel.is-compact-single .batch-toolbar-actions #batch-zip');
+    expect(batchCss).toContain('#batch-consultation-panel.is-compact-single .batch-toolbar-actions #batch-print');
   });
 
   it('shows a clear message for cancelled NF-e status 653', () => {
