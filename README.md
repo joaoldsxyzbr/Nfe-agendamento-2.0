@@ -91,7 +91,9 @@ Detalhes: `docs/testing/portal-post-hcaptcha.md`.
 - Named Pipes locais restritos ao usuário atual;
 - Actions do GitHub fixadas por SHA e permissões mínimas;
 - secrets de Authenticode não entram em builds de pull request;
-- CI inclui `npm audit` e NuGet Audit no POC fiscal.
+- CI inclui `npm audit` e NuGet Audit no POC fiscal;
+- CodeQL analisa automaticamente JavaScript/TypeScript e C# em `main`, pull requests e uma execução semanal;
+- Dependabot verifica semanalmente npm, Playwright, NuGet e GitHub Actions e propõe atualizações por pull request.
 
 ## CI
 
@@ -102,6 +104,8 @@ Jobs obrigatórios do pipeline:
 - `bridge` — testes e build .NET;
 - `fiscal-compatibility` — POC Unimake e paridade fiscal;
 - `windows-package` — empacotamento Windows somente depois dos gates anteriores.
+
+O workflow separado `CodeQL` complementa o CI com análise estática de segurança. O Dependabot apenas abre propostas de atualização; nenhuma dependência é atualizada automaticamente na `main`.
 
 ## Validações/configurações externas ainda pendentes
 
