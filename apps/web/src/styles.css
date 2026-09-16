@@ -1,6 +1,9 @@
 :root {
   color-scheme: dark;
-  font-family: Arial, Helvetica, sans-serif;
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Segoe UI Variable Display", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Cascadia Mono", "Cascadia Code", Consolas, "Liberation Mono", monospace;
+  font-family: var(--font-sans);
   color: var(--text);
   background: var(--bg);
   font-synthesis: none;
@@ -39,7 +42,8 @@ body {
 
 body.danfe-open { overflow: hidden; }
 
-button, input, select { font: inherit; }
+button, input, select, textarea { font-family: inherit; }
+button, input, select { font-size: inherit; }
 
 button {
   border: 1px solid #3c72bf;
@@ -107,13 +111,23 @@ select:disabled { background: #0b121c; color: var(--muted-2); }
 }
 
 h1, h2, p { margin-top: 0; }
+h1, h2 {
+  font-family: var(--font-display);
+}
 h1 {
   margin-bottom: 8px;
   color: var(--text);
   font-size: clamp(28px, 4vw, 38px);
-  letter-spacing: -0.03em;
+  font-weight: 760;
+  letter-spacing: -0.035em;
 }
-h2 { margin-bottom: 0; color: var(--text); font-size: 20px; }
+h2 {
+  margin-bottom: 0;
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 720;
+  letter-spacing: -0.015em;
+}
 .subtitle, .help-text { color: var(--muted); }
 .subtitle { margin-bottom: 0; }
 
