@@ -69,7 +69,7 @@ Quando a entrada contém zero ou uma chave válida, a própria interface aplica 
 - **Baixar XMLs (.zip)** e **Imprimir DANFEs** ficam ocultos, pois são ações de várias NF-e;
 - **Consultar**, **Nova consulta**, **Visualizar DANFE** e **Baixar XML** permanecem disponíveis normalmente.
 
-Ao informar duas ou mais chaves válidas, a tela volta automaticamente ao layout expandido e exibe novamente as ações coletivas.
+Ao informar duas ou mais chaves válidas, a tela volta automaticamente ao layout expandido e exibe novamente as ações coletivas. A mudança é somente visual, controlada pela classe `is-compact-single`; processamento, fila, fallback e proteção fiscal não são alterados.
 
 ## Linha de cada NF-e
 
