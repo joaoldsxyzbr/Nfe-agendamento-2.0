@@ -30,6 +30,13 @@ Este roteiro valida a interface unificada de consulta da `main`. O mesmo campo a
 15. Inserir uma chave inválida e confirmar a contagem de inválidas.
 16. Colar mais de 10 chaves válidas e confirmar que todas continuam aceitas e **Consultar** permanece disponível.
 
+## Tipografia
+
+1. Em Windows 11, confirmar que a interface usa a família visual moderna do sistema (**Segoe UI Variable**) sem depender de download externo de fonte.
+2. Confirmar que títulos possuem leitura mais destacada que textos auxiliares, sem perda de legibilidade.
+3. Confirmar que chaves NF-e permanecem monoespaçadas, preferencialmente com **Cascadia Mono/Cascadia Code** quando disponíveis e fallback adequado em outros sistemas.
+4. Confirmar que botões, campos e textos mantêm alinhamento e não sofrem corte após a troca tipográfica.
+
 ## Processamento de uma NF-e
 
 1. Informar uma única chave válida.
@@ -38,9 +45,11 @@ Este roteiro valida a interface unificada de consulta da `main`. O mesmo campo a
 4. Confirmar que somente uma linha é processada e que o layout compacto permanece durante a consulta.
 5. Durante o processamento, confirmar que **Consultar** permanece no mesmo lugar e fica indisponível.
 6. Quando a tentativa terminar, com sucesso ou erro terminal, confirmar que **Consultar** desaparece e **Nova consulta** aparece no mesmo lugar.
-7. Em caso de sucesso, confirmar origem **SEFAZ**, dados da NF-e e liberação de **Visualizar DANFE** e **Baixar XML**.
-8. Clicar em **Nova consulta** e confirmar que entrada/resultados são limpos e **Consultar** reaparece.
-9. Confirmar que fallback Portal e proteção fiscal continuam funcionando pelas mesmas regras quando ocorrerem naturalmente.
+7. Em caso de sucesso, confirmar que o resultado final fica ainda mais compacto: ordem, chave abreviada, badges de status/origem e barra de progresso deixam de ocupar espaço visual.
+8. Confirmar que permanecem em destaque número/série da NF-e, emitente, valor e as ações **Visualizar DANFE** / **Baixar XML**.
+9. Confirmar que o resultado e as ações cabem confortavelmente na tela junto com o formulário em resolução desktop normal.
+10. Clicar em **Nova consulta** e confirmar que entrada/resultados são limpos, o foco retorna ao campo e **Consultar** reaparece.
+11. Confirmar que fallback Portal e proteção fiscal continuam funcionando pelas mesmas regras quando ocorrerem naturalmente.
 
 ## Processamento de várias NF-e
 
@@ -114,4 +123,4 @@ Não force `656` para teste. Se o Bridge já estiver naturalmente em proteção,
 
 ## Critério de aprovação física
 
-A interface unificada está fisicamente validada quando consulta com uma chave em modo compacto, troca **Consultar → Nova consulta** no mesmo lugar, restauração após **Nova consulta**, consulta com várias chaves, expansão automática, volume acima de 10, ações individuais, ZIP, impressão e cancelamento passam em um PC real. Cenários `217` e limite fiscal devem ser registrados quando ocorrerem naturalmente, sem gerar consumo indevido apenas para testar.
+A interface unificada está fisicamente validada quando consulta com uma chave em modo compacto, troca **Consultar → Nova consulta** no mesmo lugar, restauração/foco após **Nova consulta**, resultado unitário compacto, tipografia legível, consulta com várias chaves, expansão automática, volume acima de 10, ações individuais, ZIP, impressão e cancelamento passam em um PC real. Cenários `217` e limite fiscal devem ser registrados quando ocorrerem naturalmente, sem gerar consumo indevido apenas para testar.
