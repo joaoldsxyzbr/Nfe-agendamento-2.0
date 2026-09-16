@@ -101,8 +101,15 @@ describe('application shell', () => {
     expect(batchUi).toContain("modeControl.style.display = 'none'");
     expect(batchUi).toContain("batchStart.textContent = 'Consultar'");
     expect(batchUi).toContain("reset.textContent = 'Nova consulta'");
+    expect(batchUi).toContain('reset.hidden = true');
+    expect(batchUi).toContain('singleConsultationPending = true');
+    expect(batchUi).toContain('singleConsultationCompleted = true');
+    expect(batchUi).toContain('batchStart.hidden = singleConsultationCompleted');
+    expect(batchUi).toContain('reset.hidden = !singleConsultationCompleted');
+    expect(batchUi).toContain("batchForm.addEventListener('submit'");
+    expect(batchUi).toContain('capture: true');
     expect(batchUi).toContain('actions.append(batchStart, reset)');
-    expect(batchUi).toContain("batchPanel.classList.toggle('is-compact-single', validKeyCount <= 1)");
+    expect(batchUi).toContain("batchPanel.classList.toggle('is-compact-single', getValidKeyCount() <= 1)");
     expect(batchCss).toContain('#batch-consultation-panel.is-compact-single #batch-form textarea');
     expect(batchCss).toContain('#batch-consultation-panel.is-compact-single .batch-toolbar-actions #batch-zip');
     expect(batchCss).toContain('#batch-consultation-panel.is-compact-single .batch-toolbar-actions #batch-print');
