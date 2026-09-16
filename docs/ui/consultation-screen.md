@@ -39,12 +39,18 @@ O fluxo visível reutiliza o orquestrador sequencial já usado pelo lote. O endp
 
 ### Ações principais
 
-Abaixo da entrada ficam, alinhados à esquerda:
+As ações ficam alinhadas à esquerda.
 
-1. **Consultar**;
-2. **Nova consulta**.
+Com zero ou uma chave válida, o comportamento replica a antiga consulta única:
 
-**Nova consulta** limpa a entrada e a lista/resultados atuais e devolve o foco ao campo. Durante uma operação ativa, a ação fica indisponível para não alterar a fila em processamento.
+- antes de consultar, aparece somente **Consultar**;
+- durante a consulta, **Consultar** permanece no mesmo lugar e fica indisponível;
+- quando a tentativa termina, **Consultar** é substituído por **Nova consulta** no mesmo lugar;
+- **Nova consulta** limpa a entrada e o resultado, devolve o foco ao campo e faz **Consultar** reaparecer.
+
+Se o usuário editar a chave depois de uma consulta concluída, a tela também volta ao estado inicial com **Consultar**.
+
+Com duas ou mais chaves válidas, a interface mantém as ações **Consultar** e **Nova consulta** disponíveis lado a lado, preservando o fluxo de múltiplas NF-e. Durante uma operação ativa, **Nova consulta** fica indisponível para não alterar a fila em processamento.
 
 ## Entrada
 
@@ -67,9 +73,10 @@ Quando a entrada contém zero ou uma chave válida, a própria interface aplica 
 - o texto auxiliar detalhado é ocultado;
 - margens e espaçamentos do formulário, progresso e linha de resultado ficam menores;
 - **Baixar XMLs (.zip)** e **Imprimir DANFEs** ficam ocultos, pois são ações de várias NF-e;
-- **Consultar**, **Nova consulta**, **Visualizar DANFE** e **Baixar XML** permanecem disponíveis normalmente.
+- **Consultar** aparece antes da execução e é substituído por **Nova consulta** quando a tentativa termina;
+- **Visualizar DANFE** e **Baixar XML** continuam disponíveis normalmente quando existe XML validado.
 
-Ao informar duas ou mais chaves válidas, a tela volta automaticamente ao layout expandido e exibe novamente as ações coletivas. A mudança é somente visual, controlada pela classe `is-compact-single`; processamento, fila, fallback e proteção fiscal não são alterados.
+Ao informar duas ou mais chaves válidas, a tela volta automaticamente ao layout expandido e exibe novamente as ações coletivas. A mudança de compactação é somente visual, controlada pela classe `is-compact-single`; processamento, fila, fallback e proteção fiscal não são alterados.
 
 ## Linha de cada NF-e
 
