@@ -2,6 +2,7 @@ import { parseBatchInput } from './input';
 
 function applyUnifiedConsultationUi(): boolean {
   const batchPanel = document.querySelector<HTMLElement>('#batch-consultation-panel');
+  const batchForm = document.querySelector<HTMLFormElement>('#batch-form');
   const batchKeysInput = document.querySelector<HTMLTextAreaElement>('#batch-keys');
   const batchHelp = document.querySelector<HTMLElement>('#batch-help');
   const batchStart = document.querySelector<HTMLButtonElement>('#batch-start');
@@ -9,7 +10,7 @@ function applyUnifiedConsultationUi(): boolean {
   const modeBatch = document.querySelector<HTMLButtonElement>('#mode-batch');
   const modeControl = document.querySelector<HTMLElement>('.consultation-mode');
 
-  if (!batchPanel || !batchKeysInput || !batchHelp || !batchStart || !batchFooter || !modeBatch) {
+  if (!batchPanel || !batchForm || !batchKeysInput || !batchHelp || !batchStart || !batchFooter || !modeBatch) {
     return false;
   }
 
@@ -24,9 +25,10 @@ function applyUnifiedConsultationUi(): boolean {
     modeControl.style.display = 'none';
   }
 
+  const getValidKeyCount = () => parseBatchInput(batchKeysInput.value).validKeys.length;
+
   const syncCompactMode = () => {
-    const validKeyCount = parseBatchInput(batchKeysInput.value).validKeys.length;
-    batchPanel.classList.toggle('is-compact-single', validKeyCount <= 1);
+    batchPanel.classList.toggle('is-compact-single', getValidKeyCount() <= 1);
   };
 
   batchKeysInput.addEventListener('input', syncCompactMode);
@@ -42,20 +44,63 @@ function applyUnifiedConsultationUi(): boolean {
     reset.className = 'lookup-reset batch-reset';
     reset.type = 'button';
     reset.textContent = 'Nova consulta';
+    reset.hidden = true;
+
+    let singleConsultationPending = false;
+    let singleConsultationCompleted = false;
+
+    const syncActionVisibility = () => {
+      const validKeyCount = getValidKeyCount();
+
+      if (validKeyCount > 1) {
+        batchStart.hidden = false;
+        reset.hidden = false;
+        return;
+      }
+
+      batchStart.hidden = singleConsultationCompleted;
+      reset.hidden = !singleConsultationCompleted;
+    };
 
     reset.addEventListener('click', () => {
       if (batchKeysInput.disabled) return;
+      singleConsultationPending = false;
+      singleConsultationCompleted = false;
       batchKeysInput.value = '';
       batchKeysInput.dispatchEvent(new Event('input', { bubbles: true }));
       batchKeysInput.focus();
     });
 
-    const syncResetState = () => {
+    // Captura antes do listener principal: registra que uma consulta unitária realmente começou.
+    batchForm.addEventListener('submit', () => {
+      if (getValidKeyCount() === 1 && !batchStart.disabled) {
+        singleConsultationPending = true;
+        singleConsultationCompleted = false;
+        syncActionVisibility();
+      }
+    }, { capture: true });
+
+    const syncActionState = () => {
       reset.disabled = batchKeysInput.disabled;
+
+      if (singleConsultationPending && !batchKeysInput.disabled) {
+        singleConsultationPending = false;
+        singleConsultationCompleted = true;
+      }
+
+      syncActionVisibility();
     };
 
-    batchKeysInput.addEventListener('input', syncResetState);
-    new MutationObserver(syncResetState).observe(batchKeysInput, {
+    batchKeysInput.addEventListener('input', () => {
+      if (!batchKeysInput.disabled) {
+        singleConsultationPending = false;
+        singleConsultationCompleted = false;
+      }
+      syncCompactMode();
+      syncActionState();
+    });
+
+    new MutationObserver(syncActionState).observe(batchKeysInput, {
       attributes: true,
       attributeFilter: ['disabled'],
     });
@@ -66,7 +111,7 @@ function applyUnifiedConsultationUi(): boolean {
     batchFooter.style.alignItems = 'stretch';
     batchFooter.style.justifyContent = 'flex-start';
     actions.style.justifyContent = 'flex-start';
-    syncResetState();
+    syncActionState();
   }
 
   return true;
