@@ -19,6 +19,7 @@ public sealed class SupplierIdentityResolverTests
     [InlineData("1234567890")]
     [InlineData("123456789012345")]
     [InlineData("12.ABC.678/0001-9Z")]
+    [InlineData("12.ABC.345/01DE#35")]
     [InlineData("")]
     public void NormalizeTaxId_rejects_invalid_shapes(string input)
     {
