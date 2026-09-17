@@ -55,7 +55,7 @@ Um mesmo fornecedor pode ter mais de um `taxId`. A configuração local deve ser
 
 ## Normalização e falha segura
 
-O Bridge remove pontuação e espaços, converte letras para maiúsculas e preserva caracteres alfanuméricos. São aceitos:
+O Bridge remove somente a formatação conhecida (`.`, `/`, `-`) e espaços, converte letras para maiúsculas e preserva caracteres alfanuméricos. Qualquer outro símbolo torna o identificador inválido. São aceitos:
 
 - CPF com 11 dígitos;
 - CNPJ com 14 posições: as 12 primeiras podem ser alfanuméricas e os 2 dígitos verificadores finais devem ser numéricos.
