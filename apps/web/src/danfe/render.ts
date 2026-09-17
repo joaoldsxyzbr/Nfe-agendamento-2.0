@@ -397,7 +397,7 @@ function paginateProductsByAvailableSpace(nfe: ParsedNfe): ParsedNfeProduct[][] 
 }
 
 function estimateProductHeight(nfe: ParsedNfe, product: ParsedNfeProduct): number {
-  const descriptionLines = Math.max(1, Math.ceil(product.description.length / 52));
+  const descriptionLines = Math.max(1, Math.ceil(product.description.length / 43));
   const packageLines = productPackageLabel(product) ? 1 : 0;
   const taxLines = product.tax.taxNote ? Math.max(1, Math.ceil(product.tax.taxNote.length / 58)) : 0;
   const descriptionBlockLines = descriptionLines + packageLines + taxLines;
