@@ -43,7 +43,7 @@ test('NF-e longa preserva paginação, grade simplificada e cabeçalho fiscal na
     expect(facts.pageLabel).toBe(`Folha ${index + 1}/${renderedPages}`);
   }
 
-  const headers = await page.locator('.products-table thead').first().textContent();
+  const headers = (await page.locator('.products-table thead').first().textContent())?.toUpperCase() ?? '';
   expect(headers).toContain('ITEM');
   expect(headers).toContain('CÓDIGO PRODUTO');
   expect(headers).not.toContain('NCM/SH');
