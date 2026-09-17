@@ -1,24 +1,22 @@
 import {
   GREEN_SUPPLIER_CATALOG,
-  normalizeSupplierName,
-  resolveSupplierRule,
+  resolveSupplierRuleForPresentation,
   type SupplierCatalogItem,
 } from './supplier-rules';
-
-export type FernandoKleinCatalogItem = SupplierCatalogItem;
 
 export type ProductPresentation = Readonly<{
   sourceCode: string;
   internalCode: string;
 }>;
 
-export type FernandoKleinProductInput = Readonly<{
+export type SupplierProductInput = Readonly<{
+  supplierRuleId?: string | null;
   emitterName?: string | null;
   xProd?: string | null;
   cProd?: string | null;
 }>;
 
-export type FernandoKleinSummary = Readonly<{
+export type SupplierProductSummary = Readonly<{
   applies: boolean;
   total: number;
   mapped: number;
@@ -26,13 +24,9 @@ export type FernandoKleinSummary = Readonly<{
   unknownProducts: readonly Readonly<{ cProd: string; xProd: string }>[];
 }>;
 
-export const FERNANDO_KLEIN_CATALOG = GREEN_SUPPLIER_CATALOG;
+export const SUPPLIER_PRODUCT_CATALOG = GREEN_SUPPLIER_CATALOG;
 
-export function normalizeFernandoKleinSupplierName(value: unknown): string {
-  return normalizeSupplierName(value);
-}
-
-export function normalizeFernandoKleinProductName(value: unknown): string {
+export function normalizeSupplierProductName(value: unknown): string {
   const normalized = String(value ?? '')
     .trim()
     .normalize('NFD')
@@ -45,7 +39,7 @@ export function normalizeFernandoKleinProductName(value: unknown): string {
   return normalized.replace(/^VERDURAS(?:\s+|$)/, '').trim();
 }
 
-function buildAliasIndex(catalog: readonly FernandoKleinCatalogItem[]): Readonly<Record<string, string>> {
+function buildAliasIndex(catalog: readonly SupplierCatalogItem[]): Readonly<Record<string, string>> {
   const aliases: Record<string, string> = {};
 
   for (const item of catalog) {
@@ -55,7 +49,7 @@ function buildAliasIndex(catalog: readonly FernandoKleinCatalogItem[]): Readonly
     }
 
     for (const rawAlias of item?.aliases ?? []) {
-      const alias = normalizeFernandoKleinProductName(rawAlias);
+      const alias = normalizeSupplierProductName(rawAlias);
       if (!alias) {
         throw new Error(`Alias vazio no código interno ${internalCode}.`);
       }
@@ -72,16 +66,16 @@ function buildAliasIndex(catalog: readonly FernandoKleinCatalogItem[]): Readonly
   return Object.freeze(aliases);
 }
 
-export function validateFernandoKleinCatalog(
-  catalog: readonly FernandoKleinCatalogItem[] = FERNANDO_KLEIN_CATALOG,
+export function validateSupplierProductCatalog(
+  catalog: readonly SupplierCatalogItem[] = SUPPLIER_PRODUCT_CATALOG,
 ): true {
   buildAliasIndex(catalog);
   return true;
 }
 
-const catalogIndexes = new Map<readonly FernandoKleinCatalogItem[], Readonly<Record<string, string>>>();
+const catalogIndexes = new Map<readonly SupplierCatalogItem[], Readonly<Record<string, string>>>();
 
-function aliasIndexFor(catalog: readonly FernandoKleinCatalogItem[]): Readonly<Record<string, string>> {
+function aliasIndexFor(catalog: readonly SupplierCatalogItem[]): Readonly<Record<string, string>> {
   const cached = catalogIndexes.get(catalog);
   if (cached) return cached;
   const index = buildAliasIndex(catalog);
@@ -89,32 +83,42 @@ function aliasIndexFor(catalog: readonly FernandoKleinCatalogItem[]): Readonly<R
   return index;
 }
 
-export function isFernandoKleinEmitter(emitterName: unknown): boolean {
-  return Boolean(resolveSupplierRule(emitterName)?.productCatalog?.length);
+export function isSupplierProductCatalogEmitter(input: Readonly<{
+  supplierRuleId?: unknown;
+  emitterName?: unknown;
+}>): boolean {
+  return Boolean(resolveSupplierRuleForPresentation(input)?.productCatalog?.length);
 }
 
-export function resolveFernandoKleinProduct(input: FernandoKleinProductInput): ProductPresentation {
+export function resolveSupplierProduct(input: SupplierProductInput): ProductPresentation {
   const sourceCode = String(input.cProd ?? '');
-  const supplier = resolveSupplierRule(input.emitterName);
+  const supplier = resolveSupplierRuleForPresentation({
+    supplierRuleId: input.supplierRuleId,
+    emitterName: input.emitterName,
+  });
   const catalog = supplier?.productCatalog;
   if (!catalog?.length) {
     return Object.freeze({ sourceCode, internalCode: '' });
   }
 
-  const productName = normalizeFernandoKleinProductName(input.xProd);
+  const productName = normalizeSupplierProductName(input.xProd);
   return Object.freeze({
     sourceCode,
     internalCode: aliasIndexFor(catalog)[productName] ?? '',
   });
 }
 
-export function summarizeFernandoKleinProducts(input: Readonly<{
+export function summarizeSupplierProducts(input: Readonly<{
+  supplierRuleId?: string | null;
   emitterName?: string | null;
   products?: readonly Readonly<{ cProd?: string | null; xProd?: string | null }>[] | null;
-}>): FernandoKleinSummary {
+}>): SupplierProductSummary {
   const products = Array.isArray(input.products) ? input.products : [];
 
-  if (!isFernandoKleinEmitter(input.emitterName)) {
+  if (!isSupplierProductCatalogEmitter({
+    supplierRuleId: input.supplierRuleId,
+    emitterName: input.emitterName,
+  })) {
     return Object.freeze({
       applies: false,
       total: products.length,
@@ -128,7 +132,8 @@ export function summarizeFernandoKleinProducts(input: Readonly<{
   const unknownProducts: Readonly<{ cProd: string; xProd: string }>[] = [];
 
   for (const product of products) {
-    const result = resolveFernandoKleinProduct({
+    const result = resolveSupplierProduct({
+      supplierRuleId: input.supplierRuleId,
       emitterName: input.emitterName,
       xProd: product?.xProd,
       cProd: product?.cProd,
@@ -152,3 +157,6 @@ export function summarizeFernandoKleinProducts(input: Readonly<{
     unknownProducts: Object.freeze(unknownProducts),
   });
 }
+
+// Compatibilidade temporária até o renderer migrar para os nomes genéricos.
+export const resolveFernandoKleinProduct = resolveSupplierProduct;
