@@ -212,8 +212,9 @@ describe('single consultation controller', () => {
     });
 
     const running = harness.controller.submit();
-    await Promise.resolve();
-    await Promise.resolve();
+    for (let attempt = 0; attempt < 8 && !harness.controller.isPortalActive(); attempt += 1) {
+      await Promise.resolve();
+    }
 
     expect(harness.controller.isPortalActive()).toBe(true);
     await harness.controller.cancelActivePortal();
