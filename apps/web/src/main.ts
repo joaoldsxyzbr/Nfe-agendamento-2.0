@@ -107,7 +107,7 @@ app.innerHTML = `
             rows="6"
             autocomplete="off"
             spellcheck="false"
-            placeholder="Cole até 10 chaves, uma por linha"
+            placeholder="Cole as chaves, uma por linha"
             aria-describedby="batch-help batch-input-summary"
           ></textarea>
           <div class="batch-form-footer">
