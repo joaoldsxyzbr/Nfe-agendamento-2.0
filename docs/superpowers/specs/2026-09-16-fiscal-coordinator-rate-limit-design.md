@@ -17,39 +17,50 @@ A divisão gradual de `apps/web/src/main.ts`, ruleset da `main` e configuração
 
 O Worker valida método HTTP, exige `Authorization: Bearer <token>` no formato Base64URL de 43 caracteres, calcula SHA-256 do token e usa o hash como nome do `FiscalCoordinator` Durable Object. O token é uma identidade opaca derivada localmente do A1 RSA; o Worker não recebe CNPJ, chave NF-e, XML, PFX, senha ou chave privada.
 
-Cada identidade fiscal já possui seu próprio controle transacional dentro do Durable Object para o limite funcional de consultas SEFAZ. Esse controle deve permanecer separado do novo mecanismo de proteção contra abuso HTTP.
+Cada identidade fiscal já possui seu próprio controle transacional dentro do Durable Object para o limite funcional de consultas SEFAZ. Esse controle deve permanecer separado da nova proteção contra abuso HTTP.
+
+## Correção de desenho durante a revisão
+
+A primeira versão desta especificação propunha um segundo Durable Object com um bucket por identidade e rota. A revisão antes da implementação identificou um problema: como o bearer atual é validado somente pelo formato, um atacante poderia rotacionar tokens aleatórios e contornar um limite por identidade, além de continuar forçando a criação de novos namespaces.
+
+Por isso, o desenho foi simplificado e endurecido antes de tocar no código: usar o **Rate Limiting binding nativo do Cloudflare Workers** como barreira global antes de qualquer acesso ao `FiscalCoordinator`.
+
+Essa API já é suportada pela versão de Wrangler fixada no projeto. Ela não adiciona biblioteca externa, não cria Durable Objects de rate limiting e é adequada para proteção de tráfego HTTP. O limite fiscal exato continua no `FiscalCoordinator` e no `FiscalUsageGuard`; o rate limiting do Worker é somente uma camada de abuso e não deve ser usado para contabilidade fiscal.
 
 ## Requisitos
 
 1. O comportamento fiscal existente de `FiscalCoordinator.reserve()` e `FiscalCoordinator.block()` não deve mudar.
 2. O Worker não deve receber ou persistir CNPJ, chave NF-e, XML, PFX, senha ou chave privada.
-3. Tokens inválidos devem continuar retornando `401` sem criar/acessar Durable Object fiscal.
+3. Tokens inválidos devem continuar retornando `401` sem acessar o Durable Object fiscal.
 4. Métodos diferentes de `POST` devem continuar retornando `405`.
 5. Rotas desconhecidas sob `/api/fiscal-coordination/` devem continuar retornando `404`.
-6. O rate limiting deve ocorrer antes da operação fiscal no Durable Object.
+6. O rate limiting deve ocorrer depois das validações baratas de método/token/rota e antes de calcular/acessar o namespace fiscal.
 7. Quando o limite HTTP for excedido, a resposta deve ser `429` com JSON estável e `Retry-After`.
-8. Falha ou indisponibilidade do mecanismo de rate limiting não pode liberar chamadas de coordenação sem controle. O comportamento deve ser conservador.
-9. Não adicionar dependências externas para implementar o limite.
-10. O mecanismo deve ser testável deterministicamente sem depender do relógio real ou de tráfego Cloudflare real.
+8. Falha ou indisponibilidade do binding de rate limiting deve retornar `503` e não acessar o `FiscalCoordinator`.
+9. Não adicionar dependências externas.
+10. A lógica HTTP deve ser testável deterministicamente sem depender do tráfego real da Cloudflare.
+11. A proteção HTTP não pode ser confundida com o teto fiscal de 20 tentativas por hora.
 
 ## Abordagem escolhida
 
-Usar um segundo Durable Object, dedicado somente ao rate limiting HTTP, separado do `FiscalCoordinator` fiscal.
+Adicionar um binding `COORDINATION_RATE_LIMITER` no `wrangler.jsonc`, usando o Rate Limiting nativo do Workers.
 
-O Worker continuará calculando `namespace = SHA-256(token)` para o coordenador fiscal. Para o rate limiter, usará um bucket derivado da mesma identidade opaca e da rota solicitada. Assim, um cliente legítimo pode usar `reserve` e `block` sem compartilhar estado com tokens aleatórios, enquanto cada identidade fica limitada a uma taxa operacional compatível com o uso do Bridge.
+A política será global para os dois endpoints fiscais, usando uma chave estável única (`fiscal-coordination`). Isso impede que simples rotação de bearer token gere uma quota HTTP nova por token antes de chegar ao Durable Object fiscal.
 
-O novo Durable Object terá estado mínimo e transacional, sem armazenar o token original. Seu core será implementado como função pura em arquivo separado, seguindo o padrão já usado por `fiscal-coordinator-core.ts`, para permitir testes unitários determinísticos.
+O handler HTTP da coordenação será extraído para um módulo pequeno e independente de `cloudflare:workers`. O `worker/index.ts` continuará responsável apenas por integrar bindings reais do runtime ao handler. Dessa forma, os contratos `401`, `404`, `405`, `429`, `503` e o caminho permitido podem ser testados com funções simples em Vitest.
 
 ## Política de limite
 
-A política inicial será simples e intencionalmente folgada para não interferir no fluxo legítimo:
+A proteção inicial será deliberadamente folgada para não interferir no uso interno legítimo:
 
-- janela fixa de 60 segundos;
-- até 60 requisições por identidade opaca e por rota dentro da janela;
-- excedido o limite, retornar `429` até o fim da janela;
-- `Retry-After` em segundos inteiros, mínimo 1.
+- período: 60 segundos;
+- limite: 300 requisições por período e por localização Cloudflare;
+- chave: `fiscal-coordination`, compartilhada entre `reserve` e `block`;
+- resposta ao exceder: `429`;
+- `Retry-After`: `60` segundos;
+- corpo JSON: `{ "error": "rate_limited", "retryAfterSeconds": 60 }`.
 
-Esse limite é de proteção HTTP, não o teto fiscal de 20 tentativas/hora. O teto fiscal continua sendo controlado exclusivamente pelo `FiscalCoordinator` e pelo `FiscalUsageGuard` local.
+A API de rate limiting do Workers é local à localização Cloudflare e usa contadores eventualmente consistentes. Essa característica é aceitável aqui porque a finalidade é reduzir abuso HTTP e custo; ela não substitui o limite fiscal transacional e exato do Durable Object.
 
 ## Fluxo
 
@@ -58,49 +69,56 @@ POST /api/fiscal-coordination/reserve|block
   -> validar método
   -> validar bearer token
   -> validar rota conhecida
-  -> SHA-256(token)
-  -> consultar RateLimitCoordinator da identidade + rota
-      -> negado: 429 + Retry-After
+  -> consultar COORDINATION_RATE_LIMITER
+      -> negado: 429 + Retry-After: 60
+      -> erro: 503, fail-safe
       -> permitido: continuar
+  -> SHA-256(token)
   -> consultar FiscalCoordinator existente
   -> retornar decisão fiscal existente
 ```
 
+Rotas fora de `/api/fiscal-coordination/*` continuam indo diretamente para `env.ASSETS.fetch(request)`.
+
 ## Falhas
 
-Se o rate limiter lançar exceção, retornar `503` com `Cache-Control: no-store` e não chamar o `FiscalCoordinator`. Isso preserva o princípio fail-safe já usado pelo projeto: falha de coordenação remota não deve resultar em chamada direta desprotegida à SEFAZ.
+Se `COORDINATION_RATE_LIMITER.limit(...)` lançar exceção ou retornar resultado inválido, o Worker deve responder `503` com `Cache-Control: no-store` e não acessar o `FiscalCoordinator`.
 
 O Bridge já trata indisponibilidade/resposta inválida do coordenador de forma conservadora e segue pelo Portal; esse contrato não será alterado.
 
 ## Arquivos previstos
 
-- `worker/rate-limit-core.ts`: regra pura de janela/contagem e cálculo de retry.
-- `worker/index.ts`: integração do novo gate antes de `reserve`/`block`.
-- `apps/web/tests/rate-limit-core.test.ts`: testes unitários do core.
-- `apps/web/tests/fiscal-coordinator-worker.test.ts` ou teste equivalente existente: testes de integração do Worker para `401`, `404`, `405`, `429`, `503` e caminho permitido.
-- `wrangler.jsonc`: binding/migration do novo Durable Object, somente se necessário pela configuração atual do projeto.
-- `docs/architecture/fiscal-usage-guard.md`: documentar a distinção entre rate limiting HTTP e limite fiscal.
-- `README.md`: refletir a nova proteção na seção de segurança, sem alterar a arquitetura descrita.
+- `worker/fiscal-coordination-http.ts`: validações HTTP, rate-limit gate e despacho para `reserve`/`block` por dependências injetadas.
+- `worker/index.ts`: integração do handler com `COORDINATION_RATE_LIMITER`, `FISCAL_COORDINATOR` e assets.
+- `apps/web/tests/fiscal-coordinator-worker.test.ts`: testes determinísticos do handler HTTP.
+- `apps/web/tests/deploy-config.test.ts`: validar configuração do binding de rate limiting.
+- `wrangler.jsonc`: binding `ratelimits` do Worker.
+- `docs/architecture/fiscal-usage-guard.md`: documentar a distinção entre proteção HTTP e limite fiscal.
+- `README.md`: refletir a nova proteção na seção de segurança.
+
+Não será criado um novo Durable Object para rate limiting.
 
 ## Testes de aceite
 
 A implementação só será considerada concluída quando:
 
-- requisições dentro do limite chegarem ao `FiscalCoordinator` normalmente;
-- a 61ª requisição da mesma identidade/rota na mesma janela retornar `429`;
-- outra identidade não herdar o limite da primeira;
-- `reserve` e `block` tenham buckets independentes;
-- após o fim da janela, a identidade volte a ser aceita;
-- `Retry-After` seja coerente com a janela restante;
-- token inválido não acione nenhum Durable Object;
-- falha do rate limiter retorne `503` e não execute operação fiscal;
-- suíte web, build, `wrangler deploy --dry-run`, CI fiscal e CodeQL continuem verdes.
+- uma requisição válida dentro do limite chegar ao `FiscalCoordinator` normalmente;
+- uma negação do binding retornar `429` e `Retry-After: 60`;
+- erro do binding retornar `503` e não executar operação fiscal;
+- token inválido retornar `401` sem executar rate limiter ou operação fiscal;
+- método inválido retornar `405` sem executar rate limiter ou operação fiscal;
+- rota desconhecida retornar `404` sem executar rate limiter ou operação fiscal;
+- `reserve` e `block` continuarem despachando para suas operações fiscais correspondentes;
+- rota não fiscal continue indo para assets;
+- `wrangler deploy --dry-run` aceite o binding;
+- suíte web, build, CI fiscal e CodeQL continuem verdes.
 
 ## Não objetivos
 
 - CAPTCHA, WAF ou Turnstile;
 - armazenamento de IP;
 - identificação de usuário final;
+- autenticação criptográfica nova do bearer;
 - alteração do limite fiscal de 20 tentativas/hora;
 - alteração do derivador da identidade A1;
 - mudança no Bridge, Portal ou DANFE;
@@ -108,4 +126,4 @@ A implementação só será considerada concluída quando:
 
 ## Segurança e privacidade
 
-O rate limiter recebe apenas a mesma identidade opaca já usada na coordenação, transformada em SHA-256 antes de ser usada como namespace. Nenhum novo dado fiscal ou pessoal é introduzido. O Worker continua sem registrar token, chave NF-e, XML ou material criptográfico do certificado.
+O novo binding recebe somente a chave constante `fiscal-coordination`. O Worker continua sem registrar token, chave NF-e, XML ou material criptográfico do certificado. Nenhum novo dado fiscal ou pessoal é introduzido.
