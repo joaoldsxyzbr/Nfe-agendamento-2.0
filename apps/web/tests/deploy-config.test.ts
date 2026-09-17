@@ -6,6 +6,7 @@ const rootLockUrl = new URL('../../../package-lock.json', import.meta.url);
 const headersUrl = new URL('../public/_headers', import.meta.url);
 const ciUrl = new URL('../../../.github/workflows/ci.yml', import.meta.url);
 const mainUrl = new URL('../src/main.ts', import.meta.url);
+const consultationControllerUrl = new URL('../src/nfe/consultation-controller.ts', import.meta.url);
 
 describe('Cloudflare deploy configuration', () => {
   it('supports the root deploy command used by Workers Builds', async () => {
@@ -72,9 +73,10 @@ describe('Cloudflare deploy configuration', () => {
 
   it('does not advertise Portal before an eligible SEFAZ fallback result occurs', async () => {
     const main = await readFile(mainUrl, 'utf8');
+    const consultationController = await readFile(consultationControllerUrl, 'utf8');
     const normalHelp = main.match(/<p id="lookup-help"[^>]*>(.*?)<\/p>/s)?.[1] ?? '';
     expect(normalHelp).not.toContain('Portal');
-    expect(main).toContain("lookup.category === 'consumption_limit'");
-    expect(main).toContain("lookup.category === 'fiscal_status' && lookup.cStat === '217'");
+    expect(consultationController).toContain("lookup.category === 'consumption_limit'");
+    expect(consultationController).toContain("lookup.category === 'fiscal_status' && lookup.cStat === '217'");
   });
 });
