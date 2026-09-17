@@ -147,7 +147,7 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
         const item = items[index];
         if (!item || item.status !== 'queued') continue;
 
-        if (route === 'portal') {
+        if (isPortalRoute()) {
           item.status = 'portal_queued';
           item.message = 'SEFAZ em proteção; aguardando consulta pelo Portal.';
           renderState('Lote seguindo pelo Portal');
@@ -222,7 +222,7 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
       }
       throw error;
     } finally {
-      renderState(route === 'portal' ? 'Lote seguindo pelo Portal' : 'Consultando SEFAZ');
+      renderState(isPortalRoute() ? 'Lote seguindo pelo Portal' : 'Consultando SEFAZ');
     }
   }
 
@@ -265,7 +265,7 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
         : 'Não foi possível concluir a consulta pelo Portal.';
     } finally {
       activePortalOperationId = null;
-      renderState(route === 'portal' ? 'Lote seguindo pelo Portal' : 'Consultando lote');
+      renderState(isPortalRoute() ? 'Lote seguindo pelo Portal' : 'Consultando lote');
     }
   }
 
@@ -316,7 +316,7 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
     const completed = completedItems();
     elements.progress.textContent = `${terminal} de ${items.length}`;
     elements.routeText.textContent = running
-      ? `${routeLabel} · rota ${route === 'portal' ? 'Portal' : 'SEFAZ'}`
+      ? `${routeLabel} · rota ${isPortalRoute() ? 'Portal' : 'SEFAZ'}`
       : routeLabel;
     elements.zipButton.disabled = completed.length === 0 || running || manualPortalBusy;
     elements.printButton.disabled = completed.length === 0 || running || manualPortalBusy;
@@ -455,6 +455,10 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
 
   function completedItems(): MutableBatchItem[] {
     return items.filter((item) => item.status === 'success' && item.parsed !== null);
+  }
+
+  function isPortalRoute(): boolean {
+    return route === 'portal';
   }
 
   function markQueuedItems(status: BatchItemStatus, message: string | null): void {
