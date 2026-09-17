@@ -343,19 +343,19 @@ function buildProductsTable(nfe: ParsedNfe, products: readonly ParsedNfeProduct[
     const internalQuantity = resolveSupplierInternalQuantity({ emitterName: nfe.issuer.name, quantity: product.quantity });
     const quantity = `<span class="source-product-quantity">${decimal(product.quantity, 4, 4)}</span>${internalQuantity !== null ? `<small class="internal-quantity">[${internalQuantity} UN]</small>` : ''}`;
     return `<tr>
-      <td class="code-col">${code}</td><td class="description">${description}</td><td class="center item-col">${product.itemNumber}</td><td class="center ncm-col">${escapeHtml(product.ncm)}</td>
+      <td class="center item-col">${product.itemNumber}</td><td class="code-col">${code}</td><td class="description">${description}</td>
       <td class="center">${escapeHtml(product.tax.cst)}</td><td class="center">${escapeHtml(product.cfop)}</td><td class="center">${escapeHtml(product.unit)}</td>
       <td class="numeric">${quantity}</td><td class="numeric">${decimal(product.unitPrice, 4, 4)}</td><td class="numeric">${moneyFiscal(product.totalPrice)}</td><td class="numeric">${moneyFiscal(product.discount)}</td>
       <td class="numeric">${moneyFiscal(product.tax.icmsBase)}</td><td class="numeric">${moneyFiscal(product.tax.icms)}</td><td class="numeric">${decimal(product.tax.icmsRate)}</td>
     </tr>`;
   }).join('');
-  const filler = rows ? '<tr class="products-filler" aria-hidden="true"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>' : '';
+  const filler = rows ? '<tr class="products-filler" aria-hidden="true"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>' : '';
 
   return `<div class="danfe-section-title">Dados dos produtos / serviços</div>
     <table class="products-table danfe-products-fill">
-      <colgroup><col class="code"><col class="description"><col class="item"><col class="ncm"><col class="cst"><col class="cfop"><col class="unit"><col class="qty"><col class="unit-value"><col class="total-value"><col class="discount"><col class="bc"><col class="icms"><col class="rate"></colgroup>
-      <thead><tr><th>Código produto</th><th>Descrição do produto / serviço</th><th>Item</th><th>NCM/SH</th><th>O/CST</th><th>CFOP</th><th>UN</th><th>Quant.</th><th>Valor unit.</th><th>Valor total</th><th>Valor desc.</th><th>B.Cálc ICMS</th><th>Valor ICMS</th><th>Alíq. ICMS</th></tr></thead>
-      <tbody>${rows || '<tr><td colspan="14">Nenhum produto informado no XML.</td></tr>'}${filler}</tbody>
+      <colgroup><col class="item"><col class="code"><col class="description"><col class="cst"><col class="cfop"><col class="unit"><col class="qty"><col class="unit-value"><col class="total-value"><col class="discount"><col class="bc"><col class="icms"><col class="rate"></colgroup>
+      <thead><tr><th>Item</th><th>Código produto</th><th>Descrição do produto / serviço</th><th>O/CST</th><th>CFOP</th><th>UN</th><th>Quant.</th><th>Valor unit.</th><th>Valor total</th><th>Valor desc.</th><th>B.Cálc ICMS</th><th>Valor ICMS</th><th>Alíq. ICMS</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="13">Nenhum produto informado no XML.</td></tr>'}${filler}</tbody>
     </table>`;
 }
 

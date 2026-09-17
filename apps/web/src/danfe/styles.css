@@ -82,15 +82,13 @@
 .products-table .products-filler { height: 100%; }
 .products-table .products-filler td { height: 100%; padding: 0; }
 .products-table .description { font-size: 8px; }
-.products-table col.code { width: 16mm; }
-.products-table col.description { width: 48mm; }
-.products-table col.item { width: 7mm; }
-.products-table col.ncm { width: 13mm; }
-.products-table col.cst { width: 9mm; }
-.products-table col.cfop { width: 10mm; }
-.products-table col.unit { width: 7mm; }
-.products-table col.qty { width: 12mm; }
-.products-table .item-col, .products-table .code-col, .products-table .ncm-col { white-space: nowrap; word-break: normal; overflow-wrap: normal; }
+.products-table col.item { width: 8mm; }
+.products-table col.code { width: 20mm; }
+.products-table col.description { width: 62mm; }
+.products-table col.cst { width: 11mm; }
+.products-table col.cfop { width: 11mm; }
+.products-table col.unit { width: 8mm; }
+.products-table .item-col, .products-table thead th:first-child, .products-table .code-col, .products-table thead th:nth-child(2) { white-space: nowrap; word-break: normal; overflow-wrap: normal; }
 .center { text-align: center; }
 .numeric { text-align: right; white-space: nowrap; }
 .source-product-code { display: block; }

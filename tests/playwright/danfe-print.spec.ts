@@ -18,7 +18,7 @@ test('NF-e curta gera exatamente uma A4 sem overflow', async ({ page }, testInfo
   expect(pdfPages).toBe(renderedPages);
 });
 
-test('NF-e longa preserva paginação, NCM e cabeçalho fiscal nas continuações', async ({ page }, testInfo) => {
+test('NF-e longa preserva paginação, grade simplificada e cabeçalho fiscal nas continuações', async ({ page }, testInfo) => {
   const nfe = createNfe(ALPHA_KEY, 85, true);
   const renderedPages = await renderForPrint(page, nfe);
 
@@ -38,10 +38,15 @@ test('NF-e longa preserva paginação, NCM e cabeçalho fiscal nas continuaçõe
   for (const [index, facts] of pageFacts.entries()) {
     expect(facts.hasNature).toBe(true);
     expect(facts.hasIssuerRegistry).toBe(true);
-    expect(facts.hasNcm).toBe(true);
+    expect(facts.hasNcm).toBe(false);
     expect(facts.hasBarcode).toBe(true);
     expect(facts.pageLabel).toBe(`Folha ${index + 1}/${renderedPages}`);
   }
+
+  const headers = (await page.locator('.products-table thead').first().textContent())?.toUpperCase() ?? '';
+  expect(headers).toContain('ITEM');
+  expect(headers).toContain('CÓDIGO PRODUTO');
+  expect(headers).not.toContain('NCM/SH');
 
   await expect(page.locator('.access-key').first()).toContainText('09PC');
   await expect(page.locator('.access-key').first()).toContainText('3D31');

@@ -17,7 +17,7 @@ NFe Agendamento é um aplicativo interno para consultar NF-e, baixar XML e gerar
 
 Não existem Central, pareamento, servidor LAN, mDNS ou pasta compartilhada na arquitetura atual. Cada PC usa seu próprio Bridge.
 
-## Estado funcional — 16/09/2026
+## Estado funcional — 17/09/2026
 
 Implementado e coberto pelos gates automatizados aplicáveis:
 
@@ -33,10 +33,10 @@ Implementado e coberto pelos gates automatizados aplicáveis:
 - XML limitado a 10 MiB, DTD proibido e validação contra a chave consultada;
 - download XML individual e ZIP do lote;
 - preview DANFE em modal com `Ctrl + scroll`, impressão/PDF e download XML;
-- DANFE com NCM/SH, coluna operacional `Item`, composição de embalagem quando derivável do XML e cabeçalhos fiscais nas folhas adicionais;
+- DANFE com grade operacional de **13 colunas**, `Item` na primeira posição, composição de embalagem quando derivável do XML e cabeçalhos fiscais nas folhas adicionais; NCM/IPI permanecem preservados no XML, mas fora da grade visual principal;
 - código de barras híbrido CODE-128C/CODE-128A para chave alfanumérica;
 - paginação determinística, sem medição frágil de viewport em `beforeprint`;
-- Playwright/Chromium gerando PDF A4 real no CI e validando overflow, paginação, cabeçalhos, NCM/SH, `Folha X/Y` e chave alfanumérica;
+- Playwright/Chromium gerando PDF A4 real no CI e validando overflow, paginação, grade simplificada, cabeçalhos, `Folha X/Y` e chave alfanumérica;
 - regras específicas de fornecedores centralizadas e sem CPF/CNPJ fixos no bundle público;
 - proteção fiscal local persistente e fail-safe;
 - coordenação compartilhada do teto fiscal entre PCs que usam o mesmo A1 RSA;
