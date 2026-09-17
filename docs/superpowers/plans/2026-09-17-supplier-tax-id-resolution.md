@@ -66,7 +66,7 @@ Criar testes completos usando somente ids sintéticos:
 [Theory]
 [InlineData("123.456.789-01", "12345678901")]
 [InlineData("12.345.678/0001-95", "12345678000195")]
-[InlineData("12.ABC.678/0001-9Z", "12ABC67800019Z")]
+[InlineData("12.ABC.345/01DE-35", "12ABC34501DE35")]
 public void NormalizeTaxId_removes_formatting_and_preserves_letters(string input, string expected)
 {
     Assert.Equal(expected, SupplierIdentityResolver.NormalizeTaxId(input));
@@ -76,6 +76,8 @@ public void NormalizeTaxId_removes_formatting_and_preserves_letters(string input
 [InlineData("ABC45678901")]
 [InlineData("1234567890")]
 [InlineData("123456789012345")]
+[InlineData("12.ABC.678/0001-9Z")]
+[InlineData("12.ABC.345/01DE#35")]
 [InlineData("")]
 public void NormalizeTaxId_rejects_invalid_shapes(string input)
 {
@@ -86,12 +88,12 @@ public void NormalizeTaxId_rejects_invalid_shapes(string input)
 public void Resolve_matches_any_tax_id_registered_for_one_supplier()
 {
     using var fixture = SupplierFileFixture.Create("""
-    {"version":1,"suppliers":[{"id":"souza-cruz","taxIds":["12.345.678/0001-95","98.765.432/0001-AB"]}]}
+    {"version":1,"suppliers":[{"id":"souza-cruz","taxIds":["12.345.678/0001-95","98.765.ABC/0001-35"]}]}
     """);
     var resolver = new SupplierIdentityResolver(fixture.Path);
 
     Assert.Equal("souza-cruz", resolver.Resolve("12345678000195"));
-    Assert.Equal("souza-cruz", resolver.Resolve("98.765.432/0001-ab"));
+    Assert.Equal("souza-cruz", resolver.Resolve("98.765.abc/0001-35"));
     Assert.Null(resolver.Resolve("11.111.111/1111-11"));
 }
 
@@ -230,14 +232,34 @@ public sealed class SupplierIdentityResolver
 
     public static string? NormalizeTaxId(string? value)
     {
-        var normalized = new string((value ?? string.Empty)
+        var raw = (value ?? string.Empty)
             .Trim()
-            .ToUpperInvariant()
-            .Where(character => (character >= 'A' && character <= 'Z') || (character >= '0' && character <= '9'))
+            .ToUpperInvariant();
+
+        if (raw.Any(character =>
+                !((character >= 'A' && character <= 'Z') ||
+                  (character >= '0' && character <= '9') ||
+                  char.IsWhiteSpace(character) ||
+                  character is '.' or '/' or '-')))
+        {
+            return null;
+        }
+
+        var normalized = new string(raw
+            .Where(character =>
+                (character >= 'A' && character <= 'Z') ||
+                (character >= '0' && character <= '9'))
             .ToArray());
 
         if (normalized.Length == 11 && normalized.All(char.IsDigit)) return normalized;
-        if (normalized.Length == 14 && normalized.All(character => (character >= 'A' && character <= 'Z') || char.IsDigit(character))) return normalized;
+        if (normalized.Length == 14 &&
+            normalized[..12].All(character =>
+                (character >= 'A' && character <= 'Z') || char.IsDigit(character)) &&
+            normalized[12..].All(char.IsDigit))
+        {
+            return normalized;
+        }
+
         return null;
     }
 }
