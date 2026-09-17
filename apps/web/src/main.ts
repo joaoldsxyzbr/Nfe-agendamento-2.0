@@ -317,7 +317,7 @@ async function submitLookup(): Promise<void> {
     const lookup = await bridgeClient.lookupNfe(validation.value);
     if (lookup.category === 'success' && lookup.xml) {
       try {
-        const parsed = parseNfeXml(lookup.xml, validation.value);
+        const parsed = await withSupplierRule(parseNfeXml(lookup.xml, validation.value));
         renderLookupSuccess(parsed);
       } catch (error) {
         renderInvalidXml(error);
@@ -364,7 +364,7 @@ async function runPortalFallback(accessKey: string, lookup: NfeLookupResult): Pr
     const portalStatus = await portalFallback.waitForResult(operationId);
     if (portalStatus.state === 'completed' && portalStatus.xml) {
       try {
-        const parsed = parseNfeXml(portalStatus.xml, accessKey);
+        const parsed = await withSupplierRule(parseNfeXml(portalStatus.xml, accessKey));
         renderLookupSuccess(parsed);
       } catch (error) {
         renderInvalidXml(error);
@@ -393,6 +393,15 @@ async function runPortalFallback(accessKey: string, lookup: NfeLookupResult): Pr
     if (activePortalOperationId === operationId) {
       activePortalOperationId = null;
     }
+  }
+}
+
+async function withSupplierRule(parsed: ParsedNfe, signal?: AbortSignal): Promise<ParsedNfe> {
+  try {
+    const resolution = await bridgeClient.resolveSupplier(parsed.issuer.taxId, signal);
+    return { ...parsed, supplierRuleId: resolution.supplierId };
+  } catch {
+    return { ...parsed, supplierRuleId: null };
   }
 }
 
