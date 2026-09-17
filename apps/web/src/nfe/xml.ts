@@ -123,6 +123,7 @@ export type ParsedNfeTransport = {
 export type ParsedNfe = {
   accessKey: string;
   originalXml: string;
+  supplierRuleId?: string | null;
   model: string;
   series: string;
   number: string;
