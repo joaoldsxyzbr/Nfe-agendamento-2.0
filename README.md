@@ -5,7 +5,7 @@ NFe Agendamento é um aplicativo interno para consultar NF-e, baixar XML e gerar
 ## Arquitetura atual
 
 - **Site Cloudflare:** Vite + TypeScript para interface, parsing XML, DANFE, lote e regras de apresentação.
-- **Worker Cloudflare:** código mínimo apenas para coordenar o consumo fiscal entre PCs; os assets continuam servidos como site estático.
+- **Worker Cloudflare:** código mínimo para coordenar o consumo fiscal entre PCs e aplicar uma barreira HTTP contra abuso; os assets continuam servidos como site estático.
 - **Durable Object SQLite:** reserva atomicamente tentativas diretas antes da SEFAZ para computadores que usam o mesmo A1 RSA.
 - **App Windows:** `NfeAgendamento.App.exe` em WinForms; inicia oculto, fica na bandeja, gerencia o Bridge e oferece atualização manual.
 - **Bridge:** ASP.NET Core .NET 10 em `http://127.0.0.1:17345`, somente loopback.
@@ -40,6 +40,7 @@ Implementado e coberto pelos gates automatizados aplicáveis:
 - regras específicas de fornecedores centralizadas e sem CPF/CNPJ fixos no bundle público;
 - proteção fiscal local persistente e fail-safe;
 - coordenação compartilhada do teto fiscal entre PCs que usam o mesmo A1 RSA;
+- barreira HTTP global de 300 requisições por 60 segundos antes do `FiscalCoordinator`, usando o Rate Limiting binding nativo do Cloudflare Workers;
 - POC isolado de `Unimake.DFe` para paridade de chave alfanumérica e estrutura RTC;
 - parser estrutural complementar de IBS/CBS/IS, sem alterar prematuramente o DANFE;
 - App, Bridge e Portal publicados como self-contained `win-x64`;
@@ -52,6 +53,8 @@ Implementado e coberto pelos gates automatizados aplicáveis:
 O Bridge mantém `FiscalUsageGuard` local com gate serial, janela de uma hora e persistência durável. Estado local corrompido falha de forma conservadora: a rota SEFAZ é protegida e a consulta segue pelo Portal.
 
 Além disso, antes de uma chamada direta à SEFAZ, o Bridge reserva uma tentativa no coordenador Cloudflare. A credencial de coordenação é derivada localmente por assinatura RSA/SHA-256 usando a chave privada do mesmo A1 e é enviada somente por HTTPS. O Worker usa SHA-256 dessa credencial para selecionar um Durable Object; ele não recebe CNPJ, chave NF-e, XML, PFX, senha ou chave privada.
+
+Antes de calcular esse namespace ou acessar o Durable Object, o Worker aplica `COORDINATION_RATE_LIMITER` com uma chave lógica global `fiscal-coordination`, limite de 300 requisições por 60 segundos. Esse limiter é apenas uma barreira aproximada contra abuso e custo: ele **não** substitui a janela fiscal exata. Negação retorna HTTP `429` com `Retry-After: 60`; falha ou resultado inválido do binding retorna `503`. Em ambos os casos o `FiscalCoordinator` não é acessado.
 
 PCs que usam cópias do **mesmo A1 RSA** compartilham a mesma janela de 20 tentativas por hora. `429` e `cStat 656` propagam cooldown compartilhado. Se o coordenador estiver indisponível ou responder de forma inválida, o Bridge **não toca na SEFAZ** e retorna `consumption_limit`, fazendo o frontend seguir pelo Portal.
 
@@ -84,6 +87,7 @@ Detalhes: `docs/testing/portal-post-hcaptcha.md`.
 - CORS sem wildcard;
 - chave privada/PFX/senha do A1 permanecem no Windows;
 - coordenador remoto não recebe dados fiscais do documento;
+- rate limiter HTTP recebe somente a chave constante `fiscal-coordination` e atua antes do Durable Object fiscal;
 - proteção local persiste somente hash do CNPJ, timestamps e prazos de proteção;
 - `.gitignore` bloqueia PFX/P12/PEM/KEY e arquivos de ambiente;
 - WebView2 limitado ao host oficial do Portal e HTTPS;
@@ -147,7 +151,7 @@ A raiz contém `wrangler.jsonc`. O deploy publica o site e o Worker de coordena�
 npx wrangler deploy
 ```
 
-`/api/fiscal-coordination/*` passa pelo Worker antes dos assets; as demais rotas continuam usando os assets do site. `FiscalCoordinator` usa Durable Object com armazenamento SQLite.
+`/api/fiscal-coordination/*` passa pelo Worker antes dos assets; as demais rotas continuam usando os assets do site. O Worker valida método/token/rota, passa pelo `COORDINATION_RATE_LIMITER` e só então acessa `FiscalCoordinator`, que usa Durable Object com armazenamento SQLite.
 
 O CI usa o Wrangler do lockfile e executa `./node_modules/.bin/wrangler deploy --dry-run`.
 
