@@ -24,6 +24,23 @@ describe('Souza Cruz quantity in DANFE', () => {
     expect(nfe.originalXml).toBe(originalXml);
   });
 
+  it('uses supplierRuleId for the visual conversion even when xNome differs', async () => {
+    const { renderDanfeHtml } = await import('../src/danfe/render');
+    const base = parseNfeXml(basicXml, KEY);
+    const nfe = {
+      ...base,
+      supplierRuleId: 'souza-cruz',
+      issuer: { ...base.issuer, name: 'NOME QUE NAO CASA' },
+      products: [{ ...base.products[0], quantity: 0.2 }],
+    };
+
+    const html = renderDanfeHtml(nfe);
+
+    expect(html).toContain('0,2000');
+    expect(html).toContain('[10 UN]');
+    expect(nfe.originalXml).toBe(base.originalXml);
+  });
+
   it('does not show an internal quantity for another supplier', async () => {
     const { renderDanfeHtml } = await import('../src/danfe/render');
     const base = parseNfeXml(basicXml, KEY);
