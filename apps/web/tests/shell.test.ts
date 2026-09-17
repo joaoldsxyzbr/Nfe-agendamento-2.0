@@ -84,6 +84,15 @@ describe('application shell', () => {
     expect(downloadIndex).toBeGreaterThan(parseIndex);
   });
 
+  it('resolves supplier identity locally for single SEFAZ and Portal results', () => {
+    const main = readFileSync(fromWeb('src/main.ts'), 'utf8');
+
+    expect(main).toContain('async function withSupplierRule(');
+    expect(main).toContain('bridgeClient.resolveSupplier(parsed.issuer.taxId, signal)');
+    expect(main).toContain('await withSupplierRule(parseNfeXml(lookup.xml, validation.value))');
+    expect(main).toContain('await withSupplierRule(parseNfeXml(portalStatus.xml, accessKey))');
+  });
+
   it('uses one visible consultation flow with per-item DANFE and XML actions', () => {
     const main = readFileSync(fromWeb('src/main.ts'), 'utf8');
     const batchController = readFileSync(fromWeb('src/batch/controller.ts'), 'utf8');
