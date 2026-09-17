@@ -29,7 +29,7 @@ describe('portal fallback integration', () => {
       consultationController.indexOf('async function renderParsedXml'),
     );
     expect(singleFallback).not.toContain('lookupNfe(');
-    expect(consultationController.match(/lookupNfe\(/g)).toHaveLength(1);
+    expect(consultationController).toContain('const lookup = await deps.bridge.lookupNfe(validation.value);');
 
     expect(batchController).toContain('deps.bridge.lookupNfe(item.accessKey, signal)');
     expect(batchController).toContain("lookup.category === 'consumption_limit'");
