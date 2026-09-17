@@ -46,7 +46,7 @@ export const SUPPLIER_RULES: readonly SupplierRule[] = Object.freeze([
   Object.freeze({
     id: 'dionisio',
     name: 'Dionisio',
-    issuerNames: Object.freeze(['DIONISIO']),
+    issuerNames: Object.freeze(['DIONISIO', 'DIONISIO KOCH']),
     productCatalog: GREEN_SUPPLIER_CATALOG,
   }),
   Object.freeze({

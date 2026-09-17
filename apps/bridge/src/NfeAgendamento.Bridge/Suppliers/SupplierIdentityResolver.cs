@@ -74,17 +74,30 @@ public sealed class SupplierIdentityResolver
 
     public static string? NormalizeTaxId(string? value)
     {
-        var normalized = new string((value ?? string.Empty)
+        var raw = (value ?? string.Empty)
             .Trim()
-            .ToUpperInvariant()
+            .ToUpperInvariant();
+
+        if (raw.Any(character =>
+                !((character >= 'A' && character <= 'Z') ||
+                  (character >= '0' && character <= '9') ||
+                  char.IsWhiteSpace(character) ||
+                  character is '.' or '/' or '-')))
+        {
+            return null;
+        }
+
+        var normalized = new string(raw
             .Where(character =>
                 (character >= 'A' && character <= 'Z') ||
                 (character >= '0' && character <= '9'))
             .ToArray());
 
         if (normalized.Length == 11 && normalized.All(char.IsDigit)) return normalized;
-        if (normalized.Length == 14 && normalized.All(character =>
-                (character >= 'A' && character <= 'Z') || char.IsDigit(character)))
+        if (normalized.Length == 14 &&
+            normalized[..12].All(character =>
+                (character >= 'A' && character <= 'Z') || char.IsDigit(character)) &&
+            normalized[12..].All(char.IsDigit))
         {
             return normalized;
         }
