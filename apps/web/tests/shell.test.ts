@@ -15,6 +15,7 @@ describe('application shell', () => {
       'src/main.ts',
       'src/styles.css',
       'src/batch.css',
+      'src/batch/controller.ts',
       'src/batch/input.ts',
       'src/batch/ui.ts',
       'src/batch/zip.ts',
@@ -85,20 +86,23 @@ describe('application shell', () => {
 
   it('uses one visible consultation flow with per-item DANFE and XML actions', () => {
     const main = readFileSync(fromWeb('src/main.ts'), 'utf8');
+    const batchController = readFileSync(fromWeb('src/batch/controller.ts'), 'utf8');
     const batchUi = readFileSync(fromWeb('src/batch/ui.ts'), 'utf8');
     const batchCss = readFileSync(fromWeb('src/batch.css'), 'utf8');
 
     expect(main).toContain('id="mode-batch"');
     expect(main).toContain('id="batch-keys"');
     expect(main).toContain('id="batch-list"');
-    expect(main).toContain('processBatchDirectItem');
-    expect(main).toContain('processBatchPortalItem');
-    expect(main).toContain("batchRoute = 'portal'");
+    expect(main).toContain("import { createBatchController } from './batch/controller';");
+    expect(batchController).toContain('async function processDirectItem');
+    expect(batchController).toContain('async function processPortalItem');
+    expect(batchController).toContain("route = 'portal'");
     expect(main).toContain('Visualizar DANFE');
     expect(main).toContain('Baixar XML');
     expect(main).toContain('Baixar XMLs (.zip)');
     expect(main).toContain('Imprimir DANFEs');
-    expect(main).toContain('createStoredZip(');
+    expect(main).toContain('createZip: createStoredZip');
+    expect(batchController).toContain('deps.createZip(');
     expect(batchUi).toContain("batchKeysInput.placeholder = 'Cole as chaves, uma por linha'");
     expect(batchUi).toContain('Sem limite fixo de quantidade');
     expect(batchUi).toContain('modeBatch.click()');
