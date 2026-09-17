@@ -58,7 +58,7 @@ Um mesmo fornecedor pode ter mais de um `taxId`. A configuração local deve ser
 O Bridge remove pontuação e espaços, converte letras para maiúsculas e preserva caracteres alfanuméricos. São aceitos:
 
 - CPF com 11 dígitos;
-- CNPJ com 14 caracteres alfanuméricos, compatível com o CNPJ alfanumérico.
+- CNPJ com 14 posições: as 12 primeiras podem ser alfanuméricas e os 2 dígitos verificadores finais devem ser numéricos.
 
 Arquivo ausente, JSON inválido, versão desconhecida, regra incompleta, identificador inválido, conflito do mesmo `taxId` entre fornecedores ou erro de leitura resultam em `supplierId: null`. A identificação de fornecedor é **fail-soft**: jamais bloqueia consulta, download, DANFE, Portal ou dispara nova tentativa fiscal.
 
@@ -95,7 +95,8 @@ As regras públicas não contêm CNPJ/CPF fixos.
 ### Dionisio
 
 - usa o mesmo catálogo compartilhado do Fernando Klein;
-- mantém a mesma regra de preservação do `cProd` e apresentação do código interno.
+- mantém a mesma regra de preservação do `cProd` e apresentação do código interno;
+- enquanto o fallback por `xNome` estiver ativo, aceita os nomes exatos normalizados `DIONISIO` e `DIONISIO KOCH`.
 
 ### Souza Cruz
 
