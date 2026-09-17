@@ -64,6 +64,8 @@ Estrutura sugerida:
 
 Um mesmo fornecedor pode possuir mais de um CNPJ/CPF cadastrado sem criar nova regra de apresentação.
 
+Os valores reais serão fornecidos separadamente durante a implementação/validação e não serão adicionados ao repositório público.
+
 O arquivo não deve:
 
 - ser versionado no GitHub;
@@ -111,7 +113,7 @@ Durante a migração:
 - documento encontrado no Bridge: usar o `supplierId` retornado;
 - documento não encontrado: tentar a regra atual por `xNome`;
 - arquivo ausente, vazio ou inválido: resolver como `null` e usar fallback por nome;
-- Bridge indisponível: não bloquear o processamento do XML nem o DANFE; apenas deixar de aplicar identificação por documento e usar o comportamento compatível definido no frontend.
+- Bridge indisponível: não bloquear o processamento do XML nem o DANFE; usar o fallback atual por `xNome` no frontend.
 
 Depois que os CNPJs/CPFs reais de Fernando Klein, Dionisio e Souza Cruz forem cadastrados e validados em NFs reais, o fallback por `xNome` poderá ser removido em uma mudança posterior separada.
 
@@ -163,13 +165,14 @@ A implementação deverá ser guiada por testes e cobrir pelo menos:
 - identificador desconhecido;
 - arquivo ausente;
 - JSON inválido;
-- garantia de que o identificador recebido não é registrado em logs;
-- resposta contendo apenas `supplierId`;
+- resposta contendo apenas `supplierId` e sem ecoar o identificador recebido;
 - fallback por `xNome` durante a migração;
 - Souza Cruz mantendo a mesma conversão atual;
 - Fernando Klein e Dionisio mantendo os mesmos códigos internos atuais;
 - nenhum impacto no XML fiscal original;
 - nenhuma regressão no DANFE e nos testes existentes.
+
+A ausência de logging do identificador deve ser preservada por desenho: o resolvedor e o endpoint não devem incluir o valor recebido em mensagens de log, exceções próprias ou payloads de resposta. Não é necessário introduzir infraestrutura específica de captura de logs só para este caso.
 
 ## Documentação
 
@@ -206,7 +209,7 @@ A mudança estará pronta quando:
 1. o Bridge resolver corretamente os fornecedores cadastrados usando CNPJ/CPF local;
 2. o frontend nunca precisar conhecer os CNPJs/CPFs cadastrados no Bridge;
 3. nenhum identificador novo for enviado ao Cloudflare;
-4. o fallback por `xNome` continuar funcionando durante a migração;
+4. o fallback por `xNome` continuar funcionando durante a migração, inclusive quando o Bridge estiver indisponível;
 5. Souza Cruz, Fernando Klein e Dionisio produzirem exatamente o mesmo resultado operacional atual no DANFE;
 6. a configuração sobreviver às atualizações do Bridge;
 7. todos os testes relevantes passarem;
