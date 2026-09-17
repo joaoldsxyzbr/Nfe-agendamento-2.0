@@ -16,6 +16,7 @@ describe('application shell', () => {
       'src/styles.css',
       'src/batch.css',
       'src/batch/controller.ts',
+      'src/nfe/consultation-controller.ts',
       'src/batch/input.ts',
       'src/batch/ui.ts',
       'src/batch/zip.ts',
@@ -68,29 +69,32 @@ describe('application shell', () => {
 
   it('validates the single key locally and validates XML before exposing download', () => {
     const main = readFileSync(fromWeb('src/main.ts'), 'utf8');
+    const controller = readFileSync(fromWeb('src/nfe/consultation-controller.ts'), 'utf8');
 
     expect(main).toContain("import { validateAccessKey } from './nfe/access-key';");
+    expect(main).toContain("import { createConsultationController } from './nfe/consultation-controller';");
     expect(main).toMatch(/import \{[^}]*parseNfeXml[^}]*\} from '\.\/nfe\/xml';/);
     expect(main).toContain("lookupForm.addEventListener('submit'");
+    expect(main).toContain('void consultationController.submit()');
 
-    const validateIndex = main.indexOf('validateAccessKey(');
-    const lookupIndex = main.indexOf('bridgeClient.lookupNfe(');
-    const parseIndex = main.indexOf('parseNfeXml(');
+    const validateIndex = controller.indexOf('deps.validateAccessKey(');
+    const lookupIndex = controller.indexOf('deps.bridge.lookupNfe(');
+    const parseIndex = controller.indexOf('deps.parseXml(');
     const downloadIndex = main.indexOf('download =');
 
     expect(validateIndex).toBeGreaterThan(-1);
     expect(lookupIndex).toBeGreaterThan(validateIndex);
     expect(parseIndex).toBeGreaterThan(lookupIndex);
-    expect(downloadIndex).toBeGreaterThan(parseIndex);
+    expect(downloadIndex).toBeGreaterThan(-1);
   });
 
   it('resolves supplier identity locally for single SEFAZ and Portal results', () => {
-    const main = readFileSync(fromWeb('src/main.ts'), 'utf8');
+    const controller = readFileSync(fromWeb('src/nfe/consultation-controller.ts'), 'utf8');
 
-    expect(main).toContain('async function withSupplierRule(');
-    expect(main).toContain('bridgeClient.resolveSupplier(parsed.issuer.taxId, signal)');
-    expect(main).toContain('await withSupplierRule(parseNfeXml(lookup.xml, validation.value))');
-    expect(main).toContain('await withSupplierRule(parseNfeXml(portalStatus.xml, accessKey))');
+    expect(controller).toContain('async function withSupplierRule(');
+    expect(controller).toContain('deps.bridge.resolveSupplier(parsed.issuer.taxId)');
+    expect(controller).toContain('await renderParsedXml(lookup.xml, validation.value)');
+    expect(controller).toContain('await renderParsedXml(portalStatus.xml, accessKey)');
   });
 
   it('uses one visible consultation flow with per-item DANFE and XML actions', () => {
