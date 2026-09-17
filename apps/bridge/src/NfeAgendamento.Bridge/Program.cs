@@ -6,6 +6,7 @@ using NfeAgendamento.Bridge.Fiscal;
 using NfeAgendamento.Bridge.Portal;
 using NfeAgendamento.Bridge.Runtime;
 using NfeAgendamento.Bridge.Security;
+using NfeAgendamento.Bridge.Suppliers;
 
 const string SingleInstanceName = "NfeAgendamento.Bridge";
 var isRealEntry = Assembly.GetEntryAssembly() == typeof(Program).Assembly;
@@ -51,6 +52,7 @@ if (isManaged)
 }
 
 builder.Services.AddSingleton<CertificateService>();
+builder.Services.AddSingleton<SupplierIdentityResolver>();
 builder.Services.AddSingleton<INfeDistributionTransport, SefazDistributionTransport>();
 builder.Services.AddSingleton(_ => FiscalUsageGuard.CreateDefault());
 builder.Services.AddSingleton<IFiscalUsageCoordinator>(services =>
@@ -207,6 +209,13 @@ api.MapPost("/certificate/select", async (
         });
     }
 });
+
+api.MapPost("/supplier/resolve", (
+    SupplierResolveRequest request,
+    SupplierIdentityResolver suppliers) => Results.Ok(new
+{
+    supplierId = suppliers.Resolve(request.TaxId),
+}));
 
 api.MapPost("/nfe/lookup", async (
     NfeLookupRequest request,
