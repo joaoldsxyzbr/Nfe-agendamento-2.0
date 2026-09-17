@@ -16,7 +16,7 @@
 - Não colocar CNPJ/CPF real de fornecedor em código, teste, documentação pública, log, bundle do frontend, issue, PR ou Cloudflare.
 - A configuração local fica em `%LocalAppData%\NfeAgendamentoBridge\supplier-rules.json` e deve sobreviver às atualizações normais do Bridge.
 - O XML original, `cProd`, quantidades fiscais e demais campos fiscais permanecem intactos.
-- Normalização: remover apenas formatação/espaços, preservar letras e usar uppercase; CPF aceito com 11 dígitos; CNPJ aceito com 14 posições, sendo as 12 primeiras alfanuméricas e os 2 dígitos verificadores finais numéricos.
+- Normalização: remover somente formatação conhecida (`.`, `/`, `-`) e espaços, rejeitar outros símbolos, preservar letras e usar uppercase; CPF aceito com 11 dígitos; CNPJ aceito com 14 posições, sendo as 12 primeiras alfanuméricas e os 2 dígitos verificadores finais numéricos.
 - Configuração ausente, inválida, duplicada, ilegível ou fornecedor desconhecido resulta em `supplierId: null`; isso nunca pode bloquear consulta, download, DANFE, Portal ou gerar retry fiscal.
 - Durante a migração, `supplierId` conhecido tem precedência; `supplierId` ausente ou desconhecido usa fallback por `xNome` exato normalizado.
 - Não remover o fallback por nome nesta implementação.
