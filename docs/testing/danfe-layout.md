@@ -1,10 +1,10 @@
 # DANFE — referência visual, conformidade e regressão
 
-Este documento registra os critérios vigentes do DANFE do NFe Agendamento após a revisão fiscal de 15/09/2026.
+Este documento registra os critérios vigentes do DANFE do NFe Agendamento, incluindo a restauração da grade de produtos aprovada em 14/09/2026 e mantida novamente a partir de 17/09/2026.
 
 ## Objetivo
 
-Manter o DANFE rápido, legível e compacto sem divergir dos campos mínimos do leiaute fiscal nem repetir a regressão de impressão que chegou a gerar praticamente um produto por folha.
+Manter o DANFE rápido, legível e compacto sem repetir regressões de impressão ou de apresentação da grade de produtos.
 
 O renderer continua próprio porque também atende regras operacionais internas de apresentação. Essas regras nunca alteram o XML fiscal original.
 
@@ -22,26 +22,25 @@ O renderer continua próprio porque também atende regras operacionais internas 
 
 ## Colunas de produtos
 
-A grade mantém a ordem fiscal e inclui novamente **NCM/SH**. A coluna operacional **Item** continua existindo, mas fica imediatamente à direita da descrição, como coluna específica da empresa.
+A grade visual usa **13 colunas** e prioriza os dados operacionais usados no recebimento. A coluna **Item** é a primeira coluna. **NCM/SH**, **Valor IPI** e **Alíq. IPI** não são exibidos na grade principal; esses dados continuam preservados no XML/modelo fiscal e os totais do DANFE não são alterados.
 
-Ordem atual:
+Ordem vigente:
 
-1. Código produto;
-2. Descrição do produto / serviço;
-3. Item;
-4. NCM/SH;
-5. O/CST;
-6. CFOP;
-7. UN;
-8. Quant.;
-9. Valor unit.;
-10. Valor total;
-11. Valor desc.;
-12. B.Cálc ICMS;
-13. Valor ICMS;
-14. Alíq. ICMS.
+1. Item;
+2. Código produto;
+3. Descrição do produto / serviço;
+4. O/CST;
+5. CFOP;
+6. UN;
+7. Quant.;
+8. Valor unit.;
+9. Valor total;
+10. Valor desc.;
+11. B.Cálc ICMS;
+12. Valor ICMS;
+13. Alíq. ICMS.
 
-`Valor IPI` e `Alíq. IPI` continuam fora da grade principal quando não forem necessários; os dados permanecem preservados no XML e nos totais.
+A descrição reserva **62 mm**. `Item` reserva 8 mm e `Código produto` 20 mm. A largura liberada pela retirada visual do NCM/IPI é usada para melhorar a leitura da descrição e reduzir quebras desnecessárias.
 
 ## Folhas adicionais
 
@@ -77,26 +76,33 @@ A paginação de impressão continua determinística. Ela não usa `getBoundingC
 
 A estimativa considera:
 
-- largura menor da descrição após a volta de NCM/SH;
+- largura da descrição de 62 mm da grade simplificada;
 - descrição do produto;
 - composição de embalagem;
 - observação tributária;
 - código interno;
 - quantidade interna.
 
-As folhas de continuação possuem orçamento vertical menor porque agora repetem Natureza da Operação e identificação fiscal do emitente. A `products-filler` é preservada em todas as folhas geradas dinamicamente.
+As folhas de continuação possuem orçamento vertical menor porque repetem Natureza da Operação e identificação fiscal do emitente. A `products-filler` é preservada em todas as folhas geradas dinamicamente.
 
 ## Regras por fornecedor
 
 Identificação de fornecedor, códigos internos e conversões operacionais permanecem centralizados nas regras de fornecedor. O renderer recebe apenas o resultado dessas regras e preserva `cProd`, `qCom`, valores e XML originais.
 
+## Regressão corrigida em 17/09/2026
+
+A revisão fiscal de 15/09/2026 havia reintroduzido `NCM/SH`, movido `Item` para depois da descrição e reduzido a descrição para 48 mm. Isso contrariava o layout operacional aprovado anteriormente.
+
+A correção restaura apenas a grade de produtos e sua estimativa de largura. Permanecem intactas as melhorias posteriores de chave alfanumérica, CODE-128 híbrido, cabeçalhos das folhas adicionais, paginação determinística, impressão A4 e regras de fornecedores.
+
 ## Testes automatizados
 
-`apps/web/tests/danfe.test.ts` cobre, entre outros:
+`apps/web/tests/danfe.test.ts` e `apps/web/tests/danfe-product-table-regression.test.ts` cobrem, entre outros:
 
-- presença das colunas fiscais principais e de NCM/SH;
-- posição da coluna Item depois da descrição;
-- omissão de IPI da grade quando não utilizado;
+- `Item` como primeira coluna da grade;
+- ausência visual de **NCM/SH**, **Valor IPI** e **Alíq. IPI**;
+- presença das 13 colunas operacionais vigentes;
+- descrição com 62 mm e ausência de `col.ncm` no CSS;
 - repetição dos campos mínimos nas folhas adicionais;
 - geração do código de barras híbrido para chave alfanumérica;
 - preservação das letras na representação da chave;
@@ -104,12 +110,9 @@ Identificação de fornecedor, códigos internos e conversões operacionais perm
 - embalagem e regras operacionais já existentes;
 - paginação determinística sem medição de viewport;
 - preservação de `products-filler`;
-- remoção do CSS morto `.danfe-measuring`;
 - dimensões A4 e proporções do cabeçalho/tabela.
 
-Além dos testes unitários, o CI possui o job **`danfe-print`** com Playwright em versão fixa. Ele instala somente Chromium, renderiza fixtures representativas, gera PDFs A4 reais pelo navegador e valida paginação, overflow, ordem dos itens, NCM/SH, cabeçalhos de continuação, `Folha X/Y` e chave alfanumérica. Os PDFs e resultados ficam disponíveis como artifact temporário do workflow para inspeção quando necessário.
-
-Esse gate já detectou uma diferença real entre a estimativa inicial e a paginação do Chromium durante a implantação; a estimativa foi recalibrada antes de a fase ser considerada automatizada.
+Além dos testes unitários, o CI possui o job **`danfe-print`** com Playwright em versão fixa. Ele instala somente Chromium, renderiza fixtures representativas, gera PDFs A4 reais pelo navegador e valida paginação, overflow, grade simplificada, cabeçalhos de continuação, `Folha X/Y` e chave alfanumérica. Os PDFs e resultados ficam disponíveis como artifact temporário do workflow para inspeção quando necessário.
 
 ## Aceitação física obrigatória
 
@@ -124,7 +127,7 @@ Antes de publicar nova release, validar em Windows/navegador real:
 7. impressão física e PDF A4;
 8. lote com pelo menos duas NF-e.
 
-Conferir número de folhas, ordem dos itens, ausência de corte/duplicação, leitura do NCM, código de barras, `Folha X/Y`, cabeçalho obrigatório nas continuações e altura normal das linhas reais.
+Conferir número de folhas, ordem dos itens, ausência de corte/duplicação, **Item como primeira coluna**, ausência visual de NCM/IPI na grade, código de barras, `Folha X/Y`, cabeçalho obrigatório nas continuações e altura normal das linhas reais.
 
 ## Limite do teste automatizado
 
