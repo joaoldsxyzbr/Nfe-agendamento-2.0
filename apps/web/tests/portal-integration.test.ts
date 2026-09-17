@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const main = readFileSync(new URL('../src/main.ts', import.meta.url), 'utf8');
+const batchController = readFileSync(new URL('../src/batch/controller.ts', import.meta.url), 'utf8');
 
 describe('portal fallback integration', () => {
   it('uses Portal after a consumption limit or SEFAZ 217 and reuses the validated XML pipeline', () => {
@@ -27,21 +28,32 @@ describe('portal fallback integration', () => {
       main.indexOf('function setConsultationMode'),
     );
     expect(singleFallback).not.toContain('lookupNfe(');
-    expect(main.match(/lookupNfe\(/g)).toHaveLength(2);
+    expect(main.match(/lookupNfe\(/g)).toHaveLength(1);
+
+    expect(batchController).toContain('deps.bridge.lookupNfe(item.accessKey, signal)');
+    expect(batchController).toContain("lookup.category === 'consumption_limit'");
+    expect(batchController).toContain("lookup.category === 'fiscal_status' && lookup.cStat === '217'");
+    expect(batchController).toContain('deps.portal.start(item.accessKey, signal)');
+    expect(batchController).toContain('deps.portal.waitForResult(operationId, signal)');
+    expect(batchController).toContain('completeItem(item, portalStatus.xml, \'Portal\')');
   });
 
   it('keeps captcha manual and reports cancelled/failed Portal operations', () => {
     expect(main).toContain('Resolva o hCaptcha manualmente');
     expect(main).toContain("portalStatus.state === 'cancelled'");
     expect(main).toContain("portalStatus.state === 'failed'");
+    expect(batchController).toContain('Resolva o hCaptcha na janela do Portal.');
   });
 
-  it('cancels an active Portal operation when the page is abandoned', () => {
+  it('cancels active Portal operations when the page or batch is abandoned', () => {
     expect(main).toContain('let activePortalOperationId: string | null = null;');
     expect(main).toContain("window.addEventListener('pagehide'");
     expect(main).toContain('const operationId = activePortalOperationId;');
     expect(main).toContain('portalFallback.cancel(operationId)');
     expect(main).toContain('activePortalOperationId = operationId;');
     expect(main).toContain('activePortalOperationId = null;');
+
+    expect(batchController).toContain('let activePortalOperationId: string | null = null;');
+    expect(batchController).toContain('void deps.portal.cancel(operationId).catch(() => {');
   });
 });
