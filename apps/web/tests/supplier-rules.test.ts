@@ -19,6 +19,7 @@ describe('supplier rules', () => {
     expect(GREEN_SUPPLIER_CATALOG).toHaveLength(18);
     expect(resolveSupplierRule('FERNANDO KLEIN')?.productCatalog).toBe(GREEN_SUPPLIER_CATALOG);
     expect(resolveSupplierRule('Dionísio')?.productCatalog).toBe(GREEN_SUPPLIER_CATALOG);
+    expect(resolveSupplierRule('DIONISIO KOCH')?.productCatalog).toBe(GREEN_SUPPLIER_CATALOG);
   });
 
   it('prefers supplier id and falls back to normalized issuer name', async () => {
