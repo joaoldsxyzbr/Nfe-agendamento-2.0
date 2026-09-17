@@ -16,6 +16,7 @@
 - Não reintroduzir Central, pareamento, LAN, mDNS ou pasta compartilhada.
 - Não enviar CNPJ, chave NF-e, XML, PFX, senha ou chave privada ao Cloudflare.
 - O limite fiscal exato continua no `FiscalUsageGuard` local e no `FiscalCoordinator` compartilhado; rate limiting HTTP é apenas proteção contra abuso/custo.
+- O lote não possui teto rígido de quantidade: cada NF-e é processada sequencialmente e mantém o mesmo fallback elegível para o Portal.
 - Não alterar deliberadamente UX, DOM, fluxo fiscal, parsing XML ou DANFE durante a refatoração do frontend.
 - Não adicionar biblioteca, framework ou state manager novo.
 - Toda mudança de código usa characterization/TDD: RED comprovado, implementação mínima, GREEN, suíte completa.
@@ -473,7 +474,7 @@ npm run build:web
 ./node_modules/.bin/wrangler deploy --dry-run
 ```
 
-Expected: all pass; no deliberate DOM/text change.
+Expected: all pass; no deliberate DOM/text change além da remoção da cópia obsoleta que anunciava limite fixo de lote.
 
 - [ ] **Step 7: Commit and open PR B**
 
@@ -634,7 +635,7 @@ Expected: FAIL because controller does not exist.
 
 - [ ] **Step 4: Extract existing certificate UI functions**
 
-Move `refreshBridgeAndCertificates`, `applyCertificateSelection`, catalog rendering and bridge/certificate UI state helpers that are exclusively owned by this flow. Keep `BridgeClient` unchanged.
+Move `refreshBridgeAndCertificates`, `applyCertificateSelection`, catalog rendering and bridge/certificate UI state helpers que are exclusively owned by this flow. Keep `BridgeClient` unchanged.
 
 - [ ] **Step 5: Wire `main.ts` and verify**
 
@@ -921,7 +922,7 @@ Execute sections 5–7: one known authorized NF-e, no automatic fiscal retry, XM
 
 - [ ] **Step 5: Validate batch**
 
-Run a 2–3 key batch and the current maximum 10-key batch. Confirm serial processing, invalid/duplicate handling, cancel, ZIP, batch DANFE print and legitimate Portal fallback when naturally available.
+Run a 2–3 key batch and a batch with more than 10 valid keys. Confirm there is no fixed quantity cap, processing remains serial, invalid/duplicate handling stays intact, cancel/ZIP/batch DANFE print work and each eligible item keeps the same legitimate Portal fallback when naturally available.
 
 - [ ] **Step 6: Validate Portal/hCaptcha manually**
 
@@ -1023,7 +1024,7 @@ Create tag `v<version>` pointing to the verified main SHA and publish only artif
 
 - [ ] **Step 8: Verify release integrity**
 
-Confirm release tag, Setup asset, technical package, SHA-256/hash metadata and Authenticode signatures when Task 10 is active. If Authenticode remains externally unavailable, release notes must say so explicitly rather than implying publisher verification.
+Confirm release tag, Setup asset, technical package, SHA-256/hash metadata and Authenticode signatures when Task 10 is active. If Authenticode remains externally unavailable, release notes must say so explicitamente rather than implying publisher verification.
 
 ---
 
