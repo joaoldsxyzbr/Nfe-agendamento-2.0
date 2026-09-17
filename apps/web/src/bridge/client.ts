@@ -8,6 +8,7 @@ import {
   type PortalOperationState,
   type PortalOperationStatus,
   type PortalStartResult,
+  type SupplierResolution,
 } from './contracts';
 
 export type BridgeTimeouts = {
@@ -71,6 +72,22 @@ export class BridgeClient {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ thumbprint: normalized }),
     }, this.timeouts.localMs, signal);
+  }
+
+  async resolveSupplier(taxId: string, signal?: AbortSignal): Promise<SupplierResolution> {
+    const normalized = taxId.trim();
+    if (!normalized) return { supplierId: null };
+
+    const response = await this.request('/supplier/resolve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ taxId: normalized }),
+    }, this.timeouts.localMs, signal);
+    const payload: unknown = await response.json();
+    if (!isSupplierResolution(payload)) {
+      throw new Error('Resposta inválida da identificação de fornecedor');
+    }
+    return payload;
   }
 
   async lookupNfe(accessKey: string, signal?: AbortSignal): Promise<NfeLookupResult> {
@@ -173,6 +190,13 @@ function isCertificateSummary(value: unknown): value is CertificateSummary {
   return hasExactKeys(certificate, CERTIFICATE_KEYS) && typeof certificate.subject === 'string' &&
     typeof certificate.issuer === 'string' && isIsoDateString(certificate.notBefore) &&
     isIsoDateString(certificate.notAfter) && typeof certificate.thumbprint === 'string' && certificate.thumbprint.length > 0;
+}
+
+function isSupplierResolution(value: unknown): value is SupplierResolution {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const result = value as Record<string, unknown>;
+  return hasExactKeys(result, ['supplierId']) &&
+    (result.supplierId === null || typeof result.supplierId === 'string');
 }
 
 function isNfeLookupResult(value: unknown): value is NfeLookupResult {
