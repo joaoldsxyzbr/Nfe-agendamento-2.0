@@ -20,6 +20,10 @@ export type CertificateCatalog = {
   selectedThumbprint: string | null;
 };
 
+export type SupplierResolution = {
+  supplierId: string | null;
+};
+
 export type NfeLookupCategory =
   | 'success'
   | 'fiscal_status'
