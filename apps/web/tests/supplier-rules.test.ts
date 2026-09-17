@@ -21,6 +21,25 @@ describe('supplier rules', () => {
     expect(resolveSupplierRule('Dionísio')?.productCatalog).toBe(GREEN_SUPPLIER_CATALOG);
   });
 
+  it('prefers supplier id and falls back to normalized issuer name', async () => {
+    const { resolveSupplierRuleForPresentation } = await import('../src/nfe/supplier-rules');
+
+    expect(resolveSupplierRuleForPresentation({
+      supplierRuleId: 'souza-cruz',
+      emitterName: 'FERNANDO KLEIN',
+    })?.id).toBe('souza-cruz');
+
+    expect(resolveSupplierRuleForPresentation({
+      supplierRuleId: null,
+      emitterName: 'FERNANDO KLEIN',
+    })?.id).toBe('fernando-klein');
+
+    expect(resolveSupplierRuleForPresentation({
+      supplierRuleId: 'unknown-id',
+      emitterName: 'DIONISIO',
+    })?.id).toBe('dionisio');
+  });
+
   it('declares Souza Cruz quantity conversion without fiscal identifiers in the rule', async () => {
     const { resolveSupplierRule } = await import('../src/nfe/supplier-rules');
 
