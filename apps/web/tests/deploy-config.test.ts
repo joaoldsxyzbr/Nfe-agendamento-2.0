@@ -21,6 +21,23 @@ describe('Cloudflare deploy configuration', () => {
     expect(config.assets?.directory).toBe('./apps/web/dist');
   });
 
+  it('configures the global fiscal-coordination rate limiter before Durable Object access', async () => {
+    const raw = await readFile(rootWranglerUrl, 'utf8');
+    const config = JSON.parse(raw) as {
+      ratelimits?: Array<{
+        name?: string;
+        simple?: { limit?: number; period?: number };
+      }>;
+    };
+
+    expect(config.ratelimits).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        name: 'COORDINATION_RATE_LIMITER',
+        simple: { limit: 300, period: 60 },
+      }),
+    ]));
+  });
+
   it('pins npm dependencies and uses npm ci in CI', async () => {
     await expect(access(rootLockUrl)).resolves.toBeUndefined();
     const ci = await readFile(ciUrl, 'utf8');
