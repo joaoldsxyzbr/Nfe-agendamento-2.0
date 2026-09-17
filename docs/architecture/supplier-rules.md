@@ -1,34 +1,88 @@
 # Regras declarativas de fornecedores
 
-As regras de apresentação específicas por fornecedor ficam centralizadas em `apps/web/src/nfe/supplier-rules.ts`.
+As regras de apresentação específicas por fornecedor ficam centralizadas no frontend em `apps/web/src/nfe/supplier-rules.ts`, enquanto a identificação primária por CNPJ/CPF fica restrita ao Bridge local.
 
 ## Objetivo
 
-Evitar espalhar identificação de fornecedor, catálogos e fatores de conversão por diferentes partes do DANFE. O renderizador continua recebendo apenas o resultado resolvido e não conhece fornecedores específicos.
+Evitar espalhar identificação de fornecedor, catálogos e fatores de conversão por diferentes partes do DANFE. O XML fiscal continua intacto e o renderizador recebe apenas uma identidade lógica opcional (`supplierRuleId`) para decidir quais melhorias operacionais de apresentação aplicar.
 
-## Privacidade e identificação
+## Identificação primária no Bridge local
 
-As regras públicas do frontend **não carregam CPF/CNPJ fixos de fornecedores**. A identificação das regras especiais usa o `xNome` do emitente presente no próprio XML da NF-e, com aliases explícitos e comparação exata após normalização.
+O site já extrai `issuer.taxId` do XML da NF-e. Depois de validar o XML, ele envia esse identificador somente ao Bridge local em:
 
-A normalização:
+```text
+POST http://127.0.0.1:17345/api/v1/supplier/resolve
+```
 
-- remove acentos;
-- ignora diferenças entre maiúsculas/minúsculas;
-- normaliza pontuação e espaços;
-- não usa correspondência parcial.
+A requisição contém apenas o CNPJ/CPF do emitente e a resposta contém exatamente:
 
-A comparação exata é intencional para impedir que uma empresa com nome parecido receba uma transformação operacional indevida. CPF/CNPJ continuam sendo lidos do XML e exibidos nos campos fiscais normais do DANFE quando aplicável, mas não ficam embutidos como constantes de configuração no bundle público.
+```json
+{ "supplierId": "souza-cruz" }
+```
 
-## Estrutura atual
+ou:
 
-Cada fornecedor pode declarar:
+```json
+{ "supplierId": null }
+```
+
+O identificador fiscal não é enviado ao Worker, Durable Object ou qualquer outro componente Cloudflare. A rota usa a mesma proteção de Host/Origin do restante da API local e não registra o CNPJ/CPF em logs.
+
+## Configuração local
+
+Os CNPJs/CPFs reais ficam exclusivamente em cada computador, no arquivo:
+
+```text
+%LocalAppData%\NfeAgendamentoBridge\supplier-rules.json
+```
+
+Schema v1:
+
+```json
+{
+  "version": 1,
+  "suppliers": [
+    { "id": "souza-cruz", "taxIds": ["00000000000000"] },
+    { "id": "fernando-klein", "taxIds": ["11111111111"] },
+    { "id": "dionisio", "taxIds": ["22222222222"] }
+  ]
+}
+```
+
+Os valores acima são apenas exemplos sintéticos. **CNPJ/CPF real de fornecedor não deve ser colocado em código, teste, documentação, issue, pull request, log ou bundle público.**
+
+Um mesmo fornecedor pode ter mais de um `taxId`. A configuração local deve ser preservada nas atualizações normais do Bridge e, quando vários PCs precisarem das mesmas regras, o mesmo arquivo pode ser copiado manualmente entre eles.
+
+## Normalização e falha segura
+
+O Bridge remove pontuação e espaços, converte letras para maiúsculas e preserva caracteres alfanuméricos. São aceitos:
+
+- CPF com 11 dígitos;
+- CNPJ com 14 caracteres alfanuméricos, compatível com o CNPJ alfanumérico.
+
+Arquivo ausente, JSON inválido, versão desconhecida, regra incompleta, identificador inválido, conflito do mesmo `taxId` entre fornecedores ou erro de leitura resultam em `supplierId: null`. A identificação de fornecedor é **fail-soft**: jamais bloqueia consulta, download, DANFE, Portal ou dispara nova tentativa fiscal.
+
+## Fallback temporário por nome
+
+Durante a migração, o frontend resolve a regra nesta ordem:
+
+1. `supplierRuleId` retornado pelo Bridge;
+2. `xNome` do emitente, com comparação exata após normalização.
+
+A normalização de `xNome` remove acentos, ignora caixa e normaliza pontuação/espaços. Não existe correspondência parcial.
+
+Esse fallback preserva o comportamento atual em PCs ainda sem `supplier-rules.json`. Ele só deve ser removido em mudança separada, depois da validação física dos fornecedores reais.
+
+## Estrutura das regras de apresentação
+
+Cada fornecedor no frontend pode declarar:
 
 - `id` e nome legível;
-- um ou mais nomes/aliases exatos em `issuerNames`;
+- `issuerNames`, usados somente como fallback temporário;
 - `productCatalog`, quando houver códigos internos por produto;
 - `internalQuantity`, quando houver conversão operacional de quantidade.
 
-Fornecedores sem uma determinada regra simplesmente não recebem aquela transformação de apresentação.
+As regras públicas não contêm CNPJ/CPF fixos.
 
 ## Fornecedores configurados
 
@@ -41,37 +95,42 @@ Fornecedores sem uma determinada regra simplesmente não recebem aquela transfor
 ### Dionisio
 
 - usa o mesmo catálogo compartilhado do Fernando Klein;
-- mantém exatamente a mesma regra de preservação do `cProd` e apresentação do código interno.
+- mantém a mesma regra de preservação do `cProd` e apresentação do código interno.
 
 ### Souza Cruz
 
 - não usa o catálogo de códigos internos de hortifruti;
 - possui conversão declarativa de quantidade com multiplicador `50` e unidade operacional `UN`;
-- a quantidade fiscal original continua preservada.
+- a quantidade fiscal original continua preservada e a quantidade operacional aparece apenas como complemento visual.
 
 ## Catálogo compartilhado
 
-`GREEN_SUPPLIER_CATALOG` contém os 18 produtos/aliases atualmente aprovados. A normalização de descrição continua removendo acentos, diferenças de caixa e o prefixo `VERDURAS`, sem alterar o XML original.
+`GREEN_SUPPLIER_CATALOG` contém os 18 produtos/aliases aprovados. A resolução de produto foi generalizada para `resolveSupplierProduct`; o catálogo continua compartilhado entre Fernando Klein e Dionisio.
 
-Aliases conflitantes continuam sendo rejeitados pelo validador do catálogo. Nomes normalizados duplicados entre regras de fornecedores são rejeitados por `validateSupplierRules()`.
+A normalização de descrição remove acentos, diferenças de caixa e o prefixo `VERDURAS`, sem alterar o XML original. Aliases conflitantes continuam sendo rejeitados pelo validador do catálogo e nomes normalizados duplicados entre regras são rejeitados por `validateSupplierRules()`.
 
-## Como adicionar um fornecedor
+## Como adicionar ou alterar um fornecedor
 
-1. adicionar uma entrada em `SUPPLIER_RULES` com aliases exatos de `xNome` realmente observados;
-2. reutilizar um catálogo existente ou declarar um novo catálogo quando necessário;
-3. adicionar apenas as capacidades aplicáveis (`productCatalog` e/ou `internalQuantity`);
-4. criar ou atualizar testes antes de usar a regra no DANFE;
-5. atualizar esta documentação e a referência visual do DANFE.
+1. criar ou ajustar a regra declarativa em `SUPPLIER_RULES` somente com capacidades de apresentação necessárias;
+2. adicionar o CNPJ/CPF real apenas ao `supplier-rules.json` local dos PCs que precisam reconhecer o fornecedor;
+3. manter aliases de `xNome` somente enquanto o fallback estiver ativo;
+4. criar ou atualizar testes usando identificadores sintéticos;
+5. atualizar esta documentação;
+6. validar uma NF-e real sem registrar o identificador fiscal no GitHub.
 
-Não adicionar CPF/CNPJ fixo ao frontend para reconhecer fornecedor e não adicionar condicionais por nome dentro de `render.ts`. Regras novas devem entrar pelo resolvedor declarativo para preservar privacidade, previsibilidade e testabilidade.
+Não adicionar CNPJ/CPF real ao frontend, ao Worker, ao Durable Object ou a logs.
 
 ## Testes
 
 Os contratos principais ficam em:
 
+- `apps/bridge/tests/NfeAgendamento.Bridge.Tests/SupplierIdentityResolverTests.cs`;
+- `apps/bridge/tests/NfeAgendamento.Bridge.Tests/SupplierEndpointsIntegrationTests.cs`;
+- `apps/web/tests/bridge-client.test.ts`;
 - `apps/web/tests/supplier-rules.test.ts`;
 - `apps/web/tests/product-mapping.test.ts`;
 - `apps/web/tests/supplier-quantity.test.ts`;
-- `apps/web/tests/supplier-quantity-render.test.ts`.
+- `apps/web/tests/supplier-quantity-render.test.ts`;
+- `apps/web/tests/batch-controller.test.ts`.
 
-A aceitação física deve confirmar o `xNome` real recebido nas NF-e dos fornecedores configurados. Se houver variação legítima, adicionar somente o alias exato necessário e cobri-lo por teste.
+Os testes automatizados usam apenas documentos sintéticos. A aceitação física deve confirmar, com uma NF-e real de cada fornecedor, que a regra visual correta foi aplicada e que o XML baixado continua exatamente o XML fiscal recebido. No GitHub deve ser registrado somente o resultado da validação, nunca o CNPJ/CPF real.

@@ -19,36 +19,47 @@ function parseProducts(xml: string): Array<{ cProd: string; xProd: string }> {
   }));
 }
 
-describe('Fernando Klein product mapping', () => {
+describe('supplier product mapping', () => {
   it('keeps the shared 18-product catalog valid', async () => {
     const mapping = await import('../src/nfe/product-mapping');
 
-    expect(mapping.FERNANDO_KLEIN_CATALOG).toHaveLength(18);
-    expect(mapping.validateFernandoKleinCatalog()).toBe(true);
+    expect(mapping.SUPPLIER_PRODUCT_CATALOG).toHaveLength(18);
+    expect(mapping.validateSupplierProductCatalog()).toBe(true);
   });
 
   it('maps the 17 known fixture products and preserves original cProd', async () => {
-    const { resolveFernandoKleinProduct } = await import('../src/nfe/product-mapping');
+    const { resolveSupplierProduct } = await import('../src/nfe/product-mapping');
     const emitterName = tag(tag(fixture, 'emit'), 'xNome');
     const products = parseProducts(fixture);
 
     expect(products).toHaveLength(18);
     products.slice(0, 17).forEach((product, index) => {
-      expect(resolveFernandoKleinProduct({ emitterName, ...product })).toEqual({
+      expect(resolveSupplierProduct({ emitterName, ...product })).toEqual({
         sourceCode: product.cProd,
         internalCode: expectedCodes[index],
       });
     });
 
-    expect(resolveFernandoKleinProduct({ emitterName, ...products[17]! })).toEqual({
+    expect(resolveSupplierProduct({ emitterName, ...products[17]! })).toEqual({
       sourceCode: 'FK999',
       internalCode: '',
     });
   });
 
+  it('uses supplierRuleId even when the issuer name does not match', async () => {
+    const { resolveSupplierProduct } = await import('../src/nfe/product-mapping');
+
+    expect(resolveSupplierProduct({
+      supplierRuleId: 'dionisio',
+      emitterName: 'NOME QUE NAO CASA',
+      xProd: 'RÚCULA',
+      cProd: 'SRC',
+    })).toEqual({ sourceCode: 'SRC', internalCode: '104111' });
+  });
+
   it('applies the full shared catalog to the additional supplier', async () => {
-    const { resolveFernandoKleinProduct } = await import('../src/nfe/product-mapping');
-    const resolve = (xProd: string) => resolveFernandoKleinProduct({
+    const { resolveSupplierProduct } = await import('../src/nfe/product-mapping');
+    const resolve = (xProd: string) => resolveSupplierProduct({
       emitterName: 'DIONISIO',
       xProd,
       cProd: 'SRC',
@@ -60,10 +71,10 @@ describe('Fernando Klein product mapping', () => {
   });
 
   it('maps alecrim for every configured supplier', async () => {
-    const { resolveFernandoKleinProduct } = await import('../src/nfe/product-mapping');
+    const { resolveSupplierProduct } = await import('../src/nfe/product-mapping');
 
     for (const emitterName of ['FERNANDO KLEIN', 'DIONISIO']) {
-      expect(resolveFernandoKleinProduct({
+      expect(resolveSupplierProduct({
         emitterName,
         xProd: 'ALECRIM',
         cProd: 'SRC-ALECRIM',
@@ -75,10 +86,10 @@ describe('Fernando Klein product mapping', () => {
   });
 
   it('maps COUVE FOLHA as COUVE for every configured supplier', async () => {
-    const { resolveFernandoKleinProduct } = await import('../src/nfe/product-mapping');
+    const { resolveSupplierProduct } = await import('../src/nfe/product-mapping');
 
     for (const emitterName of ['FERNANDO KLEIN', 'DIONISIO']) {
-      expect(resolveFernandoKleinProduct({
+      expect(resolveSupplierProduct({
         emitterName,
         xProd: 'COUVE FOLHA',
         cProd: 'SRC-COUVE',
@@ -90,11 +101,11 @@ describe('Fernando Klein product mapping', () => {
   });
 
   it('summarizes unknown products without guessing', async () => {
-    const { summarizeFernandoKleinProducts } = await import('../src/nfe/product-mapping');
+    const { summarizeSupplierProducts } = await import('../src/nfe/product-mapping');
     const emitterName = tag(tag(fixture, 'emit'), 'xNome');
     const products = parseProducts(fixture);
 
-    expect(summarizeFernandoKleinProducts({ emitterName, products })).toEqual({
+    expect(summarizeSupplierProducts({ emitterName, products })).toEqual({
       applies: true,
       total: 18,
       mapped: 17,
@@ -104,8 +115,8 @@ describe('Fernando Klein product mapping', () => {
   });
 
   it('preserves aliases, accents and VERDURAS prefix behavior', async () => {
-    const { resolveFernandoKleinProduct } = await import('../src/nfe/product-mapping');
-    const resolve = (xProd: string) => resolveFernandoKleinProduct({
+    const { resolveSupplierProduct } = await import('../src/nfe/product-mapping');
+    const resolve = (xProd: string) => resolveSupplierProduct({
       emitterName: 'FERNANDO KLEIN',
       xProd,
       cProd: 'SRC',
@@ -123,15 +134,15 @@ describe('Fernando Klein product mapping', () => {
   });
 
   it('never applies the mapping to another emitter', async () => {
-    const { resolveFernandoKleinProduct, summarizeFernandoKleinProducts } = await import('../src/nfe/product-mapping');
+    const { resolveSupplierProduct, summarizeSupplierProducts } = await import('../src/nfe/product-mapping');
     const products = [{ cProd: 'OUT001', xProd: 'ALFACE' }];
 
-    expect(resolveFernandoKleinProduct({
+    expect(resolveSupplierProduct({
       emitterName: 'OUTRO FORNECEDOR LTDA',
       ...products[0]!,
     })).toEqual({ sourceCode: 'OUT001', internalCode: '' });
 
-    expect(summarizeFernandoKleinProducts({ emitterName: 'OUTRO FORNECEDOR LTDA', products })).toEqual({
+    expect(summarizeSupplierProducts({ emitterName: 'OUTRO FORNECEDOR LTDA', products })).toEqual({
       applies: false,
       total: 1,
       mapped: 0,
@@ -141,9 +152,9 @@ describe('Fernando Klein product mapping', () => {
   });
 
   it('rejects aliases that conflict after normalization', async () => {
-    const { validateFernandoKleinCatalog } = await import('../src/nfe/product-mapping');
+    const { validateSupplierProductCatalog } = await import('../src/nfe/product-mapping');
 
-    expect(() => validateFernandoKleinCatalog([
+    expect(() => validateSupplierProductCatalog([
       { internalCode: '1', name: 'A', aliases: ['ALFACE'] },
       { internalCode: '2', name: 'B', aliases: [' alface '] },
     ])).toThrow('Alias conflitante ALFACE');

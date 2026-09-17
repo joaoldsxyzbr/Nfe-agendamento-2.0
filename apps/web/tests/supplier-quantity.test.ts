@@ -9,6 +9,16 @@ describe('Souza Cruz quantity presentation', () => {
     expect(resolveSupplierInternalQuantity({ emitterName: 'SOUZA CRUZ S A', quantity: 1 })).toBe(50);
   });
 
+  it('uses supplierRuleId even when the issuer name does not match', async () => {
+    const { resolveSupplierInternalQuantity } = await import('../src/nfe/supplier-quantity');
+
+    expect(resolveSupplierInternalQuantity({
+      supplierRuleId: 'souza-cruz',
+      emitterName: 'NOME QUE NAO CASA',
+      quantity: 2,
+    })).toBe(100);
+  });
+
   it('does not apply the conversion to another supplier', async () => {
     const { resolveSupplierInternalQuantity } = await import('../src/nfe/supplier-quantity');
 

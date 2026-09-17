@@ -111,6 +111,49 @@ describe('BridgeClient', () => {
     );
   });
 
+  it('resolves supplier through the local bridge', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ supplierId: 'souza-cruz' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const result = await new BridgeClient().resolveSupplier('12.345.678/0001-95');
+
+    expect(result).toEqual({ supplierId: 'souza-cruz' });
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${BRIDGE_BASE_URL}/supplier/resolve`,
+      expect.objectContaining({
+        method: 'POST',
+        cache: 'no-store',
+        headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ taxId: '12.345.678/0001-95' }),
+      }),
+    );
+  });
+
+  it('accepts supplierId null and rejects unexpected supplier response fields', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ supplierId: null }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        supplierId: null,
+        taxId: 'never-echo',
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }));
+
+    await expect(new BridgeClient().resolveSupplier('11.111.111/1111-11'))
+      .resolves.toEqual({ supplierId: null });
+    await expect(new BridgeClient().resolveSupplier('11.111.111/1111-11'))
+      .rejects.toThrow('Resposta inválida da identificação de fornecedor');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it('looks up NFe only through the fixed local bridge endpoint', async () => {
     const payload = {
       category: 'fiscal_status',

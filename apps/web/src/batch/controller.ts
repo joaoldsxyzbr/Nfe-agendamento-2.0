@@ -1,4 +1,9 @@
-import type { BridgeHealth, NfeLookupResult, PortalOperationStatus } from '../bridge/contracts';
+import type {
+  BridgeHealth,
+  NfeLookupResult,
+  PortalOperationStatus,
+  SupplierResolution,
+} from '../bridge/contracts';
 import type { ParsedNfe } from '../nfe/xml';
 import { MAX_BATCH_ITEMS, parseBatchInput } from './input';
 
@@ -36,6 +41,7 @@ type MutableBatchItem = {
 type BridgeBatchClient = Readonly<{
   health(signal?: AbortSignal): Promise<BridgeHealth>;
   lookupNfe(accessKey: string, signal?: AbortSignal): Promise<NfeLookupResult>;
+  resolveSupplier(taxId: string, signal?: AbortSignal): Promise<SupplierResolution>;
 }>;
 
 type PortalBatchClient = Readonly<{
@@ -182,7 +188,7 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
     try {
       const lookup = await deps.bridge.lookupNfe(item.accessKey, signal);
       if (lookup.category === 'success' && lookup.xml) {
-        completeItem(item, lookup.xml, 'SEFAZ');
+        await completeItem(item, lookup.xml, 'SEFAZ', signal);
         return;
       }
 
@@ -240,7 +246,7 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
 
       const portalStatus = await deps.portal.waitForResult(operationId, signal);
       if (portalStatus.state === 'completed' && portalStatus.xml) {
-        completeItem(item, portalStatus.xml, 'Portal');
+        await completeItem(item, portalStatus.xml, 'Portal', signal);
         return;
       }
 
@@ -269,9 +275,22 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
     }
   }
 
-  function completeItem(item: MutableBatchItem, xml: string, source: BatchSource): void {
+  async function completeItem(
+    item: MutableBatchItem,
+    xml: string,
+    source: BatchSource,
+    signal?: AbortSignal,
+  ): Promise<void> {
     try {
-      item.parsed = deps.parseXml(xml, item.accessKey);
+      const parsed = deps.parseXml(xml, item.accessKey);
+      let supplierRuleId: string | null = null;
+      try {
+        supplierRuleId = (await deps.bridge.resolveSupplier(parsed.issuer.taxId, signal)).supplierId;
+      } catch {
+        supplierRuleId = null;
+      }
+
+      item.parsed = { ...parsed, supplierRuleId };
       item.source = source;
       item.status = 'success';
       item.message = `XML validado via ${source}.`;

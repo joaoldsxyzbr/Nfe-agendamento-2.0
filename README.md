@@ -12,7 +12,7 @@ NFe Agendamento é um aplicativo interno para consultar NF-e, baixar XML e gerar
 - **Controle App → Bridge:** Named Pipe local restrito ao usuário atual, com lease, heartbeat e shutdown controlado.
 - **Helper Portal:** WinForms/WebView2 persistente para o fallback pelo Portal Nacional; hCaptcha continua sempre manual.
 - **Certificado A1:** descoberto em `CurrentUser/My`; PFX, senha e chave privada nunca são enviados ao site ou ao Cloudflare.
-- **Persistência local:** thumbprint selecionado em `%LOCALAPPDATA%/NfeAgendamentoBridge/settings.json` e metadados da proteção fiscal em `fiscal-usage.json`.
+- **Persistência local:** thumbprint selecionado em `%LOCALAPPDATA%/NfeAgendamentoBridge/settings.json`, regras locais de fornecedor em `supplier-rules.json` e metadados da proteção fiscal em `fiscal-usage.json`.
 - **Versão canônica atual:** `0.0.14`; a publicação da release é automatizada somente após o CI do commit `release: v0.0.14` ficar verde.
 
 Não existem Central, pareamento, servidor LAN, mDNS ou pasta compartilhada na arquitetura atual. Cada PC usa seu próprio Bridge.
@@ -37,7 +37,7 @@ Implementado e coberto pelos gates automatizados aplicáveis:
 - código de barras híbrido CODE-128C/CODE-128A para chave alfanumérica;
 - paginação determinística, sem medição frágil de viewport em `beforeprint`;
 - Playwright/Chromium gerando PDF A4 real no CI e validando overflow, paginação, grade simplificada, cabeçalhos, `Folha X/Y` e chave alfanumérica;
-- regras específicas de fornecedores centralizadas e sem CPF/CNPJ fixos no bundle público;
+- regras específicas de fornecedores centralizadas, com identificação primária por CNPJ/CPF resolvida somente no Bridge local e sem identificadores fiscais fixos no bundle público;
 - proteção fiscal local persistente e fail-safe;
 - coordenação compartilhada do teto fiscal entre PCs que usam o mesmo A1 RSA;
 - barreira HTTP global de 300 requisições por 60 segundos antes do `FiscalCoordinator`, usando o Rate Limiting binding nativo do Cloudflare Workers;
@@ -79,6 +79,14 @@ No Portal, o helper preenche a chave, aguarda o usuário resolver o hCaptcha, co
 
 Detalhes: `docs/testing/portal-post-hcaptcha.md`.
 
+## Regras locais de fornecedor
+
+O site usa o CNPJ/CPF do emitente já presente no XML somente para consultar o Bridge local em `127.0.0.1`. O Bridge compara esse identificador com `%LOCALAPPDATA%\NfeAgendamentoBridge\supplier-rules.json` e devolve apenas um `supplierId` lógico, como `souza-cruz`, `fernando-klein` ou `dionisio`. Nenhum novo dado fiscal de fornecedor é enviado ao Cloudflare.
+
+O arquivo local aceita múltiplos identificadores por fornecedor, suporta CNPJ alfanumérico e falha de forma suave: configuração ausente, inválida ou fornecedor desconhecido simplesmente resulta em `supplierId: null`. Durante a migração, o frontend mantém o `xNome` normalizado como fallback temporário.
+
+Os CNPJs/CPFs reais de fornecedores não pertencem ao repositório, testes, documentação, issues, pull requests ou logs. Eles são configurados apenas nas máquinas que executam o Bridge. Detalhes: `docs/architecture/supplier-rules.md`.
+
 ## Segurança
 
 - Bridge somente em `127.0.0.1:17345`;
@@ -87,6 +95,8 @@ Detalhes: `docs/testing/portal-post-hcaptcha.md`.
 - CORS sem wildcard;
 - chave privada/PFX/senha do A1 permanecem no Windows;
 - coordenador remoto não recebe dados fiscais do documento;
+- resolução de fornecedor acontece somente no Bridge loopback e retorna apenas `supplierId`;
+- CNPJ/CPF real usado nas regras de fornecedor fica apenas no `supplier-rules.json` local e não entra em logs;
 - rate limiter HTTP recebe somente a chave constante `fiscal-coordination` e atua antes do Durable Object fiscal;
 - proteção local persiste somente hash do CNPJ, timestamps e prazos de proteção;
 - `.gitignore` bloqueia PFX/P12/PEM/KEY e arquivos de ambiente;
@@ -165,7 +175,7 @@ Asset principal:
 NFeAgendamentoBridge-Setup-v0.0.14.exe
 ```
 
-O instalador é por usuário, não pede administrador, mantém App + Bridge + helper Portal lado a lado, cria atalho no Menu Iniciar, registra início automático e preserva `%LOCALAPPDATA%\NfeAgendamentoBridge`.
+O instalador é por usuário, não pede administrador, mantém App + Bridge + helper Portal lado a lado, cria atalho no Menu Iniciar, registra início automático e preserva `%LOCALAPPDATA%\NfeAgendamentoBridge` — incluindo configurações locais como `settings.json`, `fiscal-usage.json` e `supplier-rules.json`.
 
 O Microsoft Edge WebView2 Runtime é necessário para o fallback pelo Portal Nacional.
 
@@ -186,6 +196,8 @@ O CI não consegue provar interação real com certificado A1, SEFAZ, Portal/hCa
 - `docs/testing/batch-query.md`;
 - `docs/testing/danfe-layout.md`;
 - `docs/testing/portal-post-hcaptcha.md`.
+
+Para as regras locais de fornecedor, validar uma NF-e real de cada fornecedor configurado e registrar no GitHub somente o resultado da validação, nunca o CNPJ/CPF usado no arquivo local.
 
 Não provoque bloqueio `656` repetindo consultas artificialmente apenas para testar o fallback.
 

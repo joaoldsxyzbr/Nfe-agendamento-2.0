@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { NfeLookupResult, PortalOperationStatus } from '../src/bridge/contracts';
+import type { NfeLookupResult, PortalOperationStatus, SupplierResolution } from '../src/bridge/contracts';
 import type { ParsedNfe } from '../src/nfe/xml';
 import {
   createBatchController,
@@ -21,6 +21,7 @@ function portalCompleted(operationId: string, xml = '<nfe/>'): PortalOperationSt
 
 type HarnessOptions = {
   lookup?: (accessKey: string, signal?: AbortSignal) => Promise<NfeLookupResult>;
+  resolveSupplier?: (taxId: string, signal?: AbortSignal) => Promise<SupplierResolution>;
   portalStart?: (accessKey: string, signal?: AbortSignal) => Promise<string>;
   portalWait?: (operationId: string, signal?: AbortSignal) => Promise<PortalOperationStatus>;
 };
@@ -39,6 +40,7 @@ function createHarness(options: HarnessOptions = {}) {
 
   const rendered: BatchItemView[][] = [];
   const lookups: string[] = [];
+  const supplierResolutions: string[] = [];
   const portalStarts: string[] = [];
   const portalCancels: string[] = [];
   const zipEntries: Array<{ name: string; content: string }> = [];
@@ -70,6 +72,10 @@ function createHarness(options: HarnessOptions = {}) {
         lookups.push(accessKey);
         return options.lookup?.(accessKey, signal) ?? success(`<nfe key="${accessKey}"/>`);
       },
+      resolveSupplier: async (taxId, signal) => {
+        supplierResolutions.push(taxId);
+        return options.resolveSupplier?.(taxId, signal) ?? { supplierId: null };
+      },
     },
     portal: {
       start: async (accessKey, signal) => {
@@ -88,7 +94,7 @@ function createHarness(options: HarnessOptions = {}) {
       originalXml: xml,
       number: accessKey.slice(-8),
       series: '1',
-      issuer: { name: 'Emitente teste' },
+      issuer: { name: 'Emitente teste', taxId: '12345678000195' },
       totals: { invoice: 10 },
     } as ParsedNfe),
     createZip: (entries) => {
@@ -127,6 +133,7 @@ function createHarness(options: HarnessOptions = {}) {
     route,
     rendered,
     lookups,
+    supplierResolutions,
     portalStarts,
     portalCancels,
     zipEntries,
@@ -177,6 +184,31 @@ describe('batch controller', () => {
     expect(maxActive).toBe(1);
     expect(harness.lookups).toEqual([KEY_A, KEY_B, KEY_C]);
     expect(lastItems(harness).map((item) => item.status)).toEqual(['success', 'success', 'success']);
+  });
+
+  it('attaches the local supplier rule after parsing without making it mandatory', async () => {
+    const identified = createHarness({
+      resolveSupplier: async () => ({ supplierId: 'souza-cruz' }),
+    });
+    identified.input.value = KEY_A;
+    identified.controller.syncDraft();
+    await identified.controller.start();
+
+    expect(identified.supplierResolutions).toEqual(['12345678000195']);
+    expect(lastItems(identified)[0]?.parsed?.supplierRuleId).toBe('souza-cruz');
+    expect(lastItems(identified)[0]?.status).toBe('success');
+
+    const unavailable = createHarness({
+      resolveSupplier: async () => {
+        throw new Error('Bridge local indisponível');
+      },
+    });
+    unavailable.input.value = KEY_A;
+    unavailable.controller.syncDraft();
+    await unavailable.controller.start();
+
+    expect(lastItems(unavailable)[0]?.parsed?.supplierRuleId).toBeNull();
+    expect(lastItems(unavailable)[0]?.status).toBe('success');
   });
 
   it('switches the rest of the batch to Portal after consumption_limit', async () => {

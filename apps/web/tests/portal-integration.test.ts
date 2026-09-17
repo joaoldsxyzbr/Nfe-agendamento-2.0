@@ -35,7 +35,7 @@ describe('portal fallback integration', () => {
     expect(batchController).toContain("lookup.category === 'fiscal_status' && lookup.cStat === '217'");
     expect(batchController).toContain('deps.portal.start(item.accessKey, signal)');
     expect(batchController).toContain('deps.portal.waitForResult(operationId, signal)');
-    expect(batchController).toContain('completeItem(item, portalStatus.xml, \'Portal\')');
+    expect(batchController).toContain("await completeItem(item, portalStatus.xml, 'Portal', signal)");
   });
 
   it('keeps captcha manual and reports cancelled/failed Portal operations', () => {

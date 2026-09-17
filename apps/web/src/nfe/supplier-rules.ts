@@ -74,6 +74,19 @@ export function resolveSupplierRule(emitterName: unknown): SupplierRule | null {
   return SUPPLIER_RULES.find((rule) => rule.issuerNames.some((name) => normalizeSupplierName(name) === normalized)) ?? null;
 }
 
+export function resolveSupplierRuleById(value: unknown): SupplierRule | null {
+  const id = String(value ?? '').trim();
+  if (!id) return null;
+  return SUPPLIER_RULES.find((rule) => rule.id === id) ?? null;
+}
+
+export function resolveSupplierRuleForPresentation(input: Readonly<{
+  supplierRuleId?: unknown;
+  emitterName?: unknown;
+}>): SupplierRule | null {
+  return resolveSupplierRuleById(input.supplierRuleId) ?? resolveSupplierRule(input.emitterName);
+}
+
 export function validateSupplierRules(rules: readonly SupplierRule[] = SUPPLIER_RULES): true {
   const issuerNames = new Map<string, string>();
 
