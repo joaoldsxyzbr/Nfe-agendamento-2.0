@@ -60,6 +60,22 @@ A credencial é estável para cópias do mesmo A1 RSA, então PCs com o mesmo ce
 
 Certificados sem chave RSA não têm uma derivação estável segura implementada. Nesse caso a coordenação falha fechada e a consulta segue pelo Portal em vez de arriscar chamada direta sem proteção compartilhada.
 
+## Barreira HTTP contra abuso
+
+Antes de calcular o namespace fiscal ou acessar `FiscalCoordinator`, o Worker aplica o binding nativo `COORDINATION_RATE_LIMITER` do Cloudflare Workers como uma barreira grosseira contra abuso e custo.
+
+Política inicial:
+
+- chave lógica global: `fiscal-coordination`;
+- limite: 300 requisições por 60 segundos;
+- `429` com `Retry-After: 60` quando o limiter negar;
+- `503` quando o binding falhar ou retornar resultado inválido;
+- nenhum caminho `429`/`503` por esse gate acessa o `FiscalCoordinator`.
+
+O rate limiter HTTP **não** é o mecanismo de contabilidade fiscal. Seus contadores podem ser aproximados e distribuídos pela infraestrutura Cloudflare. O teto fiscal conservador e exato continua pertencendo ao `FiscalUsageGuard` local e ao `FiscalCoordinator` transacional.
+
+A ordem do Worker é: validar método, bearer e rota conhecida; aplicar o rate limiter; somente depois calcular SHA-256 da credencial e acessar o Durable Object. O binding recebe somente a chave constante `fiscal-coordination`; esta camada não adiciona CNPJ, chave NF-e, XML, PFX, senha, thumbprint ou chave privada ao tráfego Cloudflare.
+
 ## Janela e limite
 
 A janela operacional continua em uma hora, com teto de 20 tentativas diretas por identidade coordenada. A reserva acontece **antes** da comunicação fiscal. Se a chamada seguinte falhar de forma ambígua, a tentativa continua contabilizada de forma conservadora nos demais PCs.
@@ -115,10 +131,10 @@ No lote, ao receber `consumption_limit`:
 
 ## Cloudflare
 
-O Worker continua servindo os assets estáticos do site. Somente `/api/fiscal-coordination/*` passa primeiro pelo código do Worker. O Durable Object usa armazenamento SQLite, compatível com Workers Free e recomendado para namespaces novos.
+O Worker continua servindo os assets estáticos do site. Somente `/api/fiscal-coordination/*` passa primeiro pelo código do Worker. A barreira HTTP usa o Rate Limiting binding nativo e o `FiscalCoordinator` usa Durable Object com armazenamento SQLite.
 
 Configuração: `wrangler.jsonc`.
-Implementação: `worker/index.ts` e `worker/fiscal-coordinator-core.ts`.
+Implementação: `worker/index.ts`, `worker/fiscal-coordination-http.ts` e `worker/fiscal-coordinator-core.ts`.
 
 ## Testes
 
@@ -129,6 +145,8 @@ Cobertura relevante:
 - `apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeLookupSharedCoordinatorTests.cs`;
 - `apps/bridge/tests/NfeAgendamento.Bridge.Tests/FiscalCoordinationCredentialTests.cs`;
 - `apps/bridge/tests/NfeAgendamento.Bridge.Tests/CloudFiscalUsageCoordinatorTests.cs`;
-- `apps/web/tests/fiscal-coordinator-core.test.ts`.
+- `apps/web/tests/fiscal-coordinator-core.test.ts`;
+- `apps/web/tests/fiscal-coordinator-worker.test.ts`;
+- `apps/web/tests/deploy-config.test.ts`.
 
 A aceitação física da consulta em lote continua em `docs/testing/batch-query.md`.
