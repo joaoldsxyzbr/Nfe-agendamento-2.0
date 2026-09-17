@@ -5,7 +5,7 @@ NFe Agendamento é um aplicativo interno para consultar NF-e, baixar XML e gerar
 ## Arquitetura atual
 
 - **Site Cloudflare:** Vite + TypeScript para interface, parsing XML, DANFE, lote e regras de apresentação.
-- **Worker Cloudflare:** código mínimo apenas para coordenar o consumo fiscal entre PCs; os assets continuam servidos como site estático.
+- **Worker Cloudflare:** código mínimo para proteger e coordenar o consumo fiscal entre PCs; `/api/fiscal-coordination/*` passa por rate limiting HTTP antes do coordenador fiscal e os demais assets continuam servidos como site estático.
 - **Durable Object SQLite:** reserva atomicamente tentativas diretas antes da SEFAZ para computadores que usam o mesmo A1 RSA.
 - **App Windows:** `NfeAgendamento.App.exe` em WinForms; inicia oculto, fica na bandeja, gerencia o Bridge e oferece atualização manual.
 - **Bridge:** ASP.NET Core .NET 10 em `http://127.0.0.1:17345`, somente loopback.
@@ -17,7 +17,7 @@ NFe Agendamento é um aplicativo interno para consultar NF-e, baixar XML e gerar
 
 Não existem Central, pareamento, servidor LAN, mDNS ou pasta compartilhada na arquitetura atual. Cada PC usa seu próprio Bridge.
 
-## Estado funcional — 16/09/2026
+## Estado funcional — 17/09/2026
 
 Implementado e coberto pelos gates automatizados aplicáveis:
 
@@ -40,6 +40,7 @@ Implementado e coberto pelos gates automatizados aplicáveis:
 - regras específicas de fornecedores centralizadas e sem CPF/CNPJ fixos no bundle público;
 - proteção fiscal local persistente e fail-safe;
 - coordenação compartilhada do teto fiscal entre PCs que usam o mesmo A1 RSA;
+- rate limiting HTTP nativo da Cloudflare antes do Durable Object fiscal, separado do teto fiscal exato;
 - POC isolado de `Unimake.DFe` para paridade de chave alfanumérica e estrutura RTC;
 - parser estrutural complementar de IBS/CBS/IS, sem alterar prematuramente o DANFE;
 - App, Bridge e Portal publicados como self-contained `win-x64`;
@@ -51,9 +52,9 @@ Implementado e coberto pelos gates automatizados aplicáveis:
 
 O Bridge mantém `FiscalUsageGuard` local com gate serial, janela de uma hora e persistência durável. Estado local corrompido falha de forma conservadora: a rota SEFAZ é protegida e a consulta segue pelo Portal.
 
-Além disso, antes de uma chamada direta à SEFAZ, o Bridge reserva uma tentativa no coordenador Cloudflare. A credencial de coordenação é derivada localmente por assinatura RSA/SHA-256 usando a chave privada do mesmo A1 e é enviada somente por HTTPS. O Worker usa SHA-256 dessa credencial para selecionar um Durable Object; ele não recebe CNPJ, chave NF-e, XML, PFX, senha ou chave privada.
+Além disso, antes de uma chamada direta à SEFAZ, o Bridge reserva uma tentativa no coordenador Cloudflare. A credencial de coordenação é derivada localmente por assinatura RSA/SHA-256 usando a chave privada do mesmo A1 e é enviada somente por HTTPS. Antes de acessar o Durable Object fiscal, o Worker valida a requisição e aplica uma barreira HTTP global de 300 requisições por 60 segundos via binding nativo da Cloudflare. Só depois disso usa SHA-256 da credencial para selecionar o Durable Object; ele não recebe CNPJ, chave NF-e, XML, PFX, senha ou chave privada.
 
-PCs que usam cópias do **mesmo A1 RSA** compartilham a mesma janela de 20 tentativas por hora. `429` e `cStat 656` propagam cooldown compartilhado. Se o coordenador estiver indisponível ou responder de forma inválida, o Bridge **não toca na SEFAZ** e retorna `consumption_limit`, fazendo o frontend seguir pelo Portal.
+PCs que usam cópias do **mesmo A1 RSA** compartilham a mesma janela fiscal de 20 tentativas por hora. `429` e `cStat 656` propagam cooldown compartilhado. O rate limiting HTTP é apenas proteção best-effort contra abuso e não substitui essa contabilidade fiscal. Se o coordenador ou o rate limiter estiver indisponível, responder de forma inválida ou recusar a chamada, o Bridge **não toca na SEFAZ** e retorna `consumption_limit`, fazendo o frontend seguir pelo Portal.
 
 Limitação consciente: certificados diferentes do mesmo CNPJ não compartilham a mesma identidade remota. O projeto evita enviar ou registrar a identidade fiscal no coordenador remoto.
 
@@ -84,6 +85,8 @@ Detalhes: `docs/testing/portal-post-hcaptcha.md`.
 - CORS sem wildcard;
 - chave privada/PFX/senha do A1 permanecem no Windows;
 - coordenador remoto não recebe dados fiscais do documento;
+- `/api/fiscal-coordination/*` passa por rate limiting Cloudflare antes de qualquer acesso ao Durable Object fiscal;
+- falha do rate limiter retorna `503` e não libera operação fiscal;
 - proteção local persiste somente hash do CNPJ, timestamps e prazos de proteção;
 - `.gitignore` bloqueia PFX/P12/PEM/KEY e arquivos de ambiente;
 - WebView2 limitado ao host oficial do Portal e HTTPS;
@@ -147,7 +150,7 @@ A raiz contém `wrangler.jsonc`. O deploy publica o site e o Worker de coordena�
 npx wrangler deploy
 ```
 
-`/api/fiscal-coordination/*` passa pelo Worker antes dos assets; as demais rotas continuam usando os assets do site. `FiscalCoordinator` usa Durable Object com armazenamento SQLite.
+`/api/fiscal-coordination/*` passa pelo Worker antes dos assets. O binding `COORDINATION_RATE_LIMITER` aplica a barreira HTTP antes de qualquer acesso ao `FiscalCoordinator`, que usa Durable Object com armazenamento SQLite. As demais rotas continuam usando os assets do site.
 
 O CI usa o Wrangler do lockfile e executa `./node_modules/.bin/wrangler deploy --dry-run`.
 
@@ -188,11 +191,12 @@ Não provoque bloqueio `656` repetindo consultas artificialmente apenas para tes
 ## Documentação
 
 - segurança do Bridge: `docs/architecture/bridge-security.md`;
-- proteção fiscal local e compartilhada: `docs/architecture/fiscal-usage-guard.md`;
+- proteção fiscal local, compartilhada e rate limiting HTTP: `docs/architecture/fiscal-usage-guard.md`;
 - POC Unimake.DFe: `docs/architecture/unimake-poc.md`;
 - RTC / IBS / CBS: `docs/architecture/rtc-ibs-cbs.md`;
 - regras de fornecedores: `docs/architecture/supplier-rules.md`;
 - hardening fiscal atual: `docs/superpowers/plans/2026-09-15-fiscal-hardening-open-source.md`;
+- hardening HTTP do coordenador: `docs/superpowers/plans/2026-09-17-fiscal-coordinator-rate-limit.md`;
 - hardening do repositório: `docs/operations/repository-hardening.md`;
 - logging local: `docs/operations/local-logging.md`;
 - aceitação geral: `docs/testing/acceptance.md`;
