@@ -16,7 +16,7 @@
 - Não colocar CNPJ/CPF real de fornecedor em código, teste, documentação pública, log, bundle do frontend, issue, PR ou Cloudflare.
 - A configuração local fica em `%LocalAppData%\NfeAgendamentoBridge\supplier-rules.json` e deve sobreviver às atualizações normais do Bridge.
 - O XML original, `cProd`, quantidades fiscais e demais campos fiscais permanecem intactos.
-- Normalização: remover apenas formatação/espaços, preservar letras e usar uppercase; CPF aceito com 11 dígitos; CNPJ aceito com 14 caracteres alfanuméricos.
+- Normalização: remover apenas formatação/espaços, preservar letras e usar uppercase; CPF aceito com 11 dígitos; CNPJ aceito com 14 posições, sendo as 12 primeiras alfanuméricas e os 2 dígitos verificadores finais numéricos.
 - Configuração ausente, inválida, duplicada, ilegível ou fornecedor desconhecido resulta em `supplierId: null`; isso nunca pode bloquear consulta, download, DANFE, Portal ou gerar retry fiscal.
 - Durante a migração, `supplierId` conhecido tem precedência; `supplierId` ausente ou desconhecido usa fallback por `xNome` exato normalizado.
 - Não remover o fallback por nome nesta implementação.
@@ -58,7 +58,7 @@
 - Produces: `public static string? NormalizeTaxId(string? value)`.
 - Reads schema v1: `{ "version": 1, "suppliers": [{ "id": "...", "taxIds": ["..."] }] }`.
 
-- [ ] **Step 1: Escrever testes RED do resolver**
+- [x] **Step 1: Escrever testes RED do resolver**
 
 Criar testes completos usando somente ids sintéticos:
 
@@ -160,7 +160,7 @@ private sealed class SupplierFileFixture : IDisposable
 }
 ```
 
-- [ ] **Step 2: Rodar e confirmar RED**
+- [x] **Step 2: Rodar e confirmar RED**
 
 ```bash
 dotnet test apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeAgendamento.Bridge.Tests.csproj -c Release --filter SupplierIdentityResolverTests
@@ -168,7 +168,7 @@ dotnet test apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeAgendamento.Bridge.
 
 Expected: FAIL porque `SupplierIdentityResolver` ainda não existe.
 
-- [ ] **Step 3: Implementar resolver mínimo e fail-safe**
+- [x] **Step 3: Implementar resolver mínimo e fail-safe**
 
 Usar `JsonSerializerOptions.PropertyNameCaseInsensitive = true` para o JSON documentado em camelCase funcionar com os records C#:
 
@@ -247,7 +247,7 @@ public sealed record SupplierRuleConfig(string? Id, string[]? TaxIds);
 public sealed record SupplierResolveRequest(string? TaxId);
 ```
 
-- [ ] **Step 4: Rodar o teste focado para confirmar GREEN**
+- [x] **Step 4: Rodar o teste focado para confirmar GREEN**
 
 ```bash
 dotnet test apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeAgendamento.Bridge.Tests.csproj -c Release --filter SupplierIdentityResolverTests
@@ -255,7 +255,7 @@ dotnet test apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeAgendamento.Bridge.
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/bridge/src/NfeAgendamento.Bridge/Suppliers/SupplierIdentityResolver.cs apps/bridge/tests/NfeAgendamento.Bridge.Tests/SupplierIdentityResolverTests.cs
@@ -274,7 +274,7 @@ git commit -m "feat: add local supplier identity resolver"
 - Consumes: `SupplierResolveRequest { TaxId }`.
 - Produces: `POST /api/v1/supplier/resolve` -> exatamente `{ "supplierId": string | null }`.
 
-- [ ] **Step 1: Escrever testes RED do endpoint**
+- [x] **Step 1: Escrever testes RED do endpoint**
 
 No fixture de integração, configurar `AllowedOrigin`, criar `SupplierIdentityResolver` com arquivo temporário e substituí-lo via DI. Implementar estes testes:
 
@@ -333,7 +333,7 @@ Assert.DoesNotContain(capturedMessages, message =>
     message.Contains("12.345.678/0001-95", StringComparison.Ordinal));
 ```
 
-- [ ] **Step 2: Rodar e confirmar RED**
+- [x] **Step 2: Rodar e confirmar RED**
 
 ```bash
 dotnet test apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeAgendamento.Bridge.Tests.csproj -c Release --filter SupplierEndpointsIntegrationTests
@@ -341,7 +341,7 @@ dotnet test apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeAgendamento.Bridge.
 
 Expected: FAIL com rota/serviço ausente.
 
-- [ ] **Step 3: Registrar o resolver e mapear a rota**
+- [x] **Step 3: Registrar o resolver e mapear a rota**
 
 ```csharp
 using NfeAgendamento.Bridge.Suppliers;
@@ -358,7 +358,7 @@ api.MapPost("/supplier/resolve", (
 
 Não adicionar logging, métricas ou exceções contendo `request.TaxId`.
 
-- [ ] **Step 4: Rodar integração e suíte Bridge**
+- [x] **Step 4: Rodar integração e suíte Bridge**
 
 ```bash
 dotnet test apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeAgendamento.Bridge.Tests.csproj -c Release --filter SupplierEndpointsIntegrationTests
@@ -367,7 +367,7 @@ dotnet run --project apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeAgendament
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/bridge/src/NfeAgendamento.Bridge/Program.cs apps/bridge/tests/NfeAgendamento.Bridge.Tests/SupplierEndpointsIntegrationTests.cs
@@ -387,7 +387,7 @@ git commit -m "feat: expose local supplier resolution endpoint"
 - Produces: `SupplierResolution = { supplierId: string | null }`.
 - Produces: `BridgeClient.resolveSupplier(taxId: string, signal?: AbortSignal): Promise<SupplierResolution>`.
 
-- [ ] **Step 1: Escrever testes RED do cliente**
+- [x] **Step 1: Escrever testes RED do cliente**
 
 ```ts
 it('resolves supplier through the local bridge', async () => {
@@ -415,7 +415,7 @@ it('rejects supplier responses with extra fields', async () => {
 });
 ```
 
-- [ ] **Step 2: Confirmar RED**
+- [x] **Step 2: Confirmar RED**
 
 ```bash
 npm run test:web -- --run apps/web/tests/bridge-client.test.ts
@@ -423,7 +423,7 @@ npm run test:web -- --run apps/web/tests/bridge-client.test.ts
 
 Expected: FAIL porque método/tipo ainda não existem.
 
-- [ ] **Step 3: Implementar contrato, método e validator**
+- [x] **Step 3: Implementar contrato, método e validator**
 
 Em `contracts.ts`:
 
@@ -459,7 +459,7 @@ function isSupplierResolution(value: unknown): value is SupplierResolution {
 }
 ```
 
-- [ ] **Step 4: Rodar teste focado + lint**
+- [x] **Step 4: Rodar teste focado + lint**
 
 ```bash
 npm run test:web -- --run apps/web/tests/bridge-client.test.ts
@@ -468,7 +468,7 @@ npm run lint:web
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/web/src/bridge/contracts.ts apps/web/src/bridge/client.ts apps/web/tests/bridge-client.test.ts
@@ -493,7 +493,7 @@ git commit -m "feat: add supplier resolution bridge client"
 - Produces: `resolveSupplierRuleForPresentation({ supplierRuleId, emitterName }): SupplierRule | null`.
 - Rename compartilhado: `resolveFernandoKleinProduct` -> `resolveSupplierProduct`.
 
-- [ ] **Step 1: Escrever testes RED de precedência e regressão**
+- [x] **Step 1: Escrever testes RED de precedência e regressão**
 
 ```ts
 it('prefers supplier id and falls back to xNome', async () => {
@@ -518,7 +518,7 @@ it('prefers supplier id and falls back to xNome', async () => {
 
 Nos testes de produto, criar um caso com `supplierRuleId: 'dionisio'` e `emitterName: 'NOME QUE NAO CASA'` e verificar que um alias conhecido continua retornando o mesmo `internalCode` do catálogo. Nos testes de quantidade, usar `supplierRuleId: 'souza-cruz'`, nome não correspondente e `quantity: 2`, esperando `100`. Manter todos os casos atuais por `xNome` para provar compatibilidade.
 
-- [ ] **Step 2: Confirmar RED**
+- [x] **Step 2: Confirmar RED**
 
 ```bash
 npm run test:web -- --run apps/web/tests/supplier-rules.test.ts apps/web/tests/product-mapping.test.ts apps/web/tests/supplier-quantity.test.ts apps/web/tests/supplier-quantity-render.test.ts
@@ -526,7 +526,7 @@ npm run test:web -- --run apps/web/tests/supplier-rules.test.ts apps/web/tests/p
 
 Expected: FAIL pelas novas interfaces ainda ausentes.
 
-- [ ] **Step 3: Implementar resolução id-first e nomes neutros**
+- [x] **Step 3: Implementar resolução id-first e nomes neutros**
 
 Em `supplier-rules.ts`:
 
@@ -597,7 +597,7 @@ const quantityRule = resolveSupplierRuleForPresentation(input)?.internalQuantity
 
 Em `danfe/render.ts`, trocar os consumidores para `resolveSupplierProduct`/`resolveSupplierInternalQuantity` passando `supplierRuleId: nfe.supplierRuleId` e `emitterName: nfe.issuer.name`. Não alterar HTML, colunas, paginação, zoom, print ou campos fiscais.
 
-- [ ] **Step 4: Rodar testes focados + DANFE + lint**
+- [x] **Step 4: Rodar testes focados + DANFE + lint**
 
 ```bash
 npm run test:web -- --run apps/web/tests/supplier-rules.test.ts apps/web/tests/product-mapping.test.ts apps/web/tests/supplier-quantity.test.ts apps/web/tests/supplier-quantity-render.test.ts apps/web/tests/danfe-render.test.ts
@@ -606,7 +606,7 @@ npm run lint:web
 
 Expected: PASS sem mudança visual deliberada.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/web/src/nfe/xml.ts apps/web/src/nfe/supplier-rules.ts apps/web/src/nfe/product-mapping.ts apps/web/src/nfe/supplier-quantity.ts apps/web/src/danfe/render.ts apps/web/tests/supplier-rules.test.ts apps/web/tests/product-mapping.test.ts apps/web/tests/supplier-quantity.test.ts apps/web/tests/supplier-quantity-render.test.ts
@@ -627,7 +627,7 @@ git commit -m "refactor: generalize supplier presentation rules"
 - Extend `BridgeBatchClient` com `resolveSupplier(taxId: string, signal?: AbortSignal): Promise<{ supplierId: string | null }>`.
 - `ParsedNfe` bem-sucedido recebe `supplierRuleId`; falha da identificação nunca transforma sucesso em erro.
 
-- [ ] **Step 1: Escrever testes RED do lote**
+- [x] **Step 1: Escrever testes RED do lote**
 
 No fixture de `BatchController`, incluir `resolveSupplier: vi.fn()` e implementar:
 
@@ -652,7 +652,7 @@ it('keeps the invoice successful when supplier resolution fails', async () => {
 
 O `parseXml` do fixture precisa retornar `issuer.taxId: '12345678000195'`. Manter os testes existentes de processamento serial, Portal, cancelamento, ZIP e print.
 
-- [ ] **Step 2: Confirmar RED**
+- [x] **Step 2: Confirmar RED**
 
 ```bash
 npm run test:web -- --run apps/web/tests/batch-controller.test.ts
@@ -660,7 +660,7 @@ npm run test:web -- --run apps/web/tests/batch-controller.test.ts
 
 Expected: FAIL porque `BridgeBatchClient` ainda não resolve fornecedor.
 
-- [ ] **Step 3: Tornar `completeItem` assíncrono e fail-soft**
+- [x] **Step 3: Tornar `completeItem` assíncrono e fail-soft**
 
 ```ts
 async function completeItem(
@@ -691,7 +691,7 @@ async function completeItem(
 
 Trocar os dois caminhos de sucesso para `await completeItem(item, xml, source, signal)`.
 
-- [ ] **Step 4: Integrar o fluxo unitário em `main.ts`**
+- [x] **Step 4: Integrar o fluxo unitário em `main.ts`**
 
 Adicionar helper local, sem novo controller:
 
@@ -708,7 +708,7 @@ async function withSupplierRule(parsed: ParsedNfe, signal?: AbortSignal): Promis
 
 Usar `await withSupplierRule(parseNfeXml(...), signal)` nos caminhos de XML vindos tanto da SEFAZ quanto do Portal, antes de guardar/exibir o `ParsedNfe`. Não alterar decisões de fallback, chamadas à SEFAZ, Portal ou retry.
 
-- [ ] **Step 5: Rodar testes focados, suíte web e lint**
+- [x] **Step 5: Rodar testes focados, suíte web e lint**
 
 ```bash
 npm run test:web -- --run apps/web/tests/batch-controller.test.ts apps/web/tests/supplier-rules.test.ts apps/web/tests/product-mapping.test.ts apps/web/tests/supplier-quantity-render.test.ts
@@ -718,7 +718,7 @@ npm run lint:web
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/web/src/main.ts apps/web/src/batch/controller.ts apps/web/tests/batch-controller.test.ts apps/web/tests/shell.test.ts
@@ -747,15 +747,15 @@ git commit -m "feat: resolve supplier identity for danfe presentation"
 }
 ```
 
-- [ ] **Step 1: Atualizar `docs/architecture/supplier-rules.md`**
+- [x] **Step 1: Atualizar `docs/architecture/supplier-rules.md`**
 
 Documentar explicitamente: path local, schema v1, múltiplos `taxIds` por fornecedor, normalização, suporte a CNPJ alfanumérico, precedência por id, fallback temporário por `xNome`, comportamento fail-soft, política de logs, cópia manual do mesmo JSON entre PCs e proibição de publicar os ids reais.
 
-- [ ] **Step 2: Atualizar README operacional**
+- [x] **Step 2: Atualizar README operacional**
 
 Adicionar uma seção curta “Regras locais de fornecedor” com `%LocalAppData%\NfeAgendamentoBridge\supplier-rules.json` e link para `docs/architecture/supplier-rules.md`.
 
-- [ ] **Step 3: Rodar todos os gates locais**
+- [x] **Step 3: Rodar todos os gates locais**
 
 ```bash
 npm run format:check:web
@@ -768,7 +768,7 @@ dotnet build apps/bridge/src/NfeAgendamento.Bridge/NfeAgendamento.Bridge.csproj 
 
 Expected: todos PASS.
 
-- [ ] **Step 4: Auditar privacidade do diff**
+- [x] **Step 4: Auditar privacidade do diff**
 
 Executar:
 
@@ -786,14 +786,14 @@ Na revisão manual, confirmar simultaneamente:
 4. resposta HTTP contém apenas `supplierId`;
 5. nenhuma linha nova de logging contém taxId.
 
-- [ ] **Step 5: Commit da documentação**
+- [x] **Step 5: Commit da documentação**
 
 ```bash
 git add docs/architecture/supplier-rules.md README.md
 git commit -m "docs: document local supplier identity rules"
 ```
 
-- [ ] **Step 6: Abrir PR de implementação e aguardar CI completo**
+- [x] **Step 6: Abrir PR de implementação e aguardar CI completo**
 
 O PR deve exigir os jobs atuais `web`, `danfe-print`, `bridge`, `fiscal-compatibility` e `windows-package`, além de CodeQL quando disparado. Não fazer merge com job vermelho.
 
