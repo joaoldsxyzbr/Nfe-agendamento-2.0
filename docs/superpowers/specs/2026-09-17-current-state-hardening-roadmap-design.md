@@ -272,7 +272,8 @@ Durante toda a fase:
 - não alterar DANFE;
 - não alterar parsing XML;
 - não alterar regras fiscais;
-- não adicionar dependência nova.
+- não adicionar dependência nova;
+- o lote continua sem teto rígido de quantidade, processa as NF-e sequencialmente e mantém o fallback Portal elegível por item.
 
 ## Testes
 
@@ -411,7 +412,7 @@ Usar pelo menos um computador Windows real com:
 ### Lote
 
 - lote pequeno com 2–3 NF-e;
-- lote máximo atual com 10 chaves;
+- lote com mais de 10 chaves, confirmando ausência de teto rígido e processamento sequencial;
 - chaves duplicadas/invalidáveis tratadas conforme contrato atual;
 - cancelamento;
 - ZIP dos XMLs;
