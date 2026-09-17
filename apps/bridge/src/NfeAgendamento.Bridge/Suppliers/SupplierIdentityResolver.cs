@@ -83,8 +83,10 @@ public sealed class SupplierIdentityResolver
             .ToArray());
 
         if (normalized.Length == 11 && normalized.All(char.IsDigit)) return normalized;
-        if (normalized.Length == 14 && normalized.All(character =>
-                (character >= 'A' && character <= 'Z') || char.IsDigit(character)))
+        if (normalized.Length == 14 &&
+            normalized[..12].All(character =>
+                (character >= 'A' && character <= 'Z') || char.IsDigit(character)) &&
+            normalized[12..].All(char.IsDigit))
         {
             return normalized;
         }
