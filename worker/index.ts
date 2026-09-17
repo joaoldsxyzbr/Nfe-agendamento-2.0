@@ -1,8 +1,11 @@
 import { DurableObject } from 'cloudflare:workers';
 import { blockFiscalUsage, reserveFiscalUsage } from './fiscal-coordinator-core';
+import {
+  COORDINATION_RATE_LIMIT_KEY,
+  handleFiscalCoordinationRequest,
+} from './fiscal-coordination-http';
 
 const STATE_KEY = 'fiscal-usage-v1';
-const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
 export class FiscalCoordinator extends DurableObject {
   reserve() {
@@ -24,65 +27,16 @@ export class FiscalCoordinator extends DurableObject {
 
 export default {
   async fetch(request, env) {
-    const url = new URL(request.url);
-    if (!url.pathname.startsWith('/api/fiscal-coordination/')) {
-      return env.ASSETS.fetch(request);
-    }
+    const coordinationResponse = await handleFiscalCoordinationRequest(request, {
+      rateLimit: () => env.COORDINATION_RATE_LIMITER.limit({
+        key: COORDINATION_RATE_LIMIT_KEY,
+      }),
+      executeFiscal: async (operation, namespace) => {
+        const stub = env.FISCAL_COORDINATOR.getByName(namespace);
+        return operation === 'reserve' ? stub.reserve() : stub.block();
+      },
+    });
 
-    if (request.method !== 'POST') {
-      return json({ error: 'method_not_allowed' }, 405, { Allow: 'POST' });
-    }
-
-    const token = bearerToken(request.headers.get('Authorization'));
-    if (!token) {
-      return json({ error: 'unauthorized' }, 401);
-    }
-
-    const namespace = await sha256Hex(token);
-    const stub = env.FISCAL_COORDINATOR.getByName(namespace);
-
-    if (url.pathname === '/api/fiscal-coordination/reserve') {
-      const decision = await stub.reserve();
-      return decisionResponse(decision);
-    }
-
-    if (url.pathname === '/api/fiscal-coordination/block') {
-      const decision = await stub.block();
-      return decisionResponse(decision);
-    }
-
-    return json({ error: 'not_found' }, 404);
+    return coordinationResponse ?? env.ASSETS.fetch(request);
   },
 };
-
-function bearerToken(value) {
-  if (!value?.startsWith('Bearer ')) return null;
-  const token = value.slice('Bearer '.length).trim();
-  return TOKEN_PATTERN.test(token) ? token : null;
-}
-
-async function sha256Hex(value) {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
-}
-
-function decisionResponse(decision) {
-  return json({
-    allowDirectLookup: decision.allowDirectLookup,
-    blockedUntilUtc: decision.blockedUntilUtc === null
-      ? null
-      : new Date(decision.blockedUntilUtc).toISOString(),
-    reason: decision.reason,
-  });
-}
-
-function json(payload, status = 200, extraHeaders = {}) {
-  return new Response(JSON.stringify(payload), {
-    status,
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Cache-Control': 'no-store',
-      ...extraHeaders,
-    },
-  });
-}
