@@ -30,14 +30,20 @@ describe('batch input', () => {
     expect(summary.invalidCount).toBe(0);
   });
 
-  it('accepts more than ten valid keys without a rigid batch cap', () => {
-    const keys = Array.from({ length: 25 }, (_, index) => createValidKey(index + 1));
-    const summary = parseBatchInput(keys.join('\n'));
+  it('caps a batch at 100 valid unique NF-e keys', () => {
+    const accepted = Array.from({ length: 100 }, (_, index) => createValidKey(index + 1));
+    const acceptedSummary = parseBatchInput(accepted.join('\n'));
 
-    expect(MAX_BATCH_ITEMS).toBe(Number.POSITIVE_INFINITY);
-    expect(summary.validKeys).toEqual(keys);
-    expect(summary.exceedsLimit).toBe(false);
-    expect(summary.invalidCount).toBe(0);
+    expect(MAX_BATCH_ITEMS).toBe(100);
+    expect(acceptedSummary.validKeys).toEqual(accepted);
+    expect(acceptedSummary.exceedsLimit).toBe(false);
+
+    const rejected = [...accepted, createValidKey(101)];
+    const rejectedSummary = parseBatchInput(rejected.join('\n'));
+
+    expect(rejectedSummary.validKeys).toEqual(rejected);
+    expect(rejectedSummary.exceedsLimit).toBe(true);
+    expect(rejectedSummary.invalidCount).toBe(0);
   });
 });
 
