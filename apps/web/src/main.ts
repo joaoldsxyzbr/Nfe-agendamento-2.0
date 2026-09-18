@@ -1,8 +1,10 @@
 import { createBatchController } from './batch/controller';
 import { createStoredZip } from './batch/zip';
 import { BridgeClient } from './bridge/client';
-import type { CertificateCatalog, CertificateSummary, NfeLookupResult } from './bridge/contracts';
+import { createCertificateController } from './bridge/certificate-controller';
+import type { NfeLookupResult } from './bridge/contracts';
 import { attachDanfeZoom, renderDanfe } from './danfe/render';
+import { createDanfeViewer } from './danfe/viewer';
 import { validateAccessKey } from './nfe/access-key';
 import { createConsultationController } from './nfe/consultation-controller';
 import { parseNfeXml, type ParsedNfe } from './nfe/xml';
@@ -192,8 +194,35 @@ const danfeContent = requireElement<HTMLElement>('#danfe-content');
 const danfeClose = requireElement<HTMLButtonElement>('#danfe-close');
 const danfePrint = requireElement<HTMLButtonElement>('#danfe-print');
 let currentDownloadUrl: string | null = null;
-let detachDanfeZoom: (() => void) | null = null;
 let consultationMode: ConsultationMode = 'single';
+
+const danfeViewerController = createDanfeViewer({
+  elements: {
+    viewer: danfeViewer,
+    title: danfeTitle,
+    content: danfeContent,
+    closeButton: danfeClose,
+    printButton: danfePrint,
+  },
+  render: renderDanfe,
+  attachZoom: attachDanfeZoom,
+  bodyClassList: document.body.classList,
+  addDocumentKeydownListener: (listener) => document.addEventListener('keydown', listener),
+  removeDocumentKeydownListener: (listener) => document.removeEventListener('keydown', listener),
+  print: () => window.print(),
+});
+
+const certificateController = createCertificateController({
+  bridge: bridgeClient,
+  elements: {
+    bridgeStatus,
+    bridgeStatusText,
+    select: certificateSelect,
+    applyButton: certificateApply,
+    certificateState,
+    help: certificateHelp,
+  },
+});
 
 const batchController = createBatchController({
   elements: {
@@ -214,12 +243,12 @@ const batchController = createBatchController({
   parseXml: parseNfeXml,
   createZip: createStoredZip,
   downloadBlob,
-  openDanfe,
+  openDanfe: (parsed) => danfeViewerController.open(parsed),
   downloadXml,
-  openDanfeDocuments,
-  printWindow: () => window.print(),
-  setCertificateControlsEnabled,
-  hasSelectableCertificates: () => certificateSelect.options.length > 1,
+  openDanfeDocuments: (documents, title) => danfeViewerController.openMany(documents, title),
+  printWindow: () => danfeViewerController.print(),
+  setCertificateControlsEnabled: (enabled) => certificateController.setControlsEnabled(enabled),
+  hasSelectableCertificates: () => certificateController.hasSelectableCertificates(),
 });
 
 const consultationController = createConsultationController({
@@ -241,7 +270,7 @@ const consultationController = createConsultationController({
 });
 
 certificateApply.addEventListener('click', () => {
-  void applyCertificateSelection();
+  void certificateController.applySelection();
 });
 
 modeSingle.addEventListener('click', () => setConsultationMode('single'));
@@ -264,56 +293,14 @@ batchZip.addEventListener('click', () => batchController.downloadZip());
 batchPrint.addEventListener('click', () => batchController.printDanfes());
 
 lookupReset.addEventListener('click', () => consultationController.reset());
-danfeClose.addEventListener('click', closeDanfe);
-danfePrint.addEventListener('click', () => window.print());
-danfeViewer.addEventListener('click', (event) => {
-  if (event.target === danfeViewer) closeDanfe();
-});
-document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape' && !danfeViewer.hidden) closeDanfe();
-});
 window.addEventListener('pagehide', () => {
+  danfeViewerController.dispose();
   batchController.dispose();
   void consultationController.cancelActivePortal();
 });
 
-void refreshBridgeAndCertificates();
+void certificateController.refresh();
 batchController.syncDraft();
-
-async function refreshBridgeAndCertificates(): Promise<void> {
-  setBridgeState('checking');
-  setCertificateControlsEnabled(false);
-
-  try {
-    await bridgeClient.health();
-    setBridgeState('connected');
-    const catalog = await bridgeClient.listCertificates();
-    renderCertificateCatalog(catalog);
-  } catch (error) {
-    renderUnavailableCertificates();
-    setBridgeState(isLocalPermissionError(error) ? 'permission' : 'missing');
-  }
-}
-
-async function applyCertificateSelection(): Promise<void> {
-  const thumbprint = certificateSelect.value;
-  if (!thumbprint) return;
-
-  setCertificateControlsEnabled(false);
-  certificateHelp.textContent = 'Salvando seleção neste computador…';
-
-  try {
-    await bridgeClient.selectCertificate(thumbprint);
-    const catalog = await bridgeClient.listCertificates();
-    renderCertificateCatalog(catalog);
-    certificateHelp.textContent = 'Certificado selecionado. Apenas o thumbprint fica salvo localmente.';
-  } catch (error) {
-    certificateHelp.textContent = error instanceof Error
-      ? `Não foi possível selecionar o certificado: ${error.message}`
-      : 'Não foi possível selecionar o certificado.';
-    setCertificateControlsEnabled(certificateSelect.options.length > 1);
-  }
-}
 
 function setConsultationMode(mode: ConsultationMode): void {
   if (batchController.isBusy() || mode === consultationMode) return;
@@ -414,7 +401,7 @@ function renderLookupSuccess(parsed: ParsedNfe): void {
     <span>Visualizar DANFE</span>
   `;
   preview.title = 'Abrir DANFE para visualização e impressão';
-  preview.addEventListener('click', () => openDanfe(parsed));
+  preview.addEventListener('click', () => danfeViewerController.open(parsed));
 
   currentDownloadUrl = URL.createObjectURL(new Blob([parsed.originalXml], { type: 'application/xml;charset=utf-8' }));
   const download = document.createElement('a');
@@ -436,29 +423,6 @@ function renderLookupSuccess(parsed: ParsedNfe): void {
   actions.append(preview, download);
   card.append(header, issuer, metadata, actions);
   resultCard.append(card);
-}
-
-function openDanfe(parsed: ParsedNfe): void {
-  openDanfeDocuments([parsed], `Visualizar DANFE · NF-e ${parsed.number || parsed.accessKey}`);
-}
-
-function openDanfeDocuments(parsed: readonly ParsedNfe[], title: string): void {
-  detachDanfeZoom?.();
-  danfeContent.replaceChildren(...parsed.map((item) => renderDanfe(item)));
-  danfeTitle.textContent = title;
-  danfeViewer.hidden = false;
-  document.body.classList.add('danfe-open');
-  detachDanfeZoom = attachDanfeZoom(danfeViewer);
-  danfeClose.focus();
-}
-
-function closeDanfe(): void {
-  if (danfeViewer.hidden) return;
-  danfeViewer.hidden = true;
-  document.body.classList.remove('danfe-open');
-  detachDanfeZoom?.();
-  detachDanfeZoom = null;
-  danfeContent.replaceChildren();
 }
 
 function downloadXml(parsed: ParsedNfe): void {
@@ -502,7 +466,7 @@ function appendResultState(titleText: string, messageText: string): void {
 }
 
 function resetResult(): void {
-  closeDanfe();
+  danfeViewerController.close();
   if (currentDownloadUrl) {
     URL.revokeObjectURL(currentDownloadUrl);
     currentDownloadUrl = null;
@@ -516,92 +480,6 @@ function setLookupBusy(busy: boolean): void {
   accessKeyInput.disabled = busy;
   modeBatch.disabled = busy;
   lookupSubmit.textContent = busy ? 'Consultando…' : 'Consultar';
-}
-
-function renderCertificateCatalog(catalog: CertificateCatalog): void {
-  certificateSelect.replaceChildren();
-
-  if (catalog.certificates.length === 0) {
-    certificateSelect.append(createOption('', 'Nenhum certificado A1 utilizável encontrado'));
-    certificateState.textContent = 'Nenhum A1 disponível';
-    setCertificateControlsEnabled(false);
-    return;
-  }
-
-  certificateSelect.append(createOption('', 'Selecione um certificado'));
-  for (const certificate of catalog.certificates) {
-    certificateSelect.append(createCertificateOption(certificate));
-  }
-
-  if (catalog.selectedThumbprint &&
-      catalog.certificates.some((certificate) => certificate.thumbprint === catalog.selectedThumbprint)) {
-    certificateSelect.value = catalog.selectedThumbprint;
-    certificateState.textContent = 'Certificado selecionado';
-  } else {
-    certificateState.textContent = 'Seleção necessária';
-  }
-
-  setCertificateControlsEnabled(true);
-}
-
-function renderUnavailableCertificates(): void {
-  certificateSelect.replaceChildren(createOption('', 'Bridge local indisponível'));
-  certificateState.textContent = 'Indisponível';
-  setCertificateControlsEnabled(false);
-}
-
-function createCertificateOption(certificate: CertificateSummary): HTMLOptionElement {
-  const expiration = new Intl.DateTimeFormat('pt-BR').format(new Date(certificate.notAfter));
-  return createOption(
-    certificate.thumbprint,
-    `${certificate.subject} · válido até ${expiration}`,
-  );
-}
-
-function createOption(value: string, label: string): HTMLOptionElement {
-  const option = document.createElement('option');
-  option.value = value;
-  option.textContent = label;
-  return option;
-}
-
-function setCertificateControlsEnabled(enabled: boolean): void {
-  certificateSelect.disabled = !enabled;
-  certificateApply.disabled = !enabled || !certificateSelect.value;
-
-  if (enabled) {
-    certificateSelect.onchange = () => {
-      certificateApply.disabled = !certificateSelect.value;
-    };
-  }
-}
-
-function setBridgeState(state: 'checking' | 'connected' | 'missing' | 'permission'): void {
-  bridgeStatus.dataset.state = state;
-
-  switch (state) {
-    case 'connected':
-      bridgeStatusText.textContent = 'Bridge conectado';
-      break;
-    case 'permission':
-      bridgeStatusText.textContent = 'Permissão de acesso local necessária';
-      certificateHelp.textContent = 'Autorize o navegador a acessar o serviço local e recarregue a página.';
-      break;
-    case 'missing':
-      bridgeStatusText.textContent = 'Bridge não encontrado';
-      certificateHelp.textContent = 'Instale ou inicie o Bridge neste computador para usar o certificado A1.';
-      break;
-    default:
-      bridgeStatusText.textContent = 'Verificando Bridge…';
-  }
-}
-
-function isLocalPermissionError(error: unknown): boolean {
-  if (error instanceof DOMException && (error.name === 'NotAllowedError' || error.name === 'SecurityError')) {
-    return true;
-  }
-
-  return error instanceof Error && /permission|private network|local network|acesso local/i.test(error.message);
 }
 
 function requireElement<T extends Element>(selector: string): T {

@@ -1,8 +1,0 @@
-{
-  "name": "NFe Agendamento",
-  "description": "Consulta de NF-e, download de XML e visualização de DANFE mantendo o certificado A1 local.",
-  "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
-}

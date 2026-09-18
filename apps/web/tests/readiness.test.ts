@@ -3,8 +3,9 @@ import { describe, expect, it } from 'vitest';
 
 const repoRoot = new URL('../../../', import.meta.url);
 const main = readFileSync(new URL('../src/main.ts', import.meta.url), 'utf8');
+const certificateController = readFileSync(new URL('../src/bridge/certificate-controller.ts', import.meta.url), 'utf8');
 const consultationController = readFileSync(new URL('../src/nfe/consultation-controller.ts', import.meta.url), 'utf8');
-const siteStates = `${main}\n${consultationController}`;
+const siteStates = `${main}\n${certificateController}\n${consultationController}`;
 const ci = readFileSync(new URL('.github/workflows/ci.yml', repoRoot), 'utf8');
 
 function readActiveSources(relativePath: string): string {

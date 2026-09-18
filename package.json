@@ -5,10 +5,6 @@
     "apps/web"
   ],
   "scripts": {
-    "dev": "npm --workspace @nfe-agendamento/web run dev",
-    "build": "npm --workspace @nfe-agendamento/web run build && node -e \"const fs=require('fs'); if(fs.existsSync('apps/web/dist')) { fs.cpSync('apps/web/dist', 'dist', {recursive: true}); }\"",
-    "test": "npm --workspace @nfe-agendamento/web test",
-    "lint": "npm --workspace @nfe-agendamento/web run lint",
     "test:web": "npm --workspace @nfe-agendamento/web test",
     "build:web": "npm --workspace @nfe-agendamento/web run build",
     "lint:web": "npm --workspace @nfe-agendamento/web run lint",

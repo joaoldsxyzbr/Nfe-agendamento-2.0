@@ -204,6 +204,7 @@ Não provoque bloqueio `656` repetindo consultas artificialmente apenas para tes
 ## Documentação
 
 - segurança do Bridge: `docs/architecture/bridge-security.md`;
+- fronteiras do frontend: `docs/architecture/frontend-boundaries.md`;
 - proteção fiscal local e compartilhada: `docs/architecture/fiscal-usage-guard.md`;
 - POC Unimake.DFe: `docs/architecture/unimake-poc.md`;
 - RTC / IBS / CBS: `docs/architecture/rtc-ibs-cbs.md`;
