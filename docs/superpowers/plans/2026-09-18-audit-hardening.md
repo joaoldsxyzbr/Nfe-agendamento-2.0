@@ -80,7 +80,7 @@
 - [x] Escrever testes de Tab/Shift+Tab e restauração do foco.
 - RED histórico desta tarefa não foi registrado separadamente antes da implementação; a regressão permanece coberta pela suíte atual.
 - [x] Implementar focus trap e retorno ao foco anterior.
-- [ ] Confirmar GREEN.
+- [x] Confirmar GREEN.
 
 ## Task 5: Portal e E2E da interface
 
