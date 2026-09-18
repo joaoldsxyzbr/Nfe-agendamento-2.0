@@ -8,7 +8,9 @@ Fechar os achados técnicos confirmados na auditoria da `main` sem alterar a arq
 
 ## Escopo aprovado
 
-A solicitação "ajuste tudo" aprova a correção dos achados listados na auditoria imediatamente anterior. O trabalho cobre código, testes, workflows e documentação. Controles que dependem de recursos externos não disponíveis pelo repositório — certificado Authenticode real e permissão administrativa para ruleset da `main` — devem ficar preparados e explicitamente bloqueados, sem serem declarados concluídos.
+A solicitação "ajuste tudo" aprova a correção dos achados listados na auditoria imediatamente anterior. O trabalho cobre código, testes, workflows e documentação.
+
+**Decisão posterior aprovada em 18/09/2026:** Authenticode e ruleset/branch protection não são requisitos do projeto. O suporte opcional de assinatura pode permanecer no pipeline, mas sua ausência não bloqueia updater, CI ou release. A ausência de ruleset também não representa pendência. Esta decisão substitui qualquer requisito obrigatório desses dois controles descrito abaixo na versão inicial desta spec.
 
 ## Decisões
 
@@ -42,14 +44,10 @@ O bearer atual é deliberadamente opaco e não carrega identidade fiscal para a 
 
 ### 3. Cadeia Windows
 
-O CI comum pode continuar produzindo artefatos não assinados para validação. Entretanto, um **commit de release** não pode ficar verde sem Authenticode válido.
-
-- CI de release commit valida assinatura dos três executáveis e do Setup.
-- Sem secrets/certificado, release commit falha antes de publicação.
-- Updater valida SHA-256 e, adicionalmente, Authenticode confiável antes de executar o Setup.
-- O verificador usa a política Authenticode do Windows; nenhum instalador sem assinatura confiável é executado pelo updater.
-
-O certificado real de code signing continua sendo um pré-requisito externo para publicar a próxima release.
+- Updater valida versão/origem esperada do asset, nome, tamanho e SHA-256 antes de executar o Setup.
+- Authenticode permanece **opcional**: se os secrets estiverem configurados, o pipeline assina os artefatos; sem secrets, CI e release continuam normalmente.
+- Não existe gate obrigatório de Authenticode no commit de release.
+- O suporte opcional de assinatura não altera o fluxo funcional do updater.
 
 ### 4. Acessibilidade DANFE
 
@@ -68,12 +66,11 @@ O modal:
 
 - pin de CodeQL por SHA imutável;
 - manter GitHub Actions existentes já pinadas;
-- documentar que ruleset da `main` continua externo e obrigatório.
-- a integração atual não possui administração para ativar ruleset; isso não será mascarado por workaround automático de revert.
+- registrar que ruleset/branch protection é opcional e não compõe o backlog do projeto.
 
 ### 7. Documentação
 
-Sincronizar referências atuais da v0.0.16, novo teto de lote, rate limits/cache, assinatura obrigatória para release e estado real da proteção de `main`.
+Sincronizar referências atuais da v0.0.16, novo teto de lote, rate limits/cache e a decisão de manter Authenticode/ruleset como controles opcionais.
 
 ## Testes
 
@@ -81,20 +78,15 @@ TDD para mudanças comportamentais:
 
 - web: lote falha mantendo mensagem; limite de 100; `hidden`; ZIP sem buffer monolítico e com limite;
 - Worker: limiter por IP, limiter de update, cache hit sem novo GitHub fetch;
-- Bridge/App: updater exige verificador de assinatura; falha de assinatura remove instalador e impede execução;
+- Bridge/App: updater exige tamanho e SHA-256 válidos sem depender de assinatura Authenticode;
 - DANFE viewer: trap de foco e restauração;
 - Portal: limpeza de XML temporário obsoleto;
 - cobertura: provider V8 pinado no lockfile, medição de `src/**/*.ts` e `worker/**/*.ts` no CI;
 - Playwright: fluxo real da tela principal com Bridge interceptado;
-- workflows: CodeQL pinado; release commit exige validação Authenticode.
+- workflows: CodeQL pinado; assinatura Authenticode opcional sem gate obrigatório de release.
 
 Validação final exige CI completo verde no HEAD final.
 
 ## Fora do alcance executável neste ambiente
 
-1. fornecer/comprar certificado Authenticode real;
-2. gravar secrets reais de code signing no GitHub;
-3. criar/ativar ruleset de `main` que exige permissão administrativa;
-4. testes físicos Windows/SEFAZ/A1/Portal/impressora.
-
-Esses itens permanecem externos, mas o repositório deve impedir que uma release seja publicada fingindo que a assinatura está pronta.
+Testes físicos Windows/SEFAZ/A1/Portal/impressora continuam fora do CI. Authenticode e ruleset/branch protection são opcionais e, por decisão do projeto, não são pendências de conclusão.
