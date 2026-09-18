@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
+    "coverage": "vitest run --coverage",
     "build": "tsc --noEmit && vite build",
     "dev": "vite",
     "lint": "tsc --noEmit && node ../../scripts/lint-web.mjs",
