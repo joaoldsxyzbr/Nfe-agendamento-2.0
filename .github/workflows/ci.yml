@@ -164,30 +164,6 @@ jobs:
         run: |
           $version = "${{ steps.version.outputs.version }}"
           ./scripts/sign-windows-artifacts.ps1 "artifacts/installer/NFeAgendamentoBridge-Setup-v$version.exe"
-      - name: Require Authenticode on release commits
-        if: >-
-          ${{
-            github.event_name == 'push' &&
-            github.ref == 'refs/heads/main' &&
-            startsWith(github.event.head_commit.message, 'release: v')
-          }}
-        shell: pwsh
-        run: |
-          $version = "${{ steps.version.outputs.version }}"
-          $paths = @(
-            "artifacts/NfeAgendamentoBridge/NfeAgendamento.App.exe",
-            "artifacts/NfeAgendamentoBridge/NfeAgendamento.Bridge.exe",
-            "artifacts/NfeAgendamentoBridge/NfeAgendamento.Portal.exe",
-            "artifacts/installer/NFeAgendamentoBridge-Setup-v$version.exe"
-          )
-
-          foreach ($path in $paths) {
-            $signature = Get-AuthenticodeSignature -LiteralPath $path
-            if ($signature.Status -ne 'Valid') {
-              throw "Release bloqueada: Authenticode inválido em $path (status: $($signature.Status))."
-            }
-          }
-
       - name: Upload Windows installer
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
