@@ -122,7 +122,7 @@ describe('application shell', () => {
     expect(main).toContain('createZip: createStoredZip');
     expect(batchController).toContain('deps.createZip(');
     expect(batchUi).toContain("batchKeysInput.placeholder = 'Cole as chaves, uma por linha'");
-    expect(batchUi).toContain('Sem limite fixo de quantidade');
+    expect(batchUi).toContain('Máximo de 100 NF-e por lote');
     expect(batchUi).toContain('modeBatch.click()');
     expect(batchUi).toContain("modeControl.style.display = 'none'");
     expect(batchUi).toContain("batchStart.textContent = 'Consultar'");
@@ -140,6 +140,8 @@ describe('application shell', () => {
     expect(batchCss).toContain('#batch-consultation-panel.is-compact-single #batch-form textarea');
     expect(batchCss).toContain('#batch-consultation-panel.is-compact-single .batch-toolbar-actions #batch-zip');
     expect(batchCss).toContain('#batch-consultation-panel.is-compact-single .batch-toolbar-actions #batch-print');
+    expect(batchCss).toContain('#batch-cancel[hidden]');
+    expect(batchCss).toMatch(/#batch-cancel\[hidden\][\s\S]*display:\s*none\s*!important/);
     expect(batchCss).not.toContain(":has(.batch-item[data-state='success']) .batch-run-toolbar {");
     expect(batchCss).not.toContain(".batch-item[data-state='success'] .batch-order,");
     expect(batchCss).not.toContain(".batch-item[data-state='success'] .batch-key,");
