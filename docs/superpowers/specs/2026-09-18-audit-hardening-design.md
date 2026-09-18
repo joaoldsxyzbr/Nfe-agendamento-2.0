@@ -59,14 +59,19 @@ O modal:
 - devolve o foco ao elemento anterior ao fechar;
 - preserva Esc/backdrop e lifecycle de zoom já existentes.
 
-### 5. Supply chain e governança
+### 5. Portal e testes de interface
+
+- limpar XMLs temporários do diretório dedicado quando tiverem mais de 24 horas, cobrindo a hipótese de crash abrupto;
+- adicionar Playwright sobre a aplicação Vite real para validar o fluxo unitário, estados `hidden`, card estático, ações e reset; o mock substitui somente o Bridge loopback, não a UI.
+
+### 6. Supply chain e governança
 
 - pin de CodeQL por SHA imutável;
 - manter GitHub Actions existentes já pinadas;
 - documentar que ruleset da `main` continua externo e obrigatório.
 - a integração atual não possui administração para ativar ruleset; isso não será mascarado por workaround automático de revert.
 
-### 6. Documentação
+### 7. Documentação
 
 Sincronizar referências atuais da v0.0.16, novo teto de lote, rate limits/cache, assinatura obrigatória para release e estado real da proteção de `main`.
 
@@ -78,6 +83,8 @@ TDD para mudanças comportamentais:
 - Worker: limiter por IP, limiter de update, cache hit sem novo GitHub fetch;
 - Bridge/App: updater exige verificador de assinatura; falha de assinatura remove instalador e impede execução;
 - DANFE viewer: trap de foco e restauração;
+- Portal: limpeza de XML temporário obsoleto;
+- Playwright: fluxo real da tela principal com Bridge interceptado;
 - workflows: CodeQL pinado; release commit exige validação Authenticode.
 
 Validação final exige CI completo verde no HEAD final.
