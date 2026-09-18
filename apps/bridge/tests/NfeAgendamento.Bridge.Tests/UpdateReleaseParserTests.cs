@@ -87,7 +87,7 @@ public sealed class UpdateReleaseParserTests
     [Fact]
     public void Rejects_direct_github_installer_url()
     {
-        var json = $"""
+        var json = """
         {
           "tag_name": "v0.0.6",
           "draft": false,
@@ -97,7 +97,7 @@ public sealed class UpdateReleaseParserTests
               "name": "NFeAgendamentoBridge-Setup-v0.0.6.exe",
               "state": "uploaded",
               "size": 12345,
-              "digest": "{{Digest}}",
+              "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
               "browser_download_url": "https://github.com/joaoldsxyzbr/Nfe-agendamento-2.0/releases/download/v0.0.6/NFeAgendamentoBridge-Setup-v0.0.6.exe"
             }
           ]
