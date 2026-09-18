@@ -7,16 +7,22 @@ import {
 
 function createSelect() {
   let options: HTMLOptionElement[] = [];
+  let value = '';
   return {
-    value: '',
     disabled: false,
     onchange: null,
+    get value() {
+      return value;
+    },
+    set value(next: string) {
+      value = next;
+    },
     get options() {
       return options;
     },
     replaceChildren(...items: HTMLOptionElement[]) {
       options = [...items];
-      this.value = items[0]?.value ?? '';
+      value = items[0]?.value ?? '';
     },
     append(...items: HTMLOptionElement[]) {
       options.push(...items);
