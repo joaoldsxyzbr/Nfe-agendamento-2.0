@@ -57,8 +57,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         };
         _updateService = new UpdateService(
             _httpClient,
-            Path.Combine(Path.GetTempPath(), "NfeAgendamento", "updates"),
-            AuthenticodeVerifier.VerifyTrusted);
+            Path.Combine(Path.GetTempPath(), "NfeAgendamento", "updates"));
 
         _menu = new ContextMenuStrip();
         _menu.Items.Add(new ToolStripMenuItem("Abrir NFe Agendamento", null, (_, _) => OpenSite()));
