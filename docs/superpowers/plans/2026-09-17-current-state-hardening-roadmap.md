@@ -489,6 +489,8 @@ Merge only after full CI/CodeQL is green.
 
 ### Task 5: Extract the single-NF-e consultation controller
 
+Status: implementado no PR #14 com RED comprovado no CI antes da criação do controller; full CI deve permanecer verde no head final antes do merge.
+
 **Files:**
 - Create: `apps/web/src/nfe/consultation-controller.ts`
 - Create: `apps/web/tests/consultation-controller.test.ts`
@@ -511,7 +513,7 @@ export function createConsultationController(
 ): ConsultationController;
 ```
 
-- [ ] **Step 1: Branch from current `main` after PR B**
+- [x] **Step 1: Branch from current `main` after PR B**
 
 ```bash
 git switch main
@@ -519,7 +521,7 @@ git pull --ff-only
 git switch -c refactor/single-consultation-controller
 ```
 
-- [ ] **Step 2: Write characterization tests**
+- [x] **Step 2: Write characterization tests**
 
 Cover exactly:
 
@@ -539,7 +541,7 @@ reset revokes current download URL and restores empty state
 pagehide cancellation is best-effort and never starts a fiscal retry
 ```
 
-- [ ] **Step 3: Verify RED**
+- [x] **Step 3: Verify RED**
 
 ```bash
 npm run test:web -- --run apps/web/tests/consultation-controller.test.ts
@@ -547,15 +549,15 @@ npm run test:web -- --run apps/web/tests/consultation-controller.test.ts
 
 Expected: FAIL because the controller module does not exist.
 
-- [ ] **Step 4: Extract existing single consultation behavior**
+- [x] **Step 4: Extract existing single consultation behavior**
 
 Move `submitLookup`, eligible Portal fallback orchestration, single-result busy/reset state and active Portal operation ownership into the controller. Preserve current Portuguese copy and categories exactly.
 
-- [ ] **Step 5: Wire `main.ts`**
+- [x] **Step 5: Wire `main.ts`**
 
 Keep markup and DOM lookup in `main.ts`; inject elements/callbacks into the controller. `pagehide` calls controller cancellation and batch disposal/cancel as applicable.
 
-- [ ] **Step 6: Verify GREEN and full gate**
+- [x] **Step 6: Verify GREEN and full gate**
 
 ```bash
 npm run test:web -- --run apps/web/tests/consultation-controller.test.ts apps/web/tests/access-key.test.ts apps/web/tests/portal-fallback.test.ts
@@ -568,7 +570,7 @@ npm run build:web
 
 Expected: all pass.
 
-- [ ] **Step 7: Commit and open PR C**
+- [x] **Step 7: Commit and open PR C**
 
 ```bash
 git add apps/web/src/nfe/consultation-controller.ts apps/web/src/main.ts apps/web/tests/consultation-controller.test.ts
