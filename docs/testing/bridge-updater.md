@@ -10,7 +10,7 @@ Desde a v0.0.16, o App consulta somente:
 
 `https://nfeagendamento.joaolds.xyz.br/api/update/latest`
 
-O Worker consulta server-side a release estável mais recente de `joaoldsxyzbr/Nfe-agendamento-2.0`, rejeita rascunhos/pré-releases e devolve apenas a metadata necessária. A versão instalada continua vindo do assembly do `NfeAgendamento.App.exe`.
+O Worker consulta server-side a release estável mais recente de `joaoldsxyzbr/Nfe-agendamento-2.0`, rejeita rascunhos/pré-releases e devolve apenas a metadata necessária. A metadata validada usa cache curto no edge e as rotas de atualização possuem rate limiter próprio por IP para reduzir abuso e dependência do limite anônimo da API do GitHub. A versão instalada continua vindo do assembly do `NfeAgendamento.App.exe`.
 
 Para uma release `vX.Y.Z`, o updater aceita somente:
 
@@ -31,9 +31,10 @@ O instalador somente é liberado para execução depois de todas estas verifica�
 3. tamanho publicado positivo e menor ou igual a 256 MiB;
 4. tamanho efetivamente baixado igual ao tamanho publicado pela release;
 5. digest da release no formato `sha256:<64 caracteres hexadecimais>`;
-6. SHA-256 calculado localmente igual ao digest publicado pelo GitHub.
+6. SHA-256 calculado localmente igual ao digest publicado pelo GitHub;
+7. assinatura **Authenticode confiável** validada pela política do Windows (`WinVerifyTrust`) antes de o arquivo `.download` ser renomeado para o Setup final.
 
-O download é escrito primeiro como arquivo `.download`. Em erro de rede, tamanho ou hash, o arquivo parcial/final é removido e nenhum instalador é iniciado.
+O download é escrito primeiro como arquivo `.download`. Em erro de rede, tamanho, hash ou Authenticode, o arquivo parcial/final é removido e nenhum instalador é iniciado.
 
 ## Fluxo de usuário
 
@@ -48,16 +49,16 @@ O download é escrito primeiro como arquivo `.download`. Em erro de rede, tamanh
 
 ## Falhas
 
-Falhas HTTP, timeout, erro de disco, asset inesperado, tamanho divergente, hash divergente ou falha ao iniciar o Setup são exibidas ao usuário. Nesses casos o App/Bridge permanece em execução e pode ser usado normalmente.
+Falhas HTTP, timeout, erro de disco, asset inesperado, tamanho divergente, hash divergente, assinatura Authenticode ausente/não confiável ou falha ao iniciar o Setup são exibidas ao usuário. Nesses casos o App/Bridge permanece em execução e pode ser usado normalmente.
 
 ## Testes automatizados
 
 - `UpdateReleaseParserTests.cs`: versão, asset exato, origem da URL e exigência de SHA-256.
-- `UpdateServiceTests.cs`: endpoint oficial de metadata, tamanho e SHA-256 do download, incluindo limpeza em falha.
-- `update-proxy-worker.test.ts`: reescrita da metadata, streaming do Setup exato, rejeição de caminho arbitrário e tratamento de falha upstream.
+- `UpdateServiceTests.cs`: endpoint oficial de metadata, tamanho, SHA-256 e gate Authenticode do download, incluindo limpeza em falha.
+- `update-proxy-worker.test.ts`: reescrita/cache da metadata, rate limit por IP, streaming do Setup exato, rejeição de caminho arbitrário e tratamento de falha upstream.
 - `TrayUpdaterStaticTests.cs`: presença do fluxo manual no app de bandeja.
 
-O CI também recompila o `NfeAgendamento.App`, o Bridge e o helper Portal e gera o pacote Windows após os jobs web/bridge ficarem verdes.
+O CI também recompila o `NfeAgendamento.App`, o Bridge e o helper Portal e gera o pacote Windows após os jobs web/bridge ficarem verdes. Para commits `release: vX.Y.Z`, o job Windows exige assinatura Authenticode válida nos três executáveis e no Setup; sem certificado/secrets de code signing reais, o commit de release falha e `release.yml` não publica nada.
 
 ## Teste físico Windows
 
@@ -68,7 +69,12 @@ Ao publicar uma versão posterior à instalada:
 - confirmar que **Verificar atualizações** detecta a versão nova;
 - clicar **Não** e confirmar que nada é baixado/instalado;
 - repetir, clicar **Sim** e confirmar o download;
-- confirmar que o Setup só abre depois da verificação SHA-256;
+- confirmar que o Setup só abre depois das verificações SHA-256 **e Authenticode**;
 - confirmar que App/Bridge fecham para a instalação;
 - concluir o Setup e confirmar que o novo App inicia normalmente;
 - usar **Verificar atualizações** novamente e confirmar a mensagem de versão mais recente.
+
+
+## Pré-requisito externo para a próxima release
+
+O repositório contém o gate e o verificador, mas **não contém certificado de code signing**. É necessário configurar `CODE_SIGNING_PFX_BASE64` e `CODE_SIGNING_PFX_PASSWORD` com um certificado Authenticode real antes do próximo commit `release: v...`. Isso é proposital: a `main` pode continuar passando CI técnico sem assinatura, mas uma nova release não pode ser publicada sem ela.
