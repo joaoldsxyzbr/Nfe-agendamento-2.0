@@ -114,7 +114,7 @@ Os CNPJs/CPFs reais de fornecedores não pertencem ao repositório, testes, docu
 
 Jobs obrigatórios do pipeline:
 
-- `web` — install/audit/lint/format/test/build e `wrangler deploy --dry-run`;
+- `web` — install/audit/lint/format/test, **medição de cobertura V8**, build e `wrangler deploy --dry-run`;
 - `danfe-print` — regressão real de PDF A4 **e fluxo E2E da consulta** com Chromium;
 - `bridge` — testes e build .NET;
 - `fiscal-compatibility` — POC Unimake e paridade fiscal;
