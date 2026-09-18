@@ -5,7 +5,7 @@ NFe Agendamento é um aplicativo interno para consultar NF-e, baixar XML e gerar
 ## Arquitetura atual
 
 - **Site Cloudflare:** Vite + TypeScript para interface, parsing XML, DANFE, lote e regras de apresentação.
-- **Worker Cloudflare:** código mínimo para coordenar o consumo fiscal entre PCs e aplicar uma barreira HTTP contra abuso; os assets continuam servidos como site estático.
+- **Worker Cloudflare:** coordena o consumo fiscal entre PCs, aplica a barreira HTTP contra abuso e faz proxy estritamente limitado da metadata/Setup de atualização; os demais assets continuam servidos como site estático.
 - **Durable Object SQLite:** reserva atomicamente tentativas diretas antes da SEFAZ para computadores que usam o mesmo A1 RSA.
 - **App Windows:** `NfeAgendamento.App.exe` em WinForms; inicia oculto, fica na bandeja, gerencia o Bridge e oferece atualização manual.
 - **Bridge:** ASP.NET Core .NET 10 em `http://127.0.0.1:17345`, somente loopback.
@@ -13,7 +13,7 @@ NFe Agendamento é um aplicativo interno para consultar NF-e, baixar XML e gerar
 - **Helper Portal:** WinForms/WebView2 persistente para o fallback pelo Portal Nacional; hCaptcha continua sempre manual.
 - **Certificado A1:** descoberto em `CurrentUser/My`; PFX, senha e chave privada nunca são enviados ao site ou ao Cloudflare.
 - **Persistência local:** thumbprint selecionado em `%LOCALAPPDATA%/NfeAgendamentoBridge/settings.json`, regras locais de fornecedor em `supplier-rules.json` e metadados da proteção fiscal em `fiscal-usage.json`.
-- **Versão canônica atual:** `0.0.15`; a publicação da release é automatizada somente após o CI do commit `release: v0.0.15` ficar verde.
+- **Versão canônica atual:** `0.0.16`; a publicação da release é automatizada somente após o CI do commit `release: v0.0.16` ficar verde.
 
 Não existem Central, pareamento, servidor LAN, mDNS ou pasta compartilhada na arquitetura atual. Cada PC usa seu próprio Bridge.
 
@@ -45,7 +45,7 @@ Implementado e coberto pelos gates automatizados aplicáveis:
 - parser estrutural complementar de IBS/CBS/IS, sem alterar prematuramente o DANFE;
 - App, Bridge e Portal publicados como self-contained `win-x64`;
 - instalador Inno Setup por usuário, sem administrador;
-- atualizador manual com validação de release, tamanho e SHA-256;
+- atualizador manual via domínio oficial, com metadata/Setup intermediados pelo Worker e validação local de release, tamanho e SHA-256;
 - logs locais estruturados com rotação e sem persistir chave NF-e, XML, PFX, senha ou chave privada.
 
 ## Proteção fiscal local e multi-PC
@@ -98,6 +98,7 @@ Os CNPJs/CPFs reais de fornecedores não pertencem ao repositório, testes, docu
 - resolução de fornecedor acontece somente no Bridge loopback e retorna apenas `supplierId`;
 - CNPJ/CPF real usado nas regras de fornecedor fica apenas no `supplier-rules.json` local e não entra em logs;
 - rate limiter HTTP recebe somente a chave constante `fiscal-coordination` e atua antes do Durable Object fiscal;
+- rotas de atualização do Worker aceitam apenas metadata da release estável e o Setup versionado com nome exato; não existe proxy de URL arbitrária;
 - proteção local persiste somente hash do CNPJ, timestamps e prazos de proteção;
 - `.gitignore` bloqueia PFX/P12/PEM/KEY e arquivos de ambiente;
 - WebView2 limitado ao host oficial do Portal e HTTPS;
@@ -161,18 +162,29 @@ A raiz contém `wrangler.jsonc`. O deploy publica o site e o Worker de coordena�
 npx wrangler deploy
 ```
 
-`/api/fiscal-coordination/*` passa pelo Worker antes dos assets; as demais rotas continuam usando os assets do site. O Worker valida método/token/rota, passa pelo `COORDINATION_RATE_LIMITER` e só então acessa `FiscalCoordinator`, que usa Durable Object com armazenamento SQLite.
+`/api/fiscal-coordination/*`, `/api/update/*` e `/downloads/windows/*` passam pelo Worker antes dos assets; as demais rotas continuam usando os assets do site. O fluxo fiscal mantém seu gate próprio. As rotas de atualização consultam apenas a release oficial do repositório e fazem streaming apenas do Setup cujo tag e nome correspondam ao padrão esperado.
 
 O CI usa o Wrangler do lockfile e executa `./node_modules/.bin/wrangler deploy --dry-run`.
 
+## Atualizações e download do App
+
+O navegador e o App não dependem mais de acesso direto do cliente ao GitHub para baixar o Setup.
+
+- `GET /api/update/latest` consulta a release estável oficial server-side e devolve somente a metadata necessária, reescrevendo a URL do asset para o domínio do NFe Agendamento;
+- `GET /downloads/windows/vX.Y.Z/NFeAgendamentoBridge-Setup-vX.Y.Z.exe` valida tag/nome e faz streaming do único Setup permitido;
+- o Worker não aceita host, URL ou nome de arquivo arbitrários;
+- o App continua validando tamanho publicado e SHA-256 antes de executar o instalador.
+
+**Migração da v0.0.15:** o binário antigo ainda contém a URL direta do GitHub. Se a atualização interna da v0.0.15 falhar, baixar e instalar a v0.0.16 uma vez pelo botão do próprio site. A partir da v0.0.16, as atualizações passam pelo domínio oficial.
+
 ## Distribuição Windows
 
-Versão canônica da release: **v0.0.15**.
+Versão canônica da release: **v0.0.16**.
 
 Asset principal:
 
 ```text
-NFeAgendamentoBridge-Setup-v0.0.15.exe
+NFeAgendamentoBridge-Setup-v0.0.16.exe
 ```
 
 O instalador é por usuário, não pede administrador, mantém App + Bridge + helper Portal lado a lado, cria atalho no Menu Iniciar, registra início automático e preserva `%LOCALAPPDATA%\NfeAgendamentoBridge` — incluindo configurações locais como `settings.json`, `fiscal-usage.json` e `supplier-rules.json`.
@@ -190,7 +202,7 @@ O Microsoft Edge WebView2 Runtime é necessário para o fallback pelo Portal Nac
 
 ## Validação física
 
-O CI não consegue provar interação real com certificado A1, SEFAZ, Portal/hCaptcha ou uma impressora específica. Para declarar a v0.0.15 fisicamente validada, executar:
+O CI não consegue provar interação real com certificado A1, SEFAZ, Portal/hCaptcha ou uma impressora específica. Para declarar a v0.0.16 fisicamente validada, executar:
 
 - `docs/testing/acceptance.md`;
 - `docs/testing/batch-query.md`;
@@ -218,4 +230,4 @@ Não provoque bloqueio `656` repetindo consultas artificialmente apenas para tes
 - atualizador: `docs/testing/bridge-updater.md`;
 - DANFE: `docs/testing/danfe-layout.md`;
 - tela de consulta: `docs/ui/consultation-screen.md`;
-- release atual: `docs/releases/v0.0.15.md`.
+- release atual: `docs/releases/v0.0.16.md`.

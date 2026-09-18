@@ -6,17 +6,21 @@ O `NfeAgendamento.App.exe` oferece a ação **Verificar atualizações** no menu
 
 ## Fonte da atualização
 
-O App consulta somente a release estável mais recente do repositório oficial:
+Desde a v0.0.16, o App consulta somente:
 
-`joaoldsxyzbr/Nfe-agendamento-2.0`
+`https://nfeagendamento.joaolds.xyz.br/api/update/latest`
 
-O updater ignora releases em rascunho e pré-releases. A versão instalada é obtida do próprio assembly do `NfeAgendamento.App.exe`.
+O Worker consulta server-side a release estável mais recente de `joaoldsxyzbr/Nfe-agendamento-2.0`, rejeita rascunhos/pré-releases e devolve apenas a metadata necessária. A versão instalada continua vindo do assembly do `NfeAgendamento.App.exe`.
 
-Para uma release `vX.Y.Z`, o updater aceita somente o asset com nome exato:
+Para uma release `vX.Y.Z`, o updater aceita somente:
 
 `NFeAgendamentoBridge-Setup-vX.Y.Z.exe`
 
-A URL do asset precisa ser HTTPS, no host `github.com`, e apontar exatamente para o caminho de download da release esperada nesse repositório.
+e somente a URL HTTPS:
+
+`https://nfeagendamento.joaolds.xyz.br/downloads/windows/vX.Y.Z/NFeAgendamentoBridge-Setup-vX.Y.Z.exe`
+
+O Worker constrói internamente a URL fixa do GitHub para esse asset e faz streaming da resposta. Não há proxy genérico nem entrada de URL/host arbitrário.
 
 ## Verificações antes de executar
 
@@ -49,7 +53,8 @@ Falhas HTTP, timeout, erro de disco, asset inesperado, tamanho divergente, hash 
 ## Testes automatizados
 
 - `UpdateReleaseParserTests.cs`: versão, asset exato, origem da URL e exigência de SHA-256.
-- `UpdateServiceTests.cs`: tamanho e SHA-256 do download, incluindo limpeza em falha.
+- `UpdateServiceTests.cs`: endpoint oficial de metadata, tamanho e SHA-256 do download, incluindo limpeza em falha.
+- `update-proxy-worker.test.ts`: reescrita da metadata, streaming do Setup exato, rejeição de caminho arbitrário e tratamento de falha upstream.
 - `TrayUpdaterStaticTests.cs`: presença do fluxo manual no app de bandeja.
 
 O CI também recompila o `NfeAgendamento.App`, o Bridge e o helper Portal e gera o pacote Windows após os jobs web/bridge ficarem verdes.
@@ -57,6 +62,8 @@ O CI também recompila o `NfeAgendamento.App`, o Bridge e o helper Portal e gera
 ## Teste físico Windows
 
 Ao publicar uma versão posterior à instalada:
+
+- confirmar que o navegador baixa o Setup pelo domínio `nfeagendamento.joaolds.xyz.br`, sem redirecionar o cliente para o GitHub;
 
 - confirmar que **Verificar atualizações** detecta a versão nova;
 - clicar **Não** e confirmar que nada é baixado/instalado;

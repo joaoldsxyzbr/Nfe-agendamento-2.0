@@ -228,11 +228,24 @@ Builds/publishes desktop são validados em `windows-latest` antes de gerar o ins
 
 ## Atualizações e versionamento
 
-O App oferece somente atualização **manual e confirmada**. Ele consulta a release estável mais recente do repositório oficial, seleciona o Setup esperado e valida tamanho e SHA-256 antes de permitir sua execução.
+O App oferece somente atualização **manual e confirmada**. Desde a v0.0.16, cliente e navegador usam o domínio oficial em vez de acessar diretamente a API/download do GitHub:
+
+```text
+GET https://nfeagendamento.joaolds.xyz.br/api/update/latest
+GET https://nfeagendamento.joaolds.xyz.br/downloads/windows/vX.Y.Z/NFeAgendamentoBridge-Setup-vX.Y.Z.exe
+```
+
+O Worker consulta a release estável oficial server-side, exige tag semver, asset no estado `uploaded`, nome exato do Setup, tamanho positivo, digest SHA-256 válido e URL original exatamente pertencente ao repositório esperado. A resposta de metadata substitui a URL do GitHub pela rota versionada do domínio oficial.
+
+A rota de download aceita somente `vX.Y.Z` e `NFeAgendamentoBridge-Setup-vX.Y.Z.exe` com a mesma versão. Ela constrói internamente a URL fixa do repositório e faz streaming do conteúdo; não existe parâmetro de host/URL arbitrário nem proxy genérico.
+
+No App, a origem do asset também é validada como `nfeagendamento.joaolds.xyz.br`. O instalador só é executado depois de confirmar tamanho e SHA-256 localmente. Falha upstream é tratada como indisponibilidade da fonte e não libera arquivo parcial.
 
 A versão canônica fica em `Directory.Build.props`. Bridge, App, Portal, CI, instalador e release derivam dessa fonte; o workflow `.github/workflows/release.yml` é genérico e publica somente artifacts de um CI verde do mesmo commit marcador `release: v<versão>`.
 
 O workflow de release cria/valida a tag contra o SHA exato aprovado pelo `workflow_run`, evitando que avanço posterior da `main` altere o target da release.
+
+Limitação de migração: a v0.0.15 já publicada não pode ter seu updater embutido alterado retroativamente. Se o acesso direto ao GitHub falhar nessa versão, a migração inicial para v0.0.16 deve ser feita pelo botão de download do site; depois disso o updater usa o domínio oficial.
 
 ## Dados persistentes
 
@@ -245,7 +258,7 @@ Dois controles não são implementáveis apenas pelo código atual:
 - **Authenticode:** App, Bridge, Portal e Setup continuam sem assinatura de publisher até existir certificado de code signing e segredo seguro para o pipeline;
 - **proteção da `main`:** branch protection/rulesets e required status checks dependem de permissão administrativa/configuração do GitHub.
 
-Não tratar SHA de artifact, HTTPS do GitHub ou validação interna do updater como substitutos de Authenticode.
+Não tratar SHA de artifact, proxy HTTPS do domínio oficial ou validação interna do updater como substitutos de Authenticode.
 
 ## Checklist de produção
 
