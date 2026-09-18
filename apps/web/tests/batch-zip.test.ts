@@ -25,6 +25,6 @@ describe('batch ZIP', () => {
     expect(() => createStoredZip([
       { name: 'nota-1.xml', content: '1234567890' },
       { name: 'nota-2.xml', content: 'abcdefghij' },
-    ], 16)).toThrow('tamanho seguro');
+    ], 150)).toThrow('tamanho seguro');
   });
 });
