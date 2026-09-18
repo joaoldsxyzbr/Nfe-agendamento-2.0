@@ -1,6 +1,6 @@
 # Hardening do repositório e da distribuição
 
-Estado: implementado no código/pipeline e revisado em 18/09/2026, exceto controles que dependem de administração externa do GitHub ou de certificado real de assinatura.
+Estado: implementado no código/pipeline e revisado em 18/09/2026. Authenticode e ruleset/branch protection são controles opcionais e não compõem o critério de conclusão deste projeto.
 
 ## CI e cadeia de build
 
@@ -33,62 +33,22 @@ O `.gitignore` bloqueia preventivamente, além de arquivos de ambiente:
 
 Isso não substitui secret scanning nem revisão de commits, mas reduz o risco de inclusão acidental de material criptográfico no repositório.
 
-## Authenticode
+## Authenticode opcional
 
-O workflow está preparado para assinar, nesta ordem:
+O pipeline mantém suporte opcional à assinatura de:
 
 1. `NfeAgendamento.App.exe`;
 2. `NfeAgendamento.Bridge.exe`;
 3. `NfeAgendamento.Portal.exe`;
-4. o Setup final gerado pelo Inno Setup.
+4. Setup final do Inno Setup.
 
-A assinatura só é ativada quando os dois secrets abaixo existirem no repositório:
+Quando `CODE_SIGNING_PFX_BASE64` e `CODE_SIGNING_PFX_PASSWORD` estiverem configurados, `scripts/sign-windows-artifacts.ps1` assina e verifica os artefatos. Quando os dois secrets estiverem ausentes, o script encerra com sucesso e os artefatos permanecem sem assinatura.
 
-- `CODE_SIGNING_PFX_BASE64`: PFX de code signing codificado integralmente em Base64;
-- `CODE_SIGNING_PFX_PASSWORD`: senha do PFX.
+A ausência de Authenticode **não bloqueia CI, updater nem release**. O updater mantém as proteções obrigatórias de origem esperada, nome/versionamento do asset, tamanho publicado e SHA-256. Configuração Authenticode parcial continua falhando de forma explícita para evitar uma assinatura mal configurada.
 
-Nunca commitar PFX, senha ou Base64 do certificado.
+## Proteção da `main` opcional
 
-As etapas que recebem esses secrets têm condição explícita para executar **somente em `push` para `refs/heads/main`**. Builds de `pull_request` continuam compilando e empacotando, mas não recebem nem executam o caminho de assinatura.
-
-O script `scripts/sign-windows-artifacts.ps1`:
-
-- não falha o build quando nenhum secret de assinatura foi configurado;
-- falha de forma explícita se apenas um dos dois secrets estiver presente;
-- importa o PFX temporariamente no store `CurrentUser/My` como não exportável;
-- exige chave privada e EKU `1.3.6.1.5.5.7.3.3` (Code Signing);
-- usa SHA-256 para digest e timestamp RFC 3161;
-- verifica cada assinatura com `signtool verify /pa`;
-- remove o certificado importado e o PFX temporário no `finally`.
-
-Em 18/09/2026 não foi fornecido ao projeto um certificado real de code signing nem acesso aos secrets do repositório. Portanto, não é correto declarar Authenticode como concluído. O código/pipeline está pronto; a etapa restante é externa. Quando houver certificado real, a configuração preferível é associar os secrets a um GitHub Environment protegido usado pelo fluxo de publicação.
-
-Além da assinatura opcional do CI comum, a `main` atual possui dois gates adicionais:
-
-- `UpdateService` só promove/abre um Setup depois de SHA-256 **e** `WinVerifyTrust` aprovarem a assinatura Authenticode;
-- commits `release: vX.Y.Z` exigem `Get-AuthenticodeSignature` com estado `Valid` para App, Bridge, Portal e Setup. Sem isso, `windows-package` falha e o workflow de release não publica a versão.
-
-## Proteção da `main`
-
-Em 18/09/2026 a consulta de rulesets do repositório continua retornando lista vazia; a `main` permanece sem ruleset moderno ativo.
-
-A integração usada pelo projeto não possui permissão administrativa de escrita para criar esse controle automaticamente. Portanto, não é possível concluir esse item a partir deste ambiente sem ação do proprietário no GitHub.
-
-Configuração recomendada no GitHub para o ruleset `main-protection`:
-
-- alvo: default branch / `main`;
-- enforcement: `Active`;
-- bloquear exclusão da branch;
-- bloquear force push;
-- exigir pull request antes de merge;
-- para repositório mantido por uma pessoa, `0` aprovações obrigatórias é aceitável, mantendo o PR como gate técnico;
-- exigir resolução de conversas antes do merge;
-- exigir status checks antes do merge;
-- checks obrigatórios: `web`, `danfe-print`, `bridge`, `fiscal-compatibility` e `windows-package` do workflow `CI`;
-- exigir branch atualizada antes do merge;
-- não permitir bypass, salvo conta de emergência explicitamente definida pelo proprietário.
-
-Depois de habilitar o ruleset, validar com um PR pequeno que o GitHub realmente bloqueia merge enquanto qualquer job obrigatório estiver pendente ou falhando.
+O repositório não possui ruleset ativo na `main`. Por decisão do projeto em 18/09/2026, branch protection/ruleset não é requisito de conclusão nem de release. O CI e o CodeQL continuam executando em pushes para a `main`, mas não existe gate administrativo adicional exigido pelo projeto.
 
 ## Portal Nacional
 
