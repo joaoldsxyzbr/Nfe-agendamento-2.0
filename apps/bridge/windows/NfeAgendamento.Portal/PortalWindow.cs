@@ -18,6 +18,7 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
     private const int RoEClosed = unchecked((int)0x80000013);
     private const int EAbort = unchecked((int)0x80004004);
     private static readonly TimeSpan ExpectedPortalDialogWindow = PortalSecurityPolicy.ExpectedDialogWindow;
+    private static readonly TimeSpan StaleTemporaryDownloadAge = TimeSpan.FromHours(24);
 
     private readonly PortalOptions? _legacyOptions;
     private readonly bool _serverMode;
@@ -187,6 +188,11 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
 
     private async Task InitializeBrowserAsync()
     {
+        PortalSecurityPolicy.CleanupStaleTemporaryDownloads(
+            PortalDownloadDirectory(),
+            DateTime.UtcNow,
+            StaleTemporaryDownloadAge);
+
         if (!IsHandleCreated) CreateControl();
         if (!_webView.IsHandleCreated) _webView.CreateControl();
 
@@ -509,7 +515,7 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
         }
 
         _downloadInProgress = true;
-        var directory = Path.Combine(Path.GetTempPath(), "NfeAgendamento", "portal-download");
+        var directory = PortalDownloadDirectory();
         Directory.CreateDirectory(directory);
         _temporaryDownloadPath = PortalSecurityPolicy.CreateTemporaryDownloadPath(directory);
 
@@ -776,6 +782,9 @@ internal sealed class PortalWindow : Form, IPortalServerOperationRunner
 
     private static bool IsOfficialHost(string? host) =>
         PortalSecurityPolicy.IsOfficialHost(host);
+
+    private static string PortalDownloadDirectory() =>
+        Path.Combine(Path.GetTempPath(), "NfeAgendamento", "portal-download");
 
     private static void TryDelete(string path)
     {
