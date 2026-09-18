@@ -160,6 +160,10 @@
   border-color: #516275;
 }
 
+#batch-cancel[hidden] {
+  display: none !important;
+}
+
 .batch-download {
   border-color: #566476;
   background: #1a232d;
