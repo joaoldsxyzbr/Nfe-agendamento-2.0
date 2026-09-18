@@ -13,7 +13,7 @@ NFe Agendamento é um aplicativo interno para consultar NF-e, baixar XML e gerar
 - **Helper Portal:** WinForms/WebView2 persistente para o fallback pelo Portal Nacional; hCaptcha continua sempre manual.
 - **Certificado A1:** descoberto em `CurrentUser/My`; PFX, senha e chave privada nunca são enviados ao site ou ao Cloudflare.
 - **Persistência local:** thumbprint selecionado em `%LOCALAPPDATA%/NfeAgendamentoBridge/settings.json`, regras locais de fornecedor em `supplier-rules.json` e metadados da proteção fiscal em `fiscal-usage.json`.
-- **Release pública atual:** `0.0.16`; a `main` já contém hardening posterior e a próxima release só pode ser publicada após CI verde **e Authenticode válido** no commit `release: vX.Y.Z`.
+- **Release pública atual:** `0.0.16`; a `main` já contém hardening posterior e a próxima release depende do CI verde do commit `release: vX.Y.Z`.
 
 Não existem Central, pareamento, servidor LAN, mDNS ou pasta compartilhada na arquitetura atual. Cada PC usa seu próprio Bridge.
 
@@ -45,7 +45,7 @@ Implementado e coberto pelos gates automatizados aplicáveis:
 - parser estrutural complementar de IBS/CBS/IS, sem alterar prematuramente o DANFE;
 - App, Bridge e Portal publicados como self-contained `win-x64`;
 - instalador Inno Setup por usuário, sem administrador;
-- atualizador manual via domínio oficial, com metadata cacheada por curto período, rate limit próprio, validação local de release/tamanho/SHA-256 e **Authenticode confiável** antes de executar o Setup;
+- atualizador manual via domínio oficial, com metadata cacheada por curto período, rate limit próprio e validação local de release, origem, tamanho e SHA-256 antes de executar o Setup;
 - logs locais estruturados com rotação e sem persistir chave NF-e, XML, PFX, senha ou chave privada.
 
 ## Proteção fiscal local e multi-PC
@@ -105,7 +105,7 @@ Os CNPJs/CPFs reais de fornecedores não pertencem ao repositório, testes, docu
 - downloads fora do endpoint XML oficial são cancelados;
 - Named Pipes locais restritos ao usuário atual;
 - Actions do GitHub fixadas por SHA e permissões mínimas;
-- secrets de Authenticode não entram em builds de pull request; commits de release falham se App/Bridge/Portal/Setup não estiverem com assinatura válida;
+- assinatura Authenticode é opcional: quando os secrets de code signing estiverem configurados, o CI assina os artefatos; a ausência de assinatura não bloqueia builds nem releases;
 - CI inclui `npm audit` e NuGet Audit no POC fiscal;
 - CodeQL analisa automaticamente JavaScript/TypeScript e C# em `main`, pull requests e uma execução semanal, com a action fixada por SHA imutável;
 - Dependabot verifica semanalmente npm, Playwright, NuGet e GitHub Actions e propõe atualizações por pull request.
@@ -122,13 +122,11 @@ Jobs obrigatórios do pipeline:
 
 O workflow separado `CodeQL` complementa o CI com análise estática de segurança. O Dependabot apenas abre propostas de atualização; nenhuma dependência é atualizada automaticamente na `main`.
 
-## Validações/configurações externas ainda pendentes
+## Validação física
 
-O código e a release podem ser produzidos no repositório, mas três controles continuam dependendo do ambiente real:
+A validação técnica do repositório não depende de Authenticode nem de ruleset/branch protection. Esses dois controles são opcionais para este projeto.
 
-- **A4 físico:** executar o checklist em Windows/impressora real para declarar a release fisicamente validada;
-- **Authenticode:** fornecer/configurar certificado real de code signing e secrets do ambiente de release;
-- **proteção da `main`:** habilitar ruleset/branch protection e checks obrigatórios com permissão administrativa no GitHub.
+A validação em Windows/impressora real continua separada do CI quando for necessária para confirmar interação física com A1, SEFAZ, Portal/hCaptcha e impressão A4.
 
 A evolução RTC/IBS/CBS além do parser estrutural só deve acontecer quando houver cenários reais do projeto e exigência clara do leiaute oficial vigente.
 
@@ -173,7 +171,7 @@ O navegador e o App não dependem mais de acesso direto do cliente ao GitHub par
 - `GET /api/update/latest` consulta a release estável oficial server-side e devolve somente a metadata necessária, reescrevendo a URL do asset para o domínio do NFe Agendamento;
 - `GET /downloads/windows/vX.Y.Z/NFeAgendamentoBridge-Setup-vX.Y.Z.exe` valida tag/nome e faz streaming do único Setup permitido;
 - o Worker não aceita host, URL ou nome de arquivo arbitrários;
-- o App valida tamanho publicado, SHA-256 e assinatura Authenticode confiável antes de executar o instalador;
+- o App valida origem esperada, tamanho publicado e SHA-256 antes de executar o instalador;
 - a metadata validada usa cache curto no Worker e as rotas de atualização têm rate limiter próprio por IP.
 
 **Migração da v0.0.15:** o binário antigo ainda contém a URL direta do GitHub. Se a atualização interna da v0.0.15 falhar, baixar e instalar a v0.0.16 uma vez pelo botão do próprio site. A partir da v0.0.16, as atualizações passam pelo domínio oficial.
@@ -198,9 +196,8 @@ O Microsoft Edge WebView2 Runtime é necessário para o fallback pelo Portal Nac
 2. atualizar a versão em `Directory.Build.props`;
 3. adicionar `docs/releases/v<versão>.md`;
 4. fazer o commit final `release: v<versão>`;
-5. garantir que o certificado/secrets de code signing estejam configurados;
-6. aguardar o CI testar, assinar, validar Authenticode, compilar e empacotar;
-7. `release.yml` publica apenas os artifacts daquele mesmo CI verde e fixa a tag no SHA validado.
+5. aguardar o CI testar, compilar e empacotar; se Authenticode estiver configurado, os artefatos são assinados opcionalmente;
+6. `release.yml` publica apenas os artifacts daquele mesmo CI verde e fixa a tag no SHA validado.
 
 ## Validação física
 
