@@ -34,7 +34,7 @@ describe('update proxy worker', () => {
     const response = requireResponse(await handleUpdateRequest(
       new Request(`${origin}/api/update/latest`),
       {
-        fetchUpstream: async (request) => {
+        fetchUpstream: async (request: Request) => {
           seen.push(request.url);
           return new Response(JSON.stringify(latestRelease()), {
             status: 200,
@@ -61,7 +61,7 @@ describe('update proxy worker', () => {
     const response = requireResponse(await handleUpdateRequest(
       new Request(`${origin}/downloads/windows/${tag}/${name}`),
       {
-        fetchUpstream: async (request) => {
+        fetchUpstream: async (request: Request) => {
           seen.push(request.url);
           return new Response(bytes, {
             status: 200,
