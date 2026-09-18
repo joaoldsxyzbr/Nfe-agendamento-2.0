@@ -45,7 +45,7 @@ function createHarness() {
 
   const deps: DanfeViewerDependencies = {
     elements: { viewer, title, content, closeButton, printButton },
-    render: (item) => ({ rendered: item.number }) as unknown as HTMLElement,
+    render: (item: ParsedNfe) => ({ rendered: item.number }) as unknown as HTMLElement,
     attachZoom: () => {
       zoomAttach += 1;
       return () => { zoomDetach += 1; };
@@ -54,7 +54,7 @@ function createHarness() {
       add: (name: string) => { classNames.add(name); },
       remove: (name: string) => { classNames.delete(name); },
     },
-    addDocumentKeydownListener: (listener) => {
+    addDocumentKeydownListener: (listener: (event: KeyboardEvent) => void) => {
       documentListeners.set('keydown', listener);
     },
     print: () => { printCalls += 1; },
@@ -139,7 +139,7 @@ describe('DANFE viewer', () => {
     click?.({ target: {} } as Event);
     expect(h.viewer.hidden).toBe(false);
 
-    click?.({ target: h.viewer } as Event);
+    click?.({ target: h.viewer } as unknown as Event);
     expect(h.viewer.hidden).toBe(true);
   });
 
