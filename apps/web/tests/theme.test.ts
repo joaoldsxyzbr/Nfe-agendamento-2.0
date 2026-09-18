@@ -12,7 +12,8 @@ describe('site theme', () => {
     expect(styles).toContain('--blue: #4c8dff');
     expect(styles).toContain('--blue-strong: #3378e8');
     expect(styles).toContain('--yellow: #d9ae42');
-    expect(styles).toMatch(/\.certificate-card, \.lookup-card[\s\S]*background:/);
+    expect(styles).toMatch(/\.certificate-card[\s\S]*background:/);
+    expect(styles).toMatch(/\.lookup-card[\s\S]*background:/);
     expect(danfeStyles).toMatch(/\.danfe-page[\s\S]*background:\s*#fff/);
   });
 
