@@ -84,6 +84,7 @@ TDD para mudanças comportamentais:
 - Bridge/App: updater exige verificador de assinatura; falha de assinatura remove instalador e impede execução;
 - DANFE viewer: trap de foco e restauração;
 - Portal: limpeza de XML temporário obsoleto;
+- cobertura: provider V8 pinado no lockfile, medição de `src/**/*.ts` e `worker/**/*.ts` no CI;
 - Playwright: fluxo real da tela principal com Bridge interceptado;
 - workflows: CodeQL pinado; release commit exige validação Authenticode.
 
