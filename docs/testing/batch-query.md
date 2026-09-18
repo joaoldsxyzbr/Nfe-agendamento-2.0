@@ -28,7 +28,7 @@ Este roteiro valida a interface unificada de consulta da `main`. O mesmo campo a
 13. Confirmar que **Visualizar DANFE** e **Baixar XML** começam desabilitados.
 14. Repetir uma chave e confirmar que a duplicada é contabilizada e não vira uma segunda linha.
 15. Inserir uma chave inválida e confirmar a contagem de inválidas.
-16. Colar mais de 10 chaves válidas e confirmar que todas continuam aceitas e **Consultar** permanece disponível.
+16. Colar até 100 chaves válidas e confirmar que todas continuam aceitas; ao ultrapassar 100, confirmar aviso de máximo e **Consultar** desabilitado.
 
 ## Tipografia
 
@@ -45,9 +45,9 @@ Este roteiro valida a interface unificada de consulta da `main`. O mesmo campo a
 4. Confirmar que somente uma linha é processada e que o layout compacto permanece durante a consulta.
 5. Durante o processamento, confirmar que **Consultar** permanece no mesmo lugar e fica indisponível.
 6. Quando a tentativa terminar, com sucesso ou erro terminal, confirmar que **Consultar** desaparece e **Nova consulta** aparece no mesmo lugar.
-7. Em caso de sucesso, confirmar que o resultado final fica ainda mais compacto: ordem, chave abreviada, badges de status/origem e barra de progresso deixam de ocupar espaço visual.
-8. Confirmar que permanecem em destaque número/série da NF-e, emitente, valor e as ações **Visualizar DANFE** / **Baixar XML**.
-9. Confirmar que o resultado e as ações cabem confortavelmente na tela junto com o formulário em resolução desktop normal.
+7. Em caso de sucesso, confirmar que o card **não recolhe**: ordem, chave abreviada, badges de status/origem e barra de progresso continuam ocupando a mesma estrutura visual.
+8. Confirmar que número/série da NF-e, emitente, valor e as ações **Visualizar DANFE** / **Baixar XML** são atualizados sem salto de layout.
+9. Confirmar que o botão **Cancelar lote** fica oculto quando nenhuma operação está em andamento.
 10. Clicar em **Nova consulta** e confirmar que entrada/resultados são limpos, o foco retorna ao campo e **Consultar** reaparece.
 11. Confirmar que fallback Portal e proteção fiscal continuam funcionando pelas mesmas regras quando ocorrerem naturalmente.
 
@@ -64,15 +64,15 @@ Este roteiro valida a interface unificada de consulta da `main`. O mesmo campo a
 5. Abrir o DANFE de duas linhas diferentes e confirmar que cada modal corresponde à NF-e correta.
 6. Baixar o XML de duas linhas e confirmar que cada arquivo pertence à chave da própria linha.
 
-## Volume acima de 10 chaves
+## Volume de lote
 
-1. Montar uma consulta com quantidade superior a 10 chaves válidas.
-2. Confirmar que nenhuma chave válida é descartada por quantidade.
-3. Confirmar que o processamento continua estritamente sequencial.
+1. Montar uma consulta com mais de 10 e no máximo 100 chaves válidas.
+2. Confirmar que todas as chaves dentro do teto aparecem e são processadas estritamente em sequência.
+3. Tentar informar 101 chaves válidas e confirmar que a interface indica o máximo de 100 e não inicia o lote.
 4. Se a proteção fiscal local for ativada durante uso real, confirmar que o restante segue pelo Portal sem nova tentativa direta à SEFAZ.
 5. Confirmar que o hCaptcha continua manual para cada operação Portal.
 
-A ausência de limite rígido de itens não deve ser interpretada como garantia de capacidade ilimitada do Portal Nacional. O objetivo é remover o teto artificial da interface mantendo serialização, proteção fiscal e interação humana do hCaptcha.
+O teto de **100 NF-e por lote** é operacional e protege a memória do navegador; ele não altera o teto fiscal de consultas diretas. A geração de ZIP também possui orçamento agregado de memória e falha de forma explícita se o arquivo extrapolar o limite seguro.
 
 ## ZIP e impressão conjunta
 
@@ -123,4 +123,4 @@ Não force `656` para teste. Se o Bridge já estiver naturalmente em proteção,
 
 ## Critério de aprovação física
 
-A interface unificada está fisicamente validada quando consulta com uma chave em modo compacto, troca **Consultar → Nova consulta** no mesmo lugar, restauração/foco após **Nova consulta**, resultado unitário compacto, tipografia legível, consulta com várias chaves, expansão automática, volume acima de 10, ações individuais, ZIP, impressão e cancelamento passam em um PC real. Cenários `217` e limite fiscal devem ser registrados quando ocorrerem naturalmente, sem gerar consumo indevido apenas para testar.
+A interface unificada está fisicamente validada quando consulta com uma chave em modo compacto, troca **Consultar → Nova consulta** no mesmo lugar, restauração/foco após **Nova consulta**, card unitário estruturalmente estático, tipografia legível, consulta com várias chaves, teto de 100, ações individuais, ZIP, impressão e cancelamento passam em um PC real. Cenários `217` e limite fiscal devem ser registrados quando ocorrerem naturalmente, sem gerar consumo indevido apenas para testar.
