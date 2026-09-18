@@ -171,6 +171,28 @@ describe('fiscal coordination worker HTTP gate', () => {
     expect(operations).toEqual([`${expectedOperation}:64`]);
   });
 
+  it('uses the Cloudflare client IP as the coarse abuse-limit key', async () => {
+    let observedKey: unknown = null;
+    const response = requireResponse(await handleFiscalCoordinationRequest(
+      request('/api/fiscal-coordination/reserve', {
+        headers: {
+          ...auth,
+          'CF-Connecting-IP': '203.0.113.42',
+        },
+      }),
+      {
+        rateLimit: async (...args: unknown[]) => {
+          observedKey = args[0];
+          return { success: true };
+        },
+        executeFiscal: async () => allowedDecision,
+      },
+    ));
+
+    expect(response.status).toBe(200);
+    expect(observedKey).toBe('ip:203.0.113.42');
+  });
+
   it('returns null for non-coordination routes so index.ts can delegate to assets', async () => {
     const response = await handleFiscalCoordinationRequest(request('/'), {
       rateLimit: async () => ({ success: true }),
