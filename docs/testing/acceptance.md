@@ -13,11 +13,11 @@ Este checklist cobre o que o CI não consegue provar: instalação real no Windo
 - site oficial disponível exatamente em `https://nfeagendamento.joaolds.xyz.br`;
 - acesso à Internet para SEFAZ, GitHub Releases e Portal Nacional da NF-e.
 
-Versão canônica atual: **`0.0.14`**. Para validar a release pública, use `NFeAgendamentoBridge-Setup-v0.0.14.exe` e registre o SHA/tag correspondentes.
+Versão canônica atual: **`0.0.16`**. Para validar a release pública, use `NFeAgendamentoBridge-Setup-v0.0.16.exe` e registre o SHA/tag correspondentes.
 
 > O publish é self-contained: não exige instalação prévia do .NET 10. O WebView2 Runtime continua necessário somente para o fallback Portal.
 
-> Os artifacts atuais não possuem Authenticode enquanto os secrets de assinatura não forem configurados. Este checklist valida funcionamento, não identidade criptográfica de publisher.
+> A release pública v0.0.16 foi produzida antes do gate Authenticode obrigatório. Na `main` atual, um commit de release só conclui o CI se App, Bridge, Portal e Setup tiverem assinatura Authenticode válida; sem certificado/secrets reais, a próxima release fica bloqueada.
 
 Registre antes de começar:
 
@@ -25,7 +25,7 @@ Registre antes de começar:
 | --- | --- |
 | Data | |
 | Commit SHA | |
-| Versão canônica | `0.0.14` |
+| Versão canônica | `0.0.16` |
 | Run CI / artifact | |
 | URL do site | `https://nfeagendamento.joaolds.xyz.br` |
 | Windows | |
@@ -132,7 +132,7 @@ Resultado: ☐ aprovado
 8. Feche por botão, `Esc` e backdrop.
 9. Use `Imprimir / PDF` e confira A4/paginação.
 10. Confirme que transporte/volumes não aparece sem conteúdo útil.
-11. Confirme que o atalho de download do app aponta para `NFeAgendamentoBridge-Setup-v0.0.14.exe`.
+11. Confirme que o atalho de download do app aponta para `NFeAgendamentoBridge-Setup-v0.0.16.exe`.
 
 Resultado: ☐ aprovado
 
@@ -193,12 +193,13 @@ Resultado: ☐ aprovado
 
 ## 10. Atualizador manual
 
-1. Em uma instalação v0.0.13, clique em **Verificar atualizações**.
-2. Confirme descoberta da v0.0.14.
+1. Instale a última versão pública anterior à release candidata e clique em **Verificar atualizações**.
+2. Confirme descoberta da release candidata mais nova.
 3. Confirme exibição da versão e pedido de confirmação.
-4. Confirme que asset/tamanho/SHA-256 inválidos impedem execução.
-5. Após confirmação válida, confirme que o Setup v0.0.14 inicia e App/Bridge encerram para substituição.
-6. Após atualizar, confirme que nova verificação informa que a versão está atualizada.
+4. Confirme que asset, tamanho ou SHA-256 inválidos impedem execução.
+5. Confirme também que um Setup sem assinatura Authenticode confiável é rejeitado antes de ser executado.
+6. Com o Setup assinado e validado, confirme que ele inicia e que App/Bridge encerram para substituição.
+7. Após atualizar, confirme que nova verificação informa que a versão está atualizada.
 
 Detalhes: `docs/testing/bridge-updater.md`.
 
@@ -215,7 +216,7 @@ Resultado: ☐ aprovado
 
 ## 12. Segundo PC independente
 
-1. Instale o mesmo Setup v0.0.14 validado.
+1. Instale o mesmo Setup v0.0.16 validado.
 2. Confirme início na bandeja sem console.
 3. Use o A1 instalado nesse segundo PC.
 4. Abra o site oficial e faça consulta normal.
@@ -231,7 +232,7 @@ Resultado: ☐ aprovado
 | Authenticode App/Bridge/Portal/Setup | ☐ configurado / ☐ pendente | |
 | Proteção da `main` + required CI checks | ☐ configurado / ☐ pendente | |
 
-Enquanto Authenticode estiver pendente, o Windows pode não apresentar publisher verificado. Enquanto branch protection estiver pendente, o CI pode estar verde sem ser administrativamente obrigatório para todo push.
+Enquanto o certificado/secrets de Authenticode estiverem pendentes, a `main` pode ser validada normalmente, mas o gate de release impede publicar uma nova versão. Enquanto branch protection estiver pendente, o CI pode estar verde sem ser administrativamente obrigatório para todo push.
 
 ## Critério de aceite
 
@@ -243,7 +244,7 @@ Uma release só deve ser declarada fisicamente validada depois de:
 - etapas 0–7 aprovadas;
 - etapa 8 aprovada em ocorrência real/controlada;
 - lifecycle/recovery aprovado;
-- atualização v0.0.13 → v0.0.14 validada;
+- atualização da versão pública anterior → release candidata validada, incluindo SHA-256 e Authenticode;
 - segundo PC aprovado quando fizer parte da implantação;
 - divergências registradas e corrigidas.
 
