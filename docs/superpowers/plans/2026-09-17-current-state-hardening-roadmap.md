@@ -745,6 +745,8 @@ If no extraction was needed, make no production-code commit for this task.
 
 ### Task 8: Close the PR #7 migration loop and document frontend boundaries
 
+Status: PR #7 comparado com a `main`; implementação do rate limit já foi absorvida pelo PR #10 e o refactor do frontend pelos PRs #11, #14, #15 e #16. Fronteiras reais documentadas em `docs/architecture/frontend-boundaries.md`. Fechamento do PR #7 e verificação final da `main` permanecem como passos seguintes.
+
 **Files:**
 - Modify: `README.md` and/or existing architecture doc that describes frontend modules
 - PR metadata: close PR #7 only after verification
@@ -753,7 +755,7 @@ If no extraction was needed, make no production-code commit for this task.
 - Consumes: merged PRs A–E or explicit no-op decision for E.
 - Produces: no ambiguous old branch debt.
 
-- [ ] **Step 1: Compare PR #7 material with merged `main`**
+- [x] **Step 1: Compare PR #7 material with merged `main`**
 
 Expected mapping:
 
@@ -763,7 +765,7 @@ web-main-refactor design -> PRs B/C/D/(E if needed)
 repository/signing design -> Tasks 9/10 documentation
 ```
 
-- [ ] **Step 2: Update architecture documentation with actual module ownership**
+- [x] **Step 2: Update architecture documentation with actual module ownership**
 
 Document the real final files and responsibilities; do not document proposed files that were not created.
 
