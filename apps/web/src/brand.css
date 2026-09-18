@@ -5,69 +5,59 @@
 .brand-lockup {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 11px;
 }
 
 .brand-mark {
   flex: 0 0 auto;
-  width: 66px;
-  height: 66px;
+  width: 44px;
+  height: 44px;
   object-fit: contain;
-  filter: drop-shadow(0 4px 14px rgba(245, 197, 66, 0.18));
 }
 
 .brand-title {
   display: flex;
-  flex-direction: column;
+  align-items: baseline;
+  gap: 7px;
   margin: 0;
-  padding-left: 16px;
-  border-left: 1.5px solid rgba(143, 161, 183, 0.35);
   color: var(--text);
-  font-size: clamp(26px, 3.2vw, 36px);
-  font-weight: 800;
-  line-height: 1.12;
-  letter-spacing: -0.03em;
+  font-size: clamp(23px, 3vw, 29px);
+  font-weight: 740;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
 }
 
 .brand-title span {
-  display: block;
+  display: inline;
 }
 
 .brand-title span:first-child {
-  color: #ffffff;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+  color: #fff;
 }
 
 .brand-title span:last-child {
-  margin-top: 3px;
-  color: var(--yellow);
-  text-shadow: 0 0 20px rgba(245, 197, 66, 0.25);
+  color: #cbd6e1;
 }
 
 .brand-heading > .subtitle {
-  margin: 10px 0 0;
-  color: #a2b4c7;
-  font-size: 14px;
-  line-height: 1.5;
+  margin: 7px 0 0 55px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 @media (max-width: 720px) {
-  .brand-lockup {
-    gap: 12px;
-  }
-
   .brand-mark {
-    width: 54px;
-    height: 54px;
+    width: 40px;
+    height: 40px;
   }
 
   .brand-title {
-    padding-left: 12px;
-    font-size: clamp(22px, 7vw, 28px);
+    font-size: 24px;
   }
 
   .brand-heading > .subtitle {
-    margin-top: 8px;
-    font-size: 13px;
+    margin: 6px 0 0;
+    font-size: 12.5px;
   }
 }

@@ -1,39 +1,37 @@
 .topbar-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex: 0 0 auto;
-  margin-top: 0;
 }
 
 .topbar-icon-action {
   display: grid;
   place-items: center;
-  width: 42px;
-  min-width: 42px;
-  min-height: 42px;
+  width: 38px;
+  min-width: 38px;
+  min-height: 38px;
   padding: 0;
-  border: 1px solid #2b4569;
-  border-radius: 12px;
-  background: rgba(17, 28, 43, 0.85);
-  color: #c9dbef;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: #c7d2dd;
   text-decoration: none;
-  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .settings-trigger:hover:not(:disabled),
 .download-trigger:hover {
-  transform: translateY(-1.5px);
-  background: #1c3252;
-  border-color: #4b8dff;
-  color: #ffffff;
-  box-shadow: 0 6px 18px rgba(75, 141, 255, 0.22);
+  background: var(--surface-2);
+  border-color: #44566a;
+  color: #fff;
 }
 
 .topbar-icon-action svg {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;
@@ -41,28 +39,24 @@
   stroke-linejoin: round;
 }
 
-.settings-trigger {
-  cursor: pointer;
-}
-
+.settings-trigger,
 .download-trigger {
   cursor: pointer;
 }
 
 .settings-panel {
   position: fixed;
-  top: 82px;
-  right: max(16px, calc((100vw - 1120px) / 2));
+  top: 72px;
+  right: max(16px, calc((100vw - 1040px) / 2));
   z-index: 900;
-  width: min(430px, calc(100vw - 32px));
-  max-height: calc(100vh - 104px);
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100vh - 92px);
   overflow: auto;
-  padding: 20px;
-  border: 1px solid #294a73;
-  border-radius: 18px;
-  background: linear-gradient(160deg, rgba(17, 31, 48, 0.99), rgba(10, 18, 29, 0.995));
-  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.48), 0 0 0 1px rgba(75, 141, 255, 0.04);
-  backdrop-filter: blur(14px);
+  padding: 18px;
+  border: 1px solid #344252;
+  border-radius: 10px;
+  background: #111820;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.42);
 }
 
 .settings-panel[hidden] {
@@ -70,15 +64,15 @@
 }
 
 .settings-panel::before {
-  content: '';
+  content: "";
   position: absolute;
-  top: -7px;
+  top: -6px;
   right: 13px;
-  width: 12px;
-  height: 12px;
-  border-top: 1px solid #294a73;
-  border-left: 1px solid #294a73;
-  background: #111f30;
+  width: 10px;
+  height: 10px;
+  border-top: 1px solid #344252;
+  border-left: 1px solid #344252;
+  background: #111820;
   transform: rotate(45deg);
 }
 
@@ -86,7 +80,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  gap: 14px;
 }
 
 .settings-panel-header .eyebrow {
@@ -94,47 +88,46 @@
 }
 
 .settings-panel-header h2 {
-  font-size: 24px;
+  font-size: 21px;
 }
 
 .settings-close {
-  width: 38px;
-  min-width: 38px;
-  min-height: 38px;
+  width: 34px;
+  min-width: 34px;
+  min-height: 34px;
   padding: 0;
   border-color: transparent;
   background: transparent;
   color: var(--muted);
-  box-shadow: none;
-  font-size: 28px;
+  font-size: 25px;
   line-height: 1;
 }
 
 .settings-close:hover:not(:disabled) {
-  background: rgba(75, 141, 255, 0.10);
+  background: var(--surface-2);
   border-color: var(--line);
   color: var(--text);
 }
 
 .settings-intro {
-  margin: 8px 0 18px;
+  margin: 7px 0 16px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12.5px;
   line-height: 1.5;
 }
 
 .settings-content {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .diagnostics-card,
 .settings-content .certificate-card {
   margin: 0;
-  padding: 20px;
+  padding: 16px;
   border: 1px solid var(--line);
-  border-radius: 16px;
-  background: linear-gradient(180deg, rgba(19, 34, 51, 0.98), rgba(13, 23, 35, 0.99));
+  border-radius: 9px;
+  background: #0e151c;
   box-shadow: none;
 }
 
@@ -142,8 +135,8 @@
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 .diagnostics-heading .eyebrow {
@@ -152,34 +145,34 @@
 
 .diagnostics-heading h3 {
   margin: 0;
-  font-size: 17px;
+  font-size: 16px;
 }
 
 #diagnostics-refresh {
-  min-height: 34px;
-  padding: 7px 10px;
-  font-size: 12px;
+  min-height: 32px;
+  padding: 0 9px;
+  font-size: 11.5px;
 }
 
 .diagnostics-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 9px;
+  gap: 8px;
   margin: 0;
 }
 
 .diagnostics-grid > div {
   min-width: 0;
-  padding: 10px;
-  border: 1px solid rgba(91, 126, 166, 0.24);
-  border-radius: 10px;
-  background: rgba(8, 16, 26, 0.5);
+  padding: 9px;
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  background: #111820;
 }
 
 .diagnostics-grid dt {
-  margin-bottom: 4px;
+  margin-bottom: 3px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -189,7 +182,7 @@
   margin: 0;
   overflow-wrap: anywhere;
   color: var(--text);
-  font-size: 12px;
+  font-size: 11.5px;
   line-height: 1.35;
 }
 
@@ -212,29 +205,24 @@
 @media (max-width: 720px) {
   .topbar-actions {
     width: 100%;
-    margin-top: 0;
     justify-content: flex-end;
   }
 
   .topbar-icon-action {
-    width: 42px;
+    width: 38px;
   }
 
   .settings-panel {
-    top: 90px;
+    top: 82px;
     right: 10px;
     width: calc(100vw - 20px);
-    max-height: calc(100vh - 110px);
-    padding: 16px;
-  }
-
-  .settings-panel::before {
-    right: 9px;
+    max-height: calc(100vh - 102px);
+    padding: 15px;
   }
 
   .diagnostics-card,
   .settings-content .certificate-card {
-    padding: 16px;
+    padding: 14px;
   }
 
   .diagnostics-grid {
