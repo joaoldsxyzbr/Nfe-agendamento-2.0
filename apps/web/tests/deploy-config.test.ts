@@ -34,7 +34,7 @@ describe('Cloudflare deploy configuration', () => {
     ]));
   });
 
-  it('configures the global fiscal-coordination rate limiter before Durable Object access', async () => {
+  it('configures bounded rate limiters for fiscal coordination and update traffic', async () => {
     const raw = await readFile(rootWranglerUrl, 'utf8');
     const config = JSON.parse(raw) as {
       ratelimits?: Array<{
@@ -46,7 +46,11 @@ describe('Cloudflare deploy configuration', () => {
     expect(config.ratelimits).toEqual(expect.arrayContaining([
       expect.objectContaining({
         name: 'COORDINATION_RATE_LIMITER',
-        simple: { limit: 300, period: 60 },
+        simple: { limit: 60, period: 60 },
+      }),
+      expect.objectContaining({
+        name: 'UPDATE_RATE_LIMITER',
+        simple: { limit: 30, period: 60 },
       }),
     ]));
   });
