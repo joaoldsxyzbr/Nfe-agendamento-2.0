@@ -17,6 +17,7 @@ describe('application shell', () => {
       'src/batch.css',
       'src/batch/controller.ts',
       'src/bridge/certificate-controller.ts',
+      'src/danfe/viewer.ts',
       'src/nfe/consultation-controller.ts',
       'src/batch/input.ts',
       'src/batch/ui.ts',
@@ -156,17 +157,21 @@ describe('application shell', () => {
 
   it('wires the DANFE preview, local zoom, close and browser print actions', () => {
     const main = readFileSync(fromWeb('src/main.ts'), 'utf8');
+    const viewer = readFileSync(fromWeb('src/danfe/viewer.ts'), 'utf8');
     const css = readFileSync(fromWeb('src/styles.css'), 'utf8');
 
     expect(main).toContain("import { attachDanfeZoom, renderDanfe } from './danfe/render';");
+    expect(main).toContain("import { createDanfeViewer } from './danfe/viewer';");
     expect(main).toContain("import './danfe/styles.css';");
     expect(main).toContain('id="danfe-viewer"');
     expect(main).toContain('Visualizar DANFE');
     expect(main).toContain('Baixar XML');
     expect(main).toContain('Ctrl + scroll para zoom');
-    expect(main).toContain('renderDanfe(item)');
-    expect(main).toContain('attachDanfeZoom(');
-    expect(main).toContain('window.print()');
+    expect(main).toContain('render: renderDanfe');
+    expect(main).toContain('attachZoom: attachDanfeZoom');
+    expect(viewer).toContain('elements.content.replaceChildren');
+    expect(viewer).toContain('deps.attachZoom(elements.viewer)');
+    expect(viewer).toContain('deps.print()');
     expect(css).toContain('.danfe-modal');
     expect(css).toContain('.danfe-scroll');
   });

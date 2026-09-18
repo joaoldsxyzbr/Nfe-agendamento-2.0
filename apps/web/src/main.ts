@@ -4,6 +4,7 @@ import { BridgeClient } from './bridge/client';
 import { createCertificateController } from './bridge/certificate-controller';
 import type { NfeLookupResult } from './bridge/contracts';
 import { attachDanfeZoom, renderDanfe } from './danfe/render';
+import { createDanfeViewer } from './danfe/viewer';
 import { validateAccessKey } from './nfe/access-key';
 import { createConsultationController } from './nfe/consultation-controller';
 import { parseNfeXml, type ParsedNfe } from './nfe/xml';
@@ -193,8 +194,23 @@ const danfeContent = requireElement<HTMLElement>('#danfe-content');
 const danfeClose = requireElement<HTMLButtonElement>('#danfe-close');
 const danfePrint = requireElement<HTMLButtonElement>('#danfe-print');
 let currentDownloadUrl: string | null = null;
-let detachDanfeZoom: (() => void) | null = null;
 let consultationMode: ConsultationMode = 'single';
+
+const danfeViewerController = createDanfeViewer({
+  elements: {
+    viewer: danfeViewer,
+    title: danfeTitle,
+    content: danfeContent,
+    closeButton: danfeClose,
+    printButton: danfePrint,
+  },
+  render: renderDanfe,
+  attachZoom: attachDanfeZoom,
+  bodyClassList: document.body.classList,
+  addDocumentKeydownListener: (listener) => document.addEventListener('keydown', listener),
+  removeDocumentKeydownListener: (listener) => document.removeEventListener('keydown', listener),
+  print: () => window.print(),
+});
 
 const certificateController = createCertificateController({
   bridge: bridgeClient,
@@ -227,10 +243,10 @@ const batchController = createBatchController({
   parseXml: parseNfeXml,
   createZip: createStoredZip,
   downloadBlob,
-  openDanfe,
+  openDanfe: (parsed) => danfeViewerController.open(parsed),
   downloadXml,
-  openDanfeDocuments,
-  printWindow: () => window.print(),
+  openDanfeDocuments: (documents, title) => danfeViewerController.openMany(documents, title),
+  printWindow: () => danfeViewerController.print(),
   setCertificateControlsEnabled: (enabled) => certificateController.setControlsEnabled(enabled),
   hasSelectableCertificates: () => certificateController.hasSelectableCertificates(),
 });
@@ -277,15 +293,8 @@ batchZip.addEventListener('click', () => batchController.downloadZip());
 batchPrint.addEventListener('click', () => batchController.printDanfes());
 
 lookupReset.addEventListener('click', () => consultationController.reset());
-danfeClose.addEventListener('click', closeDanfe);
-danfePrint.addEventListener('click', () => window.print());
-danfeViewer.addEventListener('click', (event) => {
-  if (event.target === danfeViewer) closeDanfe();
-});
-document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape' && !danfeViewer.hidden) closeDanfe();
-});
 window.addEventListener('pagehide', () => {
+  danfeViewerController.dispose();
   batchController.dispose();
   void consultationController.cancelActivePortal();
 });
@@ -368,7 +377,7 @@ function renderLookupSuccess(parsed: ParsedNfe): void {
   const preview = document.createElement('button');
   preview.type = 'button';
   preview.textContent = 'Visualizar DANFE';
-  preview.addEventListener('click', () => openDanfe(parsed));
+  preview.addEventListener('click', () => danfeViewerController.open(parsed));
 
   currentDownloadUrl = URL.createObjectURL(new Blob([parsed.originalXml], { type: 'application/xml;charset=utf-8' }));
   const download = document.createElement('a');
@@ -379,29 +388,6 @@ function renderLookupSuccess(parsed: ParsedNfe): void {
 
   actions.append(preview, download);
   resultCard.append(title, issuer, metadata, actions);
-}
-
-function openDanfe(parsed: ParsedNfe): void {
-  openDanfeDocuments([parsed], `Visualizar DANFE · NF-e ${parsed.number || parsed.accessKey}`);
-}
-
-function openDanfeDocuments(parsed: readonly ParsedNfe[], title: string): void {
-  detachDanfeZoom?.();
-  danfeContent.replaceChildren(...parsed.map((item) => renderDanfe(item)));
-  danfeTitle.textContent = title;
-  danfeViewer.hidden = false;
-  document.body.classList.add('danfe-open');
-  detachDanfeZoom = attachDanfeZoom(danfeViewer);
-  danfeClose.focus();
-}
-
-function closeDanfe(): void {
-  if (danfeViewer.hidden) return;
-  danfeViewer.hidden = true;
-  document.body.classList.remove('danfe-open');
-  detachDanfeZoom?.();
-  detachDanfeZoom = null;
-  danfeContent.replaceChildren();
 }
 
 function downloadXml(parsed: ParsedNfe): void {
@@ -445,7 +431,7 @@ function appendResultState(titleText: string, messageText: string): void {
 }
 
 function resetResult(): void {
-  closeDanfe();
+  danfeViewerController.close();
   if (currentDownloadUrl) {
     URL.revokeObjectURL(currentDownloadUrl);
     currentDownloadUrl = null;
