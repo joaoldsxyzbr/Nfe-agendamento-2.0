@@ -22,6 +22,18 @@ describe('Cloudflare deploy configuration', () => {
     expect(config.assets?.directory).toBe('./apps/web/dist');
   });
 
+  it('runs update metadata and installer downloads through the Worker before static assets', async () => {
+    const raw = await readFile(rootWranglerUrl, 'utf8');
+    const config = JSON.parse(raw) as {
+      assets?: { run_worker_first?: string[] };
+    };
+
+    expect(config.assets?.run_worker_first).toEqual(expect.arrayContaining([
+      '/api/update/*',
+      '/downloads/windows/*',
+    ]));
+  });
+
   it('configures the global fiscal-coordination rate limiter before Durable Object access', async () => {
     const raw = await readFile(rootWranglerUrl, 'utf8');
     const config = JSON.parse(raw) as {

@@ -8,6 +8,29 @@ namespace NfeAgendamento.Bridge.Tests;
 public sealed class UpdateServiceTests
 {
     [Fact]
+    public async Task CheckAsync_uses_the_official_update_proxy()
+    {
+        const string json = """
+        {
+          "tag_name": "v0.0.6",
+          "draft": false,
+          "prerelease": false,
+          "assets": []
+        }
+        """;
+        using var http = new HttpClient(new InspectUriHandler(
+            new Uri("https://nfeagendamento.joaolds.xyz.br/api/update/latest"),
+            json));
+        var directory = Path.Combine(Path.GetTempPath(), "nfe-updater-tests", Guid.NewGuid().ToString("N"));
+        var service = new UpdateService(http, directory);
+
+        var result = await service.CheckAsync(new Version(0, 0, 6), TestContext.Current.CancellationToken);
+
+        Assert.False(result.IsUpdateAvailable);
+        Assert.Equal(new Version(0, 0, 6), result.LatestVersion);
+    }
+
+    [Fact]
     public async Task DownloadAsync_accepts_only_matching_size_and_sha256()
     {
         var bytes = "installer-content"u8.ToArray();
@@ -17,7 +40,7 @@ public sealed class UpdateServiceTests
         var service = new UpdateService(http, directory);
         var asset = new UpdateAsset(
             "NFeAgendamentoBridge-Setup-v0.0.6.exe",
-            new Uri("https://github.com/joaoldsxyzbr/Nfe-agendamento-2.0/releases/download/v0.0.6/NFeAgendamentoBridge-Setup-v0.0.6.exe"),
+            new Uri("https://nfeagendamento.joaolds.xyz.br/downloads/windows/v0.0.6/NFeAgendamentoBridge-Setup-v0.0.6.exe"),
             digest,
             bytes.Length);
 
@@ -43,7 +66,7 @@ public sealed class UpdateServiceTests
         var service = new UpdateService(http, directory);
         var asset = new UpdateAsset(
             "NFeAgendamentoBridge-Setup-v0.0.6.exe",
-            new Uri("https://github.com/joaoldsxyzbr/Nfe-agendamento-2.0/releases/download/v0.0.6/NFeAgendamentoBridge-Setup-v0.0.6.exe"),
+            new Uri("https://nfeagendamento.joaolds.xyz.br/downloads/windows/v0.0.6/NFeAgendamentoBridge-Setup-v0.0.6.exe"),
             "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
             bytes.Length);
 
@@ -70,7 +93,7 @@ public sealed class UpdateServiceTests
         var service = new UpdateService(http, directory);
         var asset = new UpdateAsset(
             "NFeAgendamentoBridge-Setup-v0.0.6.exe",
-            new Uri("https://github.com/joaoldsxyzbr/Nfe-agendamento-2.0/releases/download/v0.0.6/NFeAgendamentoBridge-Setup-v0.0.6.exe"),
+            new Uri("https://nfeagendamento.joaolds.xyz.br/downloads/windows/v0.0.6/NFeAgendamentoBridge-Setup-v0.0.6.exe"),
             digest,
             bytes.Length + 1);
 
@@ -82,6 +105,18 @@ public sealed class UpdateServiceTests
         finally
         {
             if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    private sealed class InspectUriHandler(Uri expectedUri, string json) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Assert.Equal(expectedUri, request.RequestUri);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json),
+            });
         }
     }
 

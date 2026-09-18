@@ -21,7 +21,7 @@ public sealed class UpdateReleaseParserTests
               "state": "uploaded",
               "size": 12345,
               "digest": "{{Digest}}",
-              "browser_download_url": "https://github.com/joaoldsxyzbr/Nfe-agendamento-2.0/releases/download/v0.0.6/NFeAgendamentoBridge-Setup-v0.0.6.exe"
+              "browser_download_url": "https://nfeagendamento.joaolds.xyz.br/downloads/windows/v0.0.6/NFeAgendamentoBridge-Setup-v0.0.6.exe"
             }
           ]
         }
@@ -50,7 +50,7 @@ public sealed class UpdateReleaseParserTests
               "state": "uploaded",
               "size": 12345,
               "digest": null,
-              "browser_download_url": "https://github.com/joaoldsxyzbr/Nfe-agendamento-2.0/releases/download/v0.0.6/NFeAgendamentoBridge-Setup-v0.0.6.exe"
+              "browser_download_url": "https://nfeagendamento.joaolds.xyz.br/downloads/windows/v0.0.6/NFeAgendamentoBridge-Setup-v0.0.6.exe"
             }
           ]
         }
@@ -75,6 +75,30 @@ public sealed class UpdateReleaseParserTests
               "size": 12345,
               "digest": "{{Digest}}",
               "browser_download_url": "https://example.com/NFeAgendamentoBridge-Setup-v0.0.6.exe"
+            }
+          ]
+        }
+        """;
+
+        Assert.Throws<InvalidDataException>(() =>
+            UpdateReleaseParser.Parse(json, new Version(0, 0, 5)));
+    }
+
+    [Fact]
+    public void Rejects_direct_github_installer_url()
+    {
+        var json = $"""
+        {
+          "tag_name": "v0.0.6",
+          "draft": false,
+          "prerelease": false,
+          "assets": [
+            {
+              "name": "NFeAgendamentoBridge-Setup-v0.0.6.exe",
+              "state": "uploaded",
+              "size": 12345,
+              "digest": "{{Digest}}",
+              "browser_download_url": "https://github.com/joaoldsxyzbr/Nfe-agendamento-2.0/releases/download/v0.0.6/NFeAgendamentoBridge-Setup-v0.0.6.exe"
             }
           ]
         }

@@ -26,8 +26,9 @@ describe('settings panel', () => {
     expect(settings).toContain("downloadTrigger.id = 'app-download'");
     expect(settings).toContain("downloadTrigger.setAttribute('aria-label', 'Baixar app para Windows')");
     expect(settings).toContain(
-      `https://github.com/joaoldsxyzbr/Nfe-agendamento-2.0/releases/download/v${appVersion}/NFeAgendamentoBridge-Setup-v${appVersion}.exe`,
+      `/downloads/windows/v${appVersion}/NFeAgendamentoBridge-Setup-v${appVersion}.exe`,
     );
+    expect(settings).not.toContain('https://github.com/joaoldsxyzbr/Nfe-agendamento-2.0/releases/download/');
     expect(settings.indexOf('topbarActions.append(downloadTrigger)')).toBeLessThan(
       settings.indexOf('topbarActions.append(settingsTrigger)'),
     );
