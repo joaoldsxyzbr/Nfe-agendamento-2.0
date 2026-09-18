@@ -141,6 +141,7 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
     abortController = new AbortController();
     setControlsRunning(true);
     renderState('Preparando lote');
+    let finalFailureMessage: string | null = null;
 
     try {
       const health = await deps.bridge.health(abortController.signal);
@@ -164,10 +165,17 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
       }
     } catch (error) {
       if (!isAbortError(error)) {
-        markQueuedItems('cancelled', null);
-        elements.routeText.textContent = error instanceof Error
+        finalFailureMessage = error instanceof Error
           ? error.message
           : 'Não foi possível iniciar o lote.';
+
+        const activeItem = items.find((item) => item.status === 'consulting');
+        if (activeItem) {
+          activeItem.status = 'transport_error';
+          activeItem.message = finalFailureMessage;
+        }
+
+        markQueuedItems('cancelled', 'Não processada porque o lote foi interrompido.');
       }
     } finally {
       if (cancelled) {
@@ -176,7 +184,7 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
       running = false;
       abortController = null;
       setControlsRunning(false);
-      renderState(cancelled ? 'Lote cancelado' : 'Lote concluído');
+      renderState(cancelled ? 'Lote cancelado' : finalFailureMessage ?? 'Lote concluído');
     }
   }
 
