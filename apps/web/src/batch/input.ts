@@ -1,7 +1,7 @@
 import { validateAccessKey } from '../nfe/access-key';
 
-// Compatibilidade com a UI atual: não existe mais teto rígido de itens por lote.
-export const MAX_BATCH_ITEMS = Number.POSITIVE_INFINITY;
+// Limite operacional para impedir crescimento ilimitado de memória no navegador.
+export const MAX_BATCH_ITEMS = 100;
 
 export type BatchInputSummary = {
   validKeys: string[];
