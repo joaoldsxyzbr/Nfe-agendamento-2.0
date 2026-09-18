@@ -19,7 +19,7 @@ public sealed class TrayUpdaterStaticTests
         Assert.Contains("UseShellExecute = true", program);
         Assert.Contains("ExitThread()", program);
         Assert.Contains("Assembly.GetExecutingAssembly().GetName().Version", program);
-        Assert.Contains("AuthenticodeVerifier.VerifyTrusted", program);
+        Assert.DoesNotContain("AuthenticodeVerifier.VerifyTrusted", program);
     }
 
     [Fact]
