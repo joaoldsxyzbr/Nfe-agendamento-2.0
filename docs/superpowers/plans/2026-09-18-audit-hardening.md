@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Corrigir todos os achados da auditoria que podem ser resolvidos no repositório e transformar Authenticode/ruleset em gates externos explícitos.
+**Goal:** Corrigir todos os achados da auditoria que podem ser resolvidos no repositório. Authenticode e ruleset/branch protection são opcionais por decisão posterior aprovada em 18/09/2026.
 
 **Architecture:** Preservar a arquitetura atual. As mudanças são hardening nas bordas: UI/lote, Worker, updater Windows, modal DANFE, CI e documentação.
 
@@ -15,7 +15,7 @@
 - Estado atual da `main` é a fonte de verdade.
 - Nenhuma mudança de arquitetura central.
 - Nenhum dado fiscal novo pode ser enviado ao Cloudflare.
-- Nenhuma release nova deve ser publicada sem Authenticode válido.
+- Authenticode pode ser usado opcionalmente quando configurado, mas sua ausência não bloqueia CI, updater ou release.
 - Mudanças comportamentais usam RED → GREEN.
 - Documentação deve terminar sincronizada com a implementação.
 
@@ -52,23 +52,23 @@
 - [x] Implementar limiter por IP para coordenação, novo `UPDATE_RATE_LIMITER` e cache curto da metadata.
 - [ ] Confirmar GREEN.
 
-## Task 3: Updater e release exigem Authenticode
+## Task 3: Updater e release sem dependência obrigatória de Authenticode
 
 **Files:**
-- Create: `apps/bridge/windows/NfeAgendamento.App/AuthenticodeVerifier.cs`
 - Modify: `apps/bridge/windows/NfeAgendamento.App/UpdateService.cs`
 - Modify: `apps/bridge/windows/NfeAgendamento.App/Program.cs`
-- Modify: `apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeAgendamento.Bridge.Tests.csproj`
+- Delete: `apps/bridge/windows/NfeAgendamento.App/AuthenticodeVerifier.cs`
 - Modify: `apps/bridge/tests/NfeAgendamento.Bridge.Tests/UpdateServiceTests.cs`
 - Modify: `apps/bridge/tests/NfeAgendamento.Bridge.Tests/TrayUpdaterStaticTests.cs`
 - Modify: `.github/workflows/ci.yml`
 - Modify: `apps/bridge/tests/NfeAgendamento.Bridge.Tests/WorkflowHardeningStaticTests.cs`
 
-- [x] Escrever testes que exijam verificação de assinatura depois do SHA-256 e bloqueio de release commit sem assinatura válida.
-- [ ] Confirmar RED.
-- [x] Implementar WinVerifyTrust e injeção de verificador no `UpdateService`.
-- [x] Adicionar gate Authenticode no job `windows-package` para commits `release: v*`.
-- [ ] Confirmar GREEN.
+- [x] Escrever testes que exijam updater baseado em origem/tamanho/SHA-256 sem verificador obrigatório de assinatura.
+- [x] Confirmar RED no CI.
+- [x] Remover a injeção obrigatória de `WinVerifyTrust` do updater.
+- [x] Remover o gate obrigatório de Authenticode dos commits de release.
+- [x] Preservar assinatura opcional quando os secrets estiverem configurados.
+- [ ] Confirmar GREEN no CI final.
 
 ## Task 4: Acessibilidade do viewer DANFE
 
@@ -115,8 +115,8 @@
 - Modify: `README.md`
 
 - [x] Pin CodeQL v4 pelo commit atual `1c5b675653bb5c22dbe9b12b556ec555138e09fd`.
-- [x] Atualizar docs para v0.0.16, teto 100, limiter por IP, cache de update e gate Authenticode.
-- [x] Manter ruleset da `main` como pendência externa explícita.
+- [x] Atualizar docs para v0.0.16, teto 100, limiter por IP/cache de update e Authenticode opcional.
+- [x] Registrar ruleset/branch protection como opcional e fora do backlog.
 - [x] Rodar busca final por referências canônicas obsoletas `0.0.14` — as ocorrências restantes são apenas histórico de releases/planos antigos.
 
 ## Task 7: Verificação final
@@ -136,4 +136,4 @@
 - Playwright: 3 testes E2E/regressão concluídos.
 - CodeQL: C# e JavaScript/TypeScript concluídos com sucesso.
 - `npm audit`: 0 vulnerabilidades conhecidas no job web e no pacote Playwright.
-- Pendências externas: certificado/secrets Authenticode reais e ruleset administrativo da `main`.
+- Authenticode e ruleset/branch protection são opcionais e não representam pendências do projeto.
