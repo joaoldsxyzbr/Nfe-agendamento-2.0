@@ -50,7 +50,7 @@
 - [x] Escrever testes para chave de rate limit derivada do IP Cloudflare, limiter separado de update e cache de metadata.
 - [x] Confirmar RED.
 - [x] Implementar limiter por IP para coordenação, novo `UPDATE_RATE_LIMITER` e cache curto da metadata.
-- [ ] Confirmar GREEN.
+- [x] Confirmar GREEN.
 
 ## Task 3: Updater e release sem dependência obrigatória de Authenticode
 
@@ -68,7 +68,7 @@
 - [x] Remover a injeção obrigatória de `WinVerifyTrust` do updater.
 - [x] Remover o gate obrigatório de Authenticode dos commits de release.
 - [x] Preservar assinatura opcional quando os secrets estiverem configurados.
-- [ ] Confirmar GREEN no CI final.
+- [x] Confirmar GREEN no CI final.
 
 ## Task 4: Acessibilidade do viewer DANFE
 
@@ -78,7 +78,7 @@
 - Modify: `apps/web/tests/danfe-viewer.test.ts`
 
 - [x] Escrever testes de Tab/Shift+Tab e restauração do foco.
-- [ ] Confirmar RED.
+- RED histórico desta tarefa não foi registrado separadamente antes da implementação; a regressão permanece coberta pela suíte atual.
 - [x] Implementar focus trap e retorno ao foco anterior.
 - [ ] Confirmar GREEN.
 
@@ -129,11 +129,15 @@
 
 ## Fechamento em 18/09/2026
 
-- Snapshot técnico validado antes do fechamento documental: `f8fa77de6e17a18d3c7e303dab1cd0881b7b6b04`; commits posteriores deste fechamento alteram somente documentação do plano.
+- Snapshot técnico validado após a decisão final sobre controles opcionais: `fdab221aa245d1be0130722d550dbe55d399df74`.
 - CI: `web`, `bridge`, `fiscal-compatibility`, `danfe-print` e `windows-package` concluídos com sucesso.
 - Web: 169 testes, 29 arquivos, cobertura V8 registrada (55,07% statements / 54,68% branches / 62,45% functions / 56,98% lines).
-- Bridge: 210 testes, 0 erros/falhas; build concluído.
+- Bridge: suíte e build concluídos no CI final sem falhas.
 - Playwright: 3 testes E2E/regressão concluídos.
 - CodeQL: C# e JavaScript/TypeScript concluídos com sucesso.
 - `npm audit`: 0 vulnerabilidades conhecidas no job web e no pacote Playwright.
 - Authenticode e ruleset/branch protection são opcionais e não representam pendências do projeto.
+
+### Decisão final sobre Authenticode/ruleset
+
+Em 18/09/2026 o proprietário confirmou que Authenticode e ruleset/branch protection não são necessários para este projeto. O updater e a release voltaram a depender das validações obrigatórias de origem, nome/versionamento, tamanho e SHA-256, enquanto a assinatura do CI permanece apenas opcional quando os secrets existirem. O CI completo e o CodeQL do snapshot `fdab221aa245d1be0130722d550dbe55d399df74` concluíram com sucesso.
