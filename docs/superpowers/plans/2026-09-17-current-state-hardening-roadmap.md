@@ -667,6 +667,8 @@ Merge only after full CI/CodeQL.
 
 ### Task 7: Decide and, only if necessary, extract the DANFE viewer
 
+Status: extração necessária porque `main.ts` ainda concentrava zoom, modal, Escape/backdrop, impressão e conteúdo renderizado; implementada no PR #16 com RED comprovado antes do módulo.
+
 **Files:**
 - Inspect: `apps/web/src/main.ts`
 - Optional Create: `apps/web/src/danfe/viewer.ts`
@@ -687,11 +689,11 @@ export type DanfeViewer = Readonly<{
 export function createDanfeViewer(deps: DanfeViewerDependencies): DanfeViewer;
 ```
 
-- [ ] **Step 1: Review `main.ts` after Tasks 4–6**
+- [x] **Step 1: Review `main.ts` after Tasks 4–6**
 
 Decision rule: if viewer ownership is already small/clear (only a few event handlers and calls), record `viewer extraction not needed` in the PR/architecture docs and do not create another abstraction. If it still owns zoom lifecycle, modal state, print, backdrop/Escape and rendered content as a cohesive block, continue.
 
-- [ ] **Step 2: If needed, branch and write RED tests**
+- [x] **Step 2: If needed, branch and write RED tests**
 
 Cover:
 
@@ -713,11 +715,11 @@ npm run test:web -- --run apps/web/tests/danfe-viewer.test.ts
 
 Expected: FAIL before extraction.
 
-- [ ] **Step 3: Extract only viewer lifecycle**
+- [x] **Step 3: Extract only viewer lifecycle**
 
 Do not move renderer/pagination/fiscal layout.
 
-- [ ] **Step 4: Run all DANFE gates**
+- [x] **Step 4: Run all DANFE gates**
 
 ```bash
 npm run test:web -- --run apps/web/tests/danfe-viewer.test.ts apps/web/tests/danfe.test.ts apps/web/tests/danfe-product-table-regression.test.ts
@@ -730,7 +732,7 @@ npm test --prefix tests/playwright
 
 Expected: all pass, including real Chromium A4 regression.
 
-- [ ] **Step 5: Commit/open PR E only if code changed**
+- [x] **Step 5: Commit/open PR E only if code changed**
 
 ```bash
 git add apps/web/src/danfe/viewer.ts apps/web/src/main.ts apps/web/tests/danfe-viewer.test.ts
