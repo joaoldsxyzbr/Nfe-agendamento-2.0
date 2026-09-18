@@ -30,6 +30,7 @@ jobs:
       - run: npm run lint:web
       - run: npm run format:check:web
       - run: npm run test:web
+      - run: npm run coverage:web
       - run: npm run build:web
       - run: ./node_modules/.bin/wrangler deploy --dry-run
 
