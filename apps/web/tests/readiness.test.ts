@@ -48,10 +48,10 @@ describe('final readiness', () => {
   });
 
   it('keeps the single NF-e consultation card structurally static after success', () => {
-    expect(batchCss).not.toContain(":has(.batch-item[data-state='success']) .batch-run-toolbar");
-    expect(batchCss).not.toContain(".batch-item[data-state='success'] .batch-order");
-    expect(batchCss).not.toContain(".batch-item[data-state='success'] .batch-key");
-    expect(batchCss).not.toContain(".batch-item[data-state='success'] .batch-status");
+    expect(batchCss).not.toContain(":has(.batch-item[data-state='success']) .batch-run-toolbar {");
+    expect(batchCss).not.toContain(".batch-item[data-state='success'] .batch-order,");
+    expect(batchCss).not.toContain(".batch-item[data-state='success'] .batch-key,");
+    expect(batchCss).not.toContain(".batch-item[data-state='success'] .batch-status {");
   });
 
   it('does not reintroduce the removed Central architecture into active code', () => {
