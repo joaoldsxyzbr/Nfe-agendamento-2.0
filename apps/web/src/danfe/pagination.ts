@@ -6,7 +6,7 @@
  * praticamente um item por folha. Aqui usamos apenas o conteúdo das linhas e limites
  * conservadores em milímetros, deixando a impressão determinística.
  */
-const FIRST_PAGE_PRODUCT_SPACE_MM = 104;
+const FIRST_PAGE_PRODUCT_SPACE_MM = 110;
 const CONTINUATION_PRODUCT_SPACE_MM = 204;
 const MIN_FIRST_PAGE_PRODUCT_SPACE_MM = 58;
 

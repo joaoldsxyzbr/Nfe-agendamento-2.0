@@ -30,6 +30,34 @@ describe('DANFE approved behavior', () => {
     expect(html).toContain('class="products-filler"');
   });
 
+  it('renders the approved traditional-refined middle band', async () => {
+    const { renderDanfeHtml } = await import('../src/danfe/render');
+    const html = renderDanfeHtml(parseNfeXml(fullXml, KEY));
+
+    for (const fragment of [
+      'class="danfe-block recipient-grid recipient-grid-refined"',
+      'Município / UF',
+      'Inscrição estadual / Indicador IE',
+      'Data / hora saída / entrada',
+      'class="danfe-block financial-strip"',
+      'class="danfe-block total-grid refined-total-grid"',
+      'class="total-row total-row-primary"',
+      'class="total-row total-row-secondary"',
+      'products-total',
+      'class="danfe-block transport-grid refined-transport-grid"',
+      'Placa / UF',
+      'Quantidade / Espécie',
+      'Marca / Numeração',
+      'Peso bruto / líquido',
+    ]) {
+      expect(html).toContain(fragment);
+    }
+
+    expect(html).toContain('FATURA / DUPLICATA');
+    expect(html).toContain('PAGAMENTO');
+    expect(html.indexOf('<th>Item</th>')).toBeLessThan(html.indexOf('<th>Código produto</th>'));
+  });
+
   it('repeats the mandatory fiscal header fields on continuation pages', async () => {
     const { renderDanfeHtml } = await import('../src/danfe/render');
     const base = parseNfeXml(fullXml, KEY);
@@ -158,7 +186,7 @@ describe('DANFE approved behavior', () => {
     expect(pagination).not.toContain('getBoundingClientRect');
     expect(pagination).not.toContain('getComputedStyle');
     expect(pagination).not.toContain('danfe-measuring');
-    expect(pagination).toContain('FIRST_PAGE_PRODUCT_SPACE_MM = 104');
+    expect(pagination).toContain('FIRST_PAGE_PRODUCT_SPACE_MM = 110');
     expect(pagination).toContain('CONTINUATION_PRODUCT_SPACE_MM = 204');
     expect(pagination).toContain("row.querySelector('.internal-product-code')");
     expect(pagination).toContain("row.querySelector('.internal-quantity')");
@@ -181,7 +209,9 @@ describe('DANFE approved behavior', () => {
     expect(css).toContain('.fiscal-label { font-size: 6.35px; font-weight: 700; }');
     expect(css).toContain('.products-table td { font-size: 8.15px; line-height: 1.18; }');
     expect(css).toContain('.products-table col.description { width: 62mm; }');
-    expect(css).toContain('grid-template-columns: repeat(12, minmax(0, 1fr));');
+    for (const rule of ['.recipient-grid-refined', '.financial-strip', '.refined-total-grid', '.total-row-primary', '.total-row-secondary', '.refined-transport-grid']) {
+      expect(css).toContain(rule);
+    }
     expect(css).toContain('align-items: flex-start; justify-content: center; padding: 5px 8px; text-align: left;');
     expect(css).toContain('.products-table.danfe-products-fill { width: 100%; flex: 1 1 auto; border-collapse: collapse; table-layout: fixed; }');
     expect(css).toContain('.products-table .products-filler { height: 100%; }');
