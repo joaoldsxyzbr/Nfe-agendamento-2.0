@@ -13,7 +13,7 @@ NFe Agendamento é um aplicativo interno para consultar NF-e, baixar XML e gerar
 - **Helper Portal:** WinForms/WebView2 persistente para o fallback pelo Portal Nacional; hCaptcha continua sempre manual.
 - **Certificado A1:** descoberto em `CurrentUser/My`; PFX, senha e chave privada nunca são enviados ao site ou ao Cloudflare.
 - **Persistência local:** thumbprint selecionado em `%LOCALAPPDATA%/NfeAgendamentoBridge/settings.json`, regras locais de fornecedor em `supplier-rules.json` e metadados da proteção fiscal em `fiscal-usage.json`.
-- **Versão canônica atual:** `0.0.16`; a publicação da release é automatizada somente após o CI do commit `release: v0.0.16` ficar verde.
+- **Release pública atual:** `0.0.16`; a `main` já contém hardening posterior e a próxima release só pode ser publicada após CI verde **e Authenticode válido** no commit `release: vX.Y.Z`.
 
 Não existem Central, pareamento, servidor LAN, mDNS ou pasta compartilhada na arquitetura atual. Cada PC usa seu próprio Bridge.
 
@@ -21,7 +21,7 @@ Não existem Central, pareamento, servidor LAN, mDNS ou pasta compartilhada na a
 
 Implementado e coberto pelos gates automatizados aplicáveis:
 
-- consulta unificada para uma ou várias NF-e, com layout compacto para uma única NF-e;
+- consulta unificada para uma ou várias NF-e, com layout compacto para uma única NF-e, card estruturalmente estático após conclusão e teto operacional de **100 NF-e por lote**;
 - chave NF-e de **44 caracteres**, incluindo CNPJ/chave alfanuméricos e DV vigente;
 - rejeição explícita de NFC-e modelo 65; o produto aceita somente NF-e modelo 55;
 - seleção local de certificado A1;
@@ -31,21 +31,21 @@ Implementado e coberto pelos gates automatizados aplicáveis:
 - fallback automático para o Portal após `consumption_limit` ou `cStat 217`;
 - hCaptcha manual e download oficial do XML pelo helper Portal;
 - XML limitado a 10 MiB, DTD proibido e validação contra a chave consultada;
-- download XML individual e ZIP do lote;
+- download XML individual e ZIP do lote, com orçamento agregado de memória e geração sem buffer monolítico duplicado;
 - preview DANFE em modal com `Ctrl + scroll`, impressão/PDF e download XML;
 - DANFE com grade operacional de **13 colunas**, `Item` na primeira posição, composição de embalagem quando derivável do XML e cabeçalhos fiscais nas folhas adicionais; NCM/IPI permanecem preservados no XML, mas fora da grade visual principal;
 - código de barras híbrido CODE-128C/CODE-128A para chave alfanumérica;
 - paginação determinística, sem medição frágil de viewport em `beforeprint`;
-- Playwright/Chromium gerando PDF A4 real no CI e validando overflow, paginação, grade simplificada, cabeçalhos, `Folha X/Y` e chave alfanumérica;
+- Playwright/Chromium gerando PDF A4 real no CI e validando overflow, paginação, grade simplificada, cabeçalhos, `Folha X/Y` e chave alfanumérica, além de um fluxo E2E da consulta unitária e dos estados do card;
 - regras específicas de fornecedores centralizadas, com identificação primária por CNPJ/CPF resolvida somente no Bridge local e sem identificadores fiscais fixos no bundle público;
 - proteção fiscal local persistente e fail-safe;
 - coordenação compartilhada do teto fiscal entre PCs que usam o mesmo A1 RSA;
-- barreira HTTP global de 300 requisições por 60 segundos antes do `FiscalCoordinator`, usando o Rate Limiting binding nativo do Cloudflare Workers;
+- barreira HTTP de 60 requisições por 60 segundos **por IP de cliente** antes do `FiscalCoordinator`, usando o Rate Limiting binding nativo do Cloudflare Workers;
 - POC isolado de `Unimake.DFe` para paridade de chave alfanumérica e estrutura RTC;
 - parser estrutural complementar de IBS/CBS/IS, sem alterar prematuramente o DANFE;
 - App, Bridge e Portal publicados como self-contained `win-x64`;
 - instalador Inno Setup por usuário, sem administrador;
-- atualizador manual via domínio oficial, com metadata/Setup intermediados pelo Worker e validação local de release, tamanho e SHA-256;
+- atualizador manual via domínio oficial, com metadata cacheada por curto período, rate limit próprio, validação local de release/tamanho/SHA-256 e **Authenticode confiável** antes de executar o Setup;
 - logs locais estruturados com rotação e sem persistir chave NF-e, XML, PFX, senha ou chave privada.
 
 ## Proteção fiscal local e multi-PC
@@ -54,11 +54,11 @@ O Bridge mantém `FiscalUsageGuard` local com gate serial, janela de uma hora e 
 
 Além disso, antes de uma chamada direta à SEFAZ, o Bridge reserva uma tentativa no coordenador Cloudflare. A credencial de coordenação é derivada localmente por assinatura RSA/SHA-256 usando a chave privada do mesmo A1 e é enviada somente por HTTPS. O Worker usa SHA-256 dessa credencial para selecionar um Durable Object; ele não recebe CNPJ, chave NF-e, XML, PFX, senha ou chave privada.
 
-Antes de calcular esse namespace ou acessar o Durable Object, o Worker aplica `COORDINATION_RATE_LIMITER` com uma chave lógica global `fiscal-coordination`, limite de 300 requisições por 60 segundos. Esse limiter é apenas uma barreira aproximada contra abuso e custo: ele **não** substitui a janela fiscal exata. Negação retorna HTTP `429` com `Retry-After: 60`; falha ou resultado inválido do binding retorna `503`. Em ambos os casos o `FiscalCoordinator` não é acessado.
+Antes de calcular esse namespace ou acessar o Durable Object, o Worker aplica `COORDINATION_RATE_LIMITER` com chave derivada do `CF-Connecting-IP`, limite de 60 requisições por 60 segundos por IP. Esse limiter é apenas uma barreira aproximada contra abuso e custo: ele **não** substitui a janela fiscal exata. Negação retorna HTTP `429` com `Retry-After: 60`; falha ou resultado inválido do binding retorna `503`. Em ambos os casos o `FiscalCoordinator` não é acessado.
 
 PCs que usam cópias do **mesmo A1 RSA** compartilham a mesma janela de 20 tentativas por hora. `429` e `cStat 656` propagam cooldown compartilhado. Se o coordenador estiver indisponível ou responder de forma inválida, o Bridge **não toca na SEFAZ** e retorna `consumption_limit`, fazendo o frontend seguir pelo Portal.
 
-Limitação consciente: certificados diferentes do mesmo CNPJ não compartilham a mesma identidade remota. O projeto evita enviar ou registrar a identidade fiscal no coordenador remoto.
+Limitações conscientes: certificados diferentes do mesmo CNPJ não compartilham a mesma identidade remota. Além disso, o Worker valida o **formato** do bearer, mas não consegue provar criptograficamente que ele foi gerado por um A1 sem introduzir um protocolo remoto adicional de identidade. O projeto preserva a fronteira atual e usa o rate limiter por IP como barreira de abuso, sem enviar CNPJ ou outro identificador fiscal novo.
 
 Detalhes: `docs/architecture/fiscal-usage-guard.md`.
 
@@ -97,17 +97,17 @@ Os CNPJs/CPFs reais de fornecedores não pertencem ao repositório, testes, docu
 - coordenador remoto não recebe dados fiscais do documento;
 - resolução de fornecedor acontece somente no Bridge loopback e retorna apenas `supplierId`;
 - CNPJ/CPF real usado nas regras de fornecedor fica apenas no `supplier-rules.json` local e não entra em logs;
-- rate limiter HTTP recebe somente a chave constante `fiscal-coordination` e atua antes do Durable Object fiscal;
-- rotas de atualização do Worker aceitam apenas metadata da release estável e o Setup versionado com nome exato; não existe proxy de URL arbitrária;
+- rate limiter fiscal usa somente o IP técnico da borda Cloudflare e atua antes do Durable Object; nenhum dado fiscal é usado como chave do limiter;
+- rotas de atualização do Worker aceitam apenas metadata da release estável e o Setup versionado com nome exato, possuem rate limiter próprio por IP e cache curto da metadata; não existe proxy de URL arbitrária;
 - proteção local persiste somente hash do CNPJ, timestamps e prazos de proteção;
 - `.gitignore` bloqueia PFX/P12/PEM/KEY e arquivos de ambiente;
-- WebView2 limitado ao host oficial do Portal e HTTPS;
+- WebView2 limitado ao host oficial do Portal e HTTPS; XMLs temporários antigos do diretório dedicado são limpos na inicialização do helper;
 - downloads fora do endpoint XML oficial são cancelados;
 - Named Pipes locais restritos ao usuário atual;
 - Actions do GitHub fixadas por SHA e permissões mínimas;
-- secrets de Authenticode não entram em builds de pull request;
+- secrets de Authenticode não entram em builds de pull request; commits de release falham se App/Bridge/Portal/Setup não estiverem com assinatura válida;
 - CI inclui `npm audit` e NuGet Audit no POC fiscal;
-- CodeQL analisa automaticamente JavaScript/TypeScript e C# em `main`, pull requests e uma execução semanal;
+- CodeQL analisa automaticamente JavaScript/TypeScript e C# em `main`, pull requests e uma execução semanal, com a action fixada por SHA imutável;
 - Dependabot verifica semanalmente npm, Playwright, NuGet e GitHub Actions e propõe atualizações por pull request.
 
 ## CI
@@ -115,7 +115,7 @@ Os CNPJs/CPFs reais de fornecedores não pertencem ao repositório, testes, docu
 Jobs obrigatórios do pipeline:
 
 - `web` — install/audit/lint/format/test/build e `wrangler deploy --dry-run`;
-- `danfe-print` — regressão real de PDF A4 com Chromium;
+- `danfe-print` — regressão real de PDF A4 **e fluxo E2E da consulta** com Chromium;
 - `bridge` — testes e build .NET;
 - `fiscal-compatibility` — POC Unimake e paridade fiscal;
 - `windows-package` — empacotamento Windows somente depois dos gates anteriores.
@@ -173,7 +173,8 @@ O navegador e o App não dependem mais de acesso direto do cliente ao GitHub par
 - `GET /api/update/latest` consulta a release estável oficial server-side e devolve somente a metadata necessária, reescrevendo a URL do asset para o domínio do NFe Agendamento;
 - `GET /downloads/windows/vX.Y.Z/NFeAgendamentoBridge-Setup-vX.Y.Z.exe` valida tag/nome e faz streaming do único Setup permitido;
 - o Worker não aceita host, URL ou nome de arquivo arbitrários;
-- o App continua validando tamanho publicado e SHA-256 antes de executar o instalador.
+- o App valida tamanho publicado, SHA-256 e assinatura Authenticode confiável antes de executar o instalador;
+- a metadata validada usa cache curto no Worker e as rotas de atualização têm rate limiter próprio por IP.
 
 **Migração da v0.0.15:** o binário antigo ainda contém a URL direta do GitHub. Se a atualização interna da v0.0.15 falhar, baixar e instalar a v0.0.16 uma vez pelo botão do próprio site. A partir da v0.0.16, as atualizações passam pelo domínio oficial.
 
@@ -197,8 +198,9 @@ O Microsoft Edge WebView2 Runtime é necessário para o fallback pelo Portal Nac
 2. atualizar a versão em `Directory.Build.props`;
 3. adicionar `docs/releases/v<versão>.md`;
 4. fazer o commit final `release: v<versão>`;
-5. aguardar o CI testar, compilar e empacotar;
-6. `release.yml` publica apenas os artifacts daquele mesmo CI verde e fixa a tag no SHA validado.
+5. garantir que o certificado/secrets de code signing estejam configurados;
+6. aguardar o CI testar, assinar, validar Authenticode, compilar e empacotar;
+7. `release.yml` publica apenas os artifacts daquele mesmo CI verde e fixa a tag no SHA validado.
 
 ## Validação física
 
