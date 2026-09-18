@@ -124,7 +124,7 @@
 - [x] Confirmar CI `web`, `bridge`, `fiscal-compatibility`, `danfe-print`, `windows-package` no HEAD final.
 - [x] Confirmar CodeQL no HEAD final.
 - [x] Revisar diff entre o SHA inicial `e9c2e6d7287f4495e55106306eacf72867049ec6` e HEAD.
-- [x] Não declarar Authenticode externo nem ruleset administrativo como concluídos sem evidência real.
+- [x] Registrar Authenticode e ruleset/branch protection como opcionais e fora do backlog.
 
 
 ## Fechamento em 18/09/2026
