@@ -16,8 +16,6 @@ describe('application shell', () => {
       'src/styles.css',
       'src/batch.css',
       'src/batch/controller.ts',
-      'src/bridge/certificate-controller.ts',
-      'src/danfe/viewer.ts',
       'src/nfe/consultation-controller.ts',
       'src/batch/input.ts',
       'src/batch/ui.ts',
@@ -57,18 +55,15 @@ describe('application shell', () => {
 
   it('keeps certificate selection inside the site and exposes only bridge states', () => {
     const main = readFileSync(fromWeb('src/main.ts'), 'utf8');
-    const controller = readFileSync(fromWeb('src/bridge/certificate-controller.ts'), 'utf8');
 
     expect(main).toContain('id="certificate-select"');
     expect(main).toContain('id="certificate-apply"');
     expect(main).toContain('new BridgeClient()');
-    expect(main).toContain("import { createCertificateController } from './bridge/certificate-controller';");
-    expect(main).toContain('void certificateController.refresh()');
-    expect(controller).toContain('deps.bridge.listCertificates()');
-    expect(controller).toContain('deps.bridge.selectCertificate(thumbprint)');
-    expect(controller).toContain('Bridge conectado');
-    expect(controller).toContain('Bridge não encontrado');
-    expect(controller).toContain('Permissão de acesso local necessária');
+    expect(main).toContain('.listCertificates()');
+    expect(main).toContain('.selectCertificate(');
+    expect(main).toContain('Bridge conectado');
+    expect(main).toContain('Bridge não encontrado');
+    expect(main).toContain('Permissão de acesso local necessária');
     expect(main.toLowerCase()).not.toContain('janela de configuração');
   });
 
@@ -157,21 +152,17 @@ describe('application shell', () => {
 
   it('wires the DANFE preview, local zoom, close and browser print actions', () => {
     const main = readFileSync(fromWeb('src/main.ts'), 'utf8');
-    const viewer = readFileSync(fromWeb('src/danfe/viewer.ts'), 'utf8');
     const css = readFileSync(fromWeb('src/styles.css'), 'utf8');
 
     expect(main).toContain("import { attachDanfeZoom, renderDanfe } from './danfe/render';");
-    expect(main).toContain("import { createDanfeViewer } from './danfe/viewer';");
     expect(main).toContain("import './danfe/styles.css';");
     expect(main).toContain('id="danfe-viewer"');
     expect(main).toContain('Visualizar DANFE');
     expect(main).toContain('Baixar XML');
     expect(main).toContain('Ctrl + scroll para zoom');
-    expect(main).toContain('render: renderDanfe');
-    expect(main).toContain('attachZoom: attachDanfeZoom');
-    expect(viewer).toContain('elements.content.replaceChildren');
-    expect(viewer).toContain('deps.attachZoom(elements.viewer)');
-    expect(viewer).toContain('deps.print()');
+    expect(main).toContain('renderDanfe(item)');
+    expect(main).toContain('attachDanfeZoom(');
+    expect(main).toContain('window.print()');
     expect(css).toContain('.danfe-modal');
     expect(css).toContain('.danfe-scroll');
   });

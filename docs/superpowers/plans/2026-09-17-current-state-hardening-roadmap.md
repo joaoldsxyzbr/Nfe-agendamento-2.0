@@ -583,8 +583,6 @@ Merge only after full CI/CodeQL.
 
 ### Task 6: Extract certificate/Bridge UI coordination
 
-Status: implementado no PR #15 com RED comprovado antes da criação do controller; integração condicionada ao CI/CodeQL verde do head final.
-
 **Files:**
 - Create: `apps/web/src/bridge/certificate-controller.ts`
 - Create: `apps/web/tests/certificate-controller.test.ts`
@@ -606,7 +604,7 @@ export function createCertificateController(
 ): CertificateController;
 ```
 
-- [x] **Step 1: Branch from current `main` after PR C**
+- [ ] **Step 1: Branch from current `main` after PR C**
 
 ```bash
 git switch main
@@ -614,7 +612,7 @@ git pull --ff-only
 git switch -c refactor/certificate-controller
 ```
 
-- [x] **Step 2: Write characterization tests**
+- [ ] **Step 2: Write characterization tests**
 
 Cover:
 
@@ -629,7 +627,7 @@ apply failure -> readable error and controls restored when options exist
 PFX/password/private-key data never appears in UI contract
 ```
 
-- [x] **Step 3: Verify RED**
+- [ ] **Step 3: Verify RED**
 
 ```bash
 npm run test:web -- --run apps/web/tests/certificate-controller.test.ts
@@ -637,11 +635,11 @@ npm run test:web -- --run apps/web/tests/certificate-controller.test.ts
 
 Expected: FAIL because controller does not exist.
 
-- [x] **Step 4: Extract existing certificate UI functions**
+- [ ] **Step 4: Extract existing certificate UI functions**
 
 Move `refreshBridgeAndCertificates`, `applyCertificateSelection`, catalog rendering and bridge/certificate UI state helpers que are exclusively owned by this flow. Keep `BridgeClient` unchanged.
 
-- [x] **Step 5: Wire `main.ts` and verify**
+- [ ] **Step 5: Wire `main.ts` and verify**
 
 ```bash
 npm run test:web -- --run apps/web/tests/certificate-controller.test.ts apps/web/tests/bridge-client.test.ts
@@ -654,7 +652,7 @@ npm run build:web
 
 Expected: all pass.
 
-- [x] **Step 6: Commit and open PR D**
+- [ ] **Step 6: Commit and open PR D**
 
 ```bash
 git add apps/web/src/bridge/certificate-controller.ts apps/web/src/main.ts apps/web/tests/certificate-controller.test.ts
@@ -666,8 +664,6 @@ Merge only after full CI/CodeQL.
 ---
 
 ### Task 7: Decide and, only if necessary, extract the DANFE viewer
-
-Status: extração necessária porque `main.ts` ainda concentrava zoom, modal, Escape/backdrop, impressão e conteúdo renderizado; implementada no PR #16 com RED comprovado antes do módulo.
 
 **Files:**
 - Inspect: `apps/web/src/main.ts`
@@ -689,11 +685,11 @@ export type DanfeViewer = Readonly<{
 export function createDanfeViewer(deps: DanfeViewerDependencies): DanfeViewer;
 ```
 
-- [x] **Step 1: Review `main.ts` after Tasks 4–6**
+- [ ] **Step 1: Review `main.ts` after Tasks 4–6**
 
 Decision rule: if viewer ownership is already small/clear (only a few event handlers and calls), record `viewer extraction not needed` in the PR/architecture docs and do not create another abstraction. If it still owns zoom lifecycle, modal state, print, backdrop/Escape and rendered content as a cohesive block, continue.
 
-- [x] **Step 2: If needed, branch and write RED tests**
+- [ ] **Step 2: If needed, branch and write RED tests**
 
 Cover:
 
@@ -715,11 +711,11 @@ npm run test:web -- --run apps/web/tests/danfe-viewer.test.ts
 
 Expected: FAIL before extraction.
 
-- [x] **Step 3: Extract only viewer lifecycle**
+- [ ] **Step 3: Extract only viewer lifecycle**
 
 Do not move renderer/pagination/fiscal layout.
 
-- [x] **Step 4: Run all DANFE gates**
+- [ ] **Step 4: Run all DANFE gates**
 
 ```bash
 npm run test:web -- --run apps/web/tests/danfe-viewer.test.ts apps/web/tests/danfe.test.ts apps/web/tests/danfe-product-table-regression.test.ts
@@ -732,7 +728,7 @@ npm test --prefix tests/playwright
 
 Expected: all pass, including real Chromium A4 regression.
 
-- [x] **Step 5: Commit/open PR E only if code changed**
+- [ ] **Step 5: Commit/open PR E only if code changed**
 
 ```bash
 git add apps/web/src/danfe/viewer.ts apps/web/src/main.ts apps/web/tests/danfe-viewer.test.ts
@@ -745,8 +741,6 @@ If no extraction was needed, make no production-code commit for this task.
 
 ### Task 8: Close the PR #7 migration loop and document frontend boundaries
 
-Status: PR #7 comparado com a `main`; implementação do rate limit já foi absorvida pelo PR #10 e o refactor do frontend pelos PRs #11, #14, #15 e #16. Fronteiras reais documentadas em `docs/architecture/frontend-boundaries.md`. Fechamento do PR #7 e verificação final da `main` permanecem como passos seguintes.
-
 **Files:**
 - Modify: `README.md` and/or existing architecture doc that describes frontend modules
 - PR metadata: close PR #7 only after verification
@@ -755,7 +749,7 @@ Status: PR #7 comparado com a `main`; implementação do rate limit já foi abso
 - Consumes: merged PRs A–E or explicit no-op decision for E.
 - Produces: no ambiguous old branch debt.
 
-- [x] **Step 1: Compare PR #7 material with merged `main`**
+- [ ] **Step 1: Compare PR #7 material with merged `main`**
 
 Expected mapping:
 
@@ -765,7 +759,7 @@ web-main-refactor design -> PRs B/C/D/(E if needed)
 repository/signing design -> Tasks 9/10 documentation
 ```
 
-- [x] **Step 2: Update architecture documentation with actual module ownership**
+- [ ] **Step 2: Update architecture documentation with actual module ownership**
 
 Document the real final files and responsibilities; do not document proposed files that were not created.
 
