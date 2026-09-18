@@ -7,6 +7,7 @@ const certificateController = readFileSync(new URL('../src/bridge/certificate-co
 const consultationController = readFileSync(new URL('../src/nfe/consultation-controller.ts', import.meta.url), 'utf8');
 const siteStates = `${main}\n${certificateController}\n${consultationController}`;
 const ci = readFileSync(new URL('.github/workflows/ci.yml', repoRoot), 'utf8');
+const batchCss = readFileSync(new URL('../src/batch.css', import.meta.url), 'utf8');
 
 function readActiveSources(relativePath: string): string {
   const root = new URL(relativePath, repoRoot);
@@ -44,6 +45,13 @@ describe('final readiness', () => {
     ]) {
       expect(siteStates, `missing UX state: ${state}`).toContain(state);
     }
+  });
+
+  it('keeps the single NF-e consultation card structurally static after success', () => {
+    expect(batchCss).not.toContain(":has(.batch-item[data-state='success']) .batch-run-toolbar");
+    expect(batchCss).not.toContain(".batch-item[data-state='success'] .batch-order");
+    expect(batchCss).not.toContain(".batch-item[data-state='success'] .batch-key");
+    expect(batchCss).not.toContain(".batch-item[data-state='success'] .batch-status");
   });
 
   it('does not reintroduce the removed Central architecture into active code', () => {
