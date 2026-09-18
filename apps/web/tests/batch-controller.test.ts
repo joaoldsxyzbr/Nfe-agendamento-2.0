@@ -299,6 +299,21 @@ describe('batch controller', () => {
     expect(harness.printCalls).toBe(1);
   });
 
+  it('preserves the startup failure message instead of reporting a successful conclusion', async () => {
+    const harness = createHarness({
+      lookup: async () => {
+        throw new Error('Bridge offline durante a consulta');
+      },
+    });
+
+    harness.input.value = KEY_A;
+    harness.controller.syncDraft();
+    await harness.controller.start();
+
+    expect(harness.route.textContent).toBe('Bridge offline durante a consulta');
+    expect(lastItems(harness)[0]?.status).toBe('cancelled');
+  });
+
   it('does not retry SEFAZ after a cancelled Portal fallback', async () => {
     const harness = createHarness({
       lookup: async () => ({
