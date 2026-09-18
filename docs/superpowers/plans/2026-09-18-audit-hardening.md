@@ -34,7 +34,7 @@
 - [x] Escrever testes que exijam máximo de 100 chaves válidas, preservação do erro inicial do lote, elementos `hidden` não exibidos e ZIP sem buffer final monolítico/limite agregado.
 - [x] Confirmar RED no CI.
 - [x] Implementar o mínimo: `MAX_BATCH_ITEMS = 100`, estado final de erro explícito, regra CSS de `hidden`, Blob por partes e teto agregado.
-- [ ] Confirmar GREEN.
+- [x] Confirmar GREEN.
 
 ## Task 2: Hardening do Worker
 
@@ -48,7 +48,7 @@
 - Modify: `apps/web/tests/deploy-config.test.ts`
 
 - [x] Escrever testes para chave de rate limit derivada do IP Cloudflare, limiter separado de update e cache de metadata.
-- [ ] Confirmar RED.
+- [x] Confirmar RED.
 - [x] Implementar limiter por IP para coordenação, novo `UPDATE_RATE_LIMITER` e cache curto da metadata.
 - [ ] Confirmar GREEN.
 
@@ -94,7 +94,7 @@
 
 - [x] Adicionar limpeza de XML temporário com mais de 24 horas no diretório dedicado do Portal.
 - [x] Adicionar E2E em Chromium cobrindo consulta unitária, botão Cancelar, card estático, ações e Nova consulta.
-- [ ] Confirmar GREEN no CI final.
+- [x] Confirmar GREEN no CI final.
 
 ### Cobertura automatizada
 
@@ -117,11 +117,23 @@
 - [x] Pin CodeQL v4 pelo commit atual `1c5b675653bb5c22dbe9b12b556ec555138e09fd`.
 - [x] Atualizar docs para v0.0.16, teto 100, limiter por IP, cache de update e gate Authenticode.
 - [x] Manter ruleset da `main` como pendência externa explícita.
-- [ ] Rodar busca final por referências canônicas obsoletas `0.0.14`.
+- [x] Rodar busca final por referências canônicas obsoletas `0.0.14` — as ocorrências restantes são apenas histórico de releases/planos antigos.
 
 ## Task 7: Verificação final
 
-- [ ] Confirmar CI `web`, `bridge`, `fiscal-compatibility`, `danfe-print`, `windows-package` no HEAD final.
-- [ ] Confirmar CodeQL no HEAD final.
-- [ ] Revisar diff entre o SHA inicial `e9c2e6d7287f4495e55106306eacf72867049ec6` e HEAD.
-- [ ] Não declarar Authenticode externo nem ruleset administrativo como concluídos sem evidência real.
+- [x] Confirmar CI `web`, `bridge`, `fiscal-compatibility`, `danfe-print`, `windows-package` no HEAD final.
+- [x] Confirmar CodeQL no HEAD final.
+- [x] Revisar diff entre o SHA inicial `e9c2e6d7287f4495e55106306eacf72867049ec6` e HEAD.
+- [x] Não declarar Authenticode externo nem ruleset administrativo como concluídos sem evidência real.
+
+
+## Fechamento em 18/09/2026
+
+- HEAD validado: `f8fa77de6e17a18d3c7e303dab1cd0881b7b6b04`.
+- CI: `web`, `bridge`, `fiscal-compatibility`, `danfe-print` e `windows-package` concluídos com sucesso.
+- Web: 169 testes, 29 arquivos, cobertura V8 registrada (55,07% statements / 54,68% branches / 62,45% functions / 56,98% lines).
+- Bridge: 210 testes, 0 erros/falhas; build concluído.
+- Playwright: 3 testes E2E/regressão concluídos.
+- CodeQL: C# e JavaScript/TypeScript concluídos com sucesso.
+- `npm audit`: 0 vulnerabilidades conhecidas no job web e no pacote Playwright.
+- Pendências externas: certificado/secrets Authenticode reais e ruleset administrativo da `main`.
