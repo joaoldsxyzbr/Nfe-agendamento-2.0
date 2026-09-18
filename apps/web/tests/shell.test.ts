@@ -122,7 +122,8 @@ describe('application shell', () => {
     expect(main).toContain('createZip: createStoredZip');
     expect(batchController).toContain('deps.createZip(');
     expect(batchUi).toContain("batchKeysInput.placeholder = 'Cole as chaves, uma por linha'");
-    expect(batchUi).toContain('Máximo de 100 NF-e por lote');
+    expect(batchUi).toContain("import { MAX_BATCH_ITEMS, parseBatchInput } from './input';");
+    expect(batchUi).toContain('Máximo de ${MAX_BATCH_ITEMS} NF-e por lote');
     expect(batchUi).toContain('modeBatch.click()');
     expect(batchUi).toContain("modeControl.style.display = 'none'");
     expect(batchUi).toContain("batchStart.textContent = 'Consultar'");
