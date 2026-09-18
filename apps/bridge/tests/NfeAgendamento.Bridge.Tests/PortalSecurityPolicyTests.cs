@@ -74,6 +74,42 @@ public sealed class PortalSecurityPolicyTests
     }
 
     [Fact]
+    public void Cleanup_removes_only_stale_xml_files_from_the_dedicated_download_directory()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "NfeAgendamento-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var now = new DateTime(2026, 9, 18, 18, 0, 0, DateTimeKind.Utc);
+        var stale = Path.Combine(directory, "stale.xml");
+        var recent = Path.Combine(directory, "recent.xml");
+        var unrelated = Path.Combine(directory, "keep.txt");
+
+        try
+        {
+            File.WriteAllText(stale, "<nfe/>");
+            File.WriteAllText(recent, "<nfe/>");
+            File.WriteAllText(unrelated, "keep");
+            File.SetLastWriteTimeUtc(stale, now.AddDays(-2));
+            File.SetLastWriteTimeUtc(recent, now.AddHours(-2));
+            File.SetLastWriteTimeUtc(unrelated, now.AddDays(-2));
+
+            var removed = PortalSecurityPolicy.CleanupStaleTemporaryDownloads(
+                directory,
+                now,
+                TimeSpan.FromHours(24));
+
+            Assert.Equal(1, removed);
+            Assert.False(File.Exists(stale));
+            Assert.True(File.Exists(recent));
+            Assert.True(File.Exists(unrelated));
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+                Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
     public void Temporary_download_name_is_random_and_contains_no_fiscal_identifier()
     {
         var directory = Path.Combine(Path.GetTempPath(), "NfeAgendamento-tests");
