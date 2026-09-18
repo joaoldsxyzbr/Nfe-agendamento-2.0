@@ -31,9 +31,9 @@
 - Modify: `apps/web/tests/batch-zip.test.ts`
 - Modify: `apps/web/tests/shell.test.ts`
 
-- [ ] Escrever testes que exijam máximo de 100 chaves válidas, preservação do erro inicial do lote, elementos `hidden` não exibidos e ZIP sem buffer final monolítico/limite agregado.
-- [ ] Confirmar RED no CI.
-- [ ] Implementar o mínimo: `MAX_BATCH_ITEMS = 100`, estado final de erro explícito, regra CSS de `hidden`, Blob por partes e teto agregado.
+- [x] Escrever testes que exijam máximo de 100 chaves válidas, preservação do erro inicial do lote, elementos `hidden` não exibidos e ZIP sem buffer final monolítico/limite agregado.
+- [x] Confirmar RED no CI.
+- [x] Implementar o mínimo: `MAX_BATCH_ITEMS = 100`, estado final de erro explícito, regra CSS de `hidden`, Blob por partes e teto agregado.
 - [ ] Confirmar GREEN.
 
 ## Task 2: Hardening do Worker
@@ -47,9 +47,9 @@
 - Modify: `apps/web/tests/update-proxy-worker.test.ts`
 - Modify: `apps/web/tests/deploy-config.test.ts`
 
-- [ ] Escrever testes para chave de rate limit derivada do IP Cloudflare, limiter separado de update e cache de metadata.
+- [x] Escrever testes para chave de rate limit derivada do IP Cloudflare, limiter separado de update e cache de metadata.
 - [ ] Confirmar RED.
-- [ ] Implementar limiter por IP para coordenação, novo `UPDATE_RATE_LIMITER` e cache curto da metadata.
+- [x] Implementar limiter por IP para coordenação, novo `UPDATE_RATE_LIMITER` e cache curto da metadata.
 - [ ] Confirmar GREEN.
 
 ## Task 3: Updater e release exigem Authenticode
@@ -64,10 +64,10 @@
 - Modify: `.github/workflows/ci.yml`
 - Modify: `apps/bridge/tests/NfeAgendamento.Bridge.Tests/WorkflowHardeningStaticTests.cs`
 
-- [ ] Escrever testes que exijam verificação de assinatura depois do SHA-256 e bloqueio de release commit sem assinatura válida.
+- [x] Escrever testes que exijam verificação de assinatura depois do SHA-256 e bloqueio de release commit sem assinatura válida.
 - [ ] Confirmar RED.
-- [ ] Implementar WinVerifyTrust e injeção de verificador no `UpdateService`.
-- [ ] Adicionar gate Authenticode no job `windows-package` para commits `release: v*`.
+- [x] Implementar WinVerifyTrust e injeção de verificador no `UpdateService`.
+- [x] Adicionar gate Authenticode no job `windows-package` para commits `release: v*`.
 - [ ] Confirmar GREEN.
 
 ## Task 4: Acessibilidade do viewer DANFE
@@ -77,12 +77,26 @@
 - Modify: `apps/web/src/main.ts`
 - Modify: `apps/web/tests/danfe-viewer.test.ts`
 
-- [ ] Escrever testes de Tab/Shift+Tab e restauração do foco.
+- [x] Escrever testes de Tab/Shift+Tab e restauração do foco.
 - [ ] Confirmar RED.
-- [ ] Implementar focus trap e retorno ao foco anterior.
+- [x] Implementar focus trap e retorno ao foco anterior.
 - [ ] Confirmar GREEN.
 
-## Task 5: Supply chain e documentação
+## Task 5: Portal e E2E da interface
+
+**Files:**
+- Modify: `apps/bridge/windows/NfeAgendamento.Portal/PortalSecurityPolicy.cs`
+- Modify: `apps/bridge/windows/NfeAgendamento.Portal/PortalWindow.cs`
+- Modify: `apps/bridge/tests/NfeAgendamento.Bridge.Tests/PortalSecurityPolicyTests.cs`
+- Create: `tests/playwright/consultation-flow.spec.ts`
+- Modify: `tests/playwright/playwright.config.ts`
+- Modify: `.github/workflows/ci.yml`
+
+- [x] Adicionar limpeza de XML temporário com mais de 24 horas no diretório dedicado do Portal.
+- [x] Adicionar E2E em Chromium cobrindo consulta unitária, botão Cancelar, card estático, ações e Nova consulta.
+- [ ] Confirmar GREEN no CI final.
+
+## Task 6: Supply chain e documentação
 
 **Files:**
 - Modify: `.github/workflows/codeql.yml`
@@ -95,12 +109,12 @@
 - Modify: `docs/ui/consultation-screen.md`
 - Modify: `README.md`
 
-- [ ] Pin CodeQL v4 pelo commit atual `1c5b675653bb5c22dbe9b12b556ec555138e09fd`.
-- [ ] Atualizar docs para v0.0.16, teto 100, limiter por IP, cache de update e gate Authenticode.
-- [ ] Manter ruleset da `main` como pendência externa explícita.
+- [x] Pin CodeQL v4 pelo commit atual `1c5b675653bb5c22dbe9b12b556ec555138e09fd`.
+- [x] Atualizar docs para v0.0.16, teto 100, limiter por IP, cache de update e gate Authenticode.
+- [x] Manter ruleset da `main` como pendência externa explícita.
 - [ ] Rodar busca final por referências canônicas obsoletas `0.0.14`.
 
-## Task 6: Verificação final
+## Task 7: Verificação final
 
 - [ ] Confirmar CI `web`, `bridge`, `fiscal-compatibility`, `danfe-print`, `windows-package` no HEAD final.
 - [ ] Confirmar CodeQL no HEAD final.
