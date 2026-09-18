@@ -12,13 +12,18 @@ public sealed class UpdateService
 
     private readonly HttpClient _httpClient;
     private readonly string _updateDirectory;
+    private readonly Action<string> _verifySignature;
 
-    public UpdateService(HttpClient httpClient, string updateDirectory)
+    public UpdateService(
+        HttpClient httpClient,
+        string updateDirectory,
+        Action<string> verifySignature)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _updateDirectory = string.IsNullOrWhiteSpace(updateDirectory)
             ? throw new ArgumentException("Diretório de atualização inválido.", nameof(updateDirectory))
             : Path.GetFullPath(updateDirectory);
+        _verifySignature = verifySignature ?? throw new ArgumentNullException(nameof(verifySignature));
     }
 
     public async Task<UpdateCheckResult> CheckAsync(Version currentVersion, CancellationToken cancellationToken)
@@ -92,6 +97,7 @@ public sealed class UpdateService
             }
 
             await VerifyDigestAsync(temporaryPath, asset.Digest, cancellationToken);
+            _verifySignature(temporaryPath);
             File.Move(temporaryPath, finalPath, overwrite: true);
             return finalPath;
         }
