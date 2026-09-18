@@ -1,4 +1,4 @@
-import { parseBatchInput } from './input';
+import { MAX_BATCH_ITEMS, parseBatchInput } from './input';
 
 function applyUnifiedConsultationUi(): boolean {
   const batchPanel = document.querySelector<HTMLElement>('#batch-consultation-panel');
@@ -15,7 +15,7 @@ function applyUnifiedConsultationUi(): boolean {
   }
 
   batchKeysInput.placeholder = 'Cole as chaves, uma por linha';
-  batchHelp.textContent = 'As chaves válidas aparecem abaixo antes de consultar. Sem limite fixo de quantidade; as NF-e são processadas uma por vez e o Portal é usado quando a proteção fiscal exigir.';
+  batchHelp.textContent = `As chaves válidas aparecem abaixo antes de consultar. Máximo de ${MAX_BATCH_ITEMS} NF-e por lote; as NF-e são processadas uma por vez e o Portal é usado quando a proteção fiscal exigir.`;
   batchStart.textContent = 'Consultar';
 
   // A interface é única: uma chave usa o mesmo fluxo seguro de uma lista com um item.
