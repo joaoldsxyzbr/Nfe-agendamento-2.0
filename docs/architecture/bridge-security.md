@@ -251,14 +251,12 @@ Limitação de migração: a v0.0.15 já publicada não pode ter seu updater emb
 
 O projeto não mantém login, usuários, histórico fiscal, banco ou fila. Fora o thumbprint do certificado e os dados internos necessários ao perfil do WebView2, operações de consulta são efêmeras.
 
-## Hardening externo ainda pendente
+## Controles opcionais
 
-Dois controles não são implementáveis apenas pelo código atual:
+Authenticode e branch protection/rulesets não são requisitos deste projeto.
 
-- **Authenticode:** App, Bridge, Portal e Setup continuam sem assinatura de publisher até existir certificado de code signing e segredo seguro para o pipeline;
-- **proteção da `main`:** branch protection/rulesets e required status checks dependem de permissão administrativa/configuração do GitHub.
-
-Não tratar SHA de artifact, proxy HTTPS do domínio oficial ou validação interna do updater como substitutos de Authenticode.
+- **Authenticode:** o pipeline conserva suporte opcional à assinatura quando existir certificado/secrets. Sem eles, os artefatos podem ser publicados sem assinatura. O updater continua exigindo origem esperada, tamanho e SHA-256.
+- **proteção da `main`:** não existe ruleset ativo e isso não é considerado pendência. CI e CodeQL continuam fornecendo verificação automatizada em pushes para a `main`.
 
 ## Checklist de produção
 
@@ -275,4 +273,4 @@ Antes de uso real:
 9. validar que `webView2Available` reflete o Runtime;
 10. validar helper WebView2/Portal oficial e cancelamento/reconexão;
 11. executar `docs/testing/acceptance.md` e registrar os resultados;
-12. não declarar publisher assinado nem proteção de branch enquanto os hardenings externos acima não forem configurados.
+12. se Authenticode for configurado futuramente, confirmar a assinatura dos artefatos; esse controle continua opcional.
