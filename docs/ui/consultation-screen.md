@@ -84,7 +84,7 @@ Quando a entrada contém zero ou uma chave válida, a própria interface aplica 
 - **Consultar** aparece antes da execução e é substituído por **Nova consulta** quando a tentativa termina;
 - **Visualizar DANFE** e **Baixar XML** continuam disponíveis normalmente quando existe XML validado.
 
-Quando a única NF-e termina com sucesso, o resultado é reduzido novamente para priorizar apenas a informação útil: número/série da NF-e, emitente, valor e as ações **Visualizar DANFE** / **Baixar XML**. Nesse estado, ordem, chave abreviada, badges de status/origem e a barra de progresso são ocultados visualmente. Os dados continuam presentes no estado da aplicação; a mudança é apenas de apresentação.
+Quando a única NF-e termina, o card mantém a mesma estrutura visual usada durante o processamento. A linha não é recolhida e a barra de progresso não desaparece; apenas status, detalhes e disponibilidade das ações são atualizados. Isso evita mudança de altura e reposicionamento do conteúdo após a conclusão.
 
 Ao informar duas ou mais chaves válidas, a tela volta automaticamente ao layout expandido e exibe novamente as ações coletivas. A mudança de compactação é somente visual, controlada pela classe `is-compact-single`; processamento, fila, fallback e proteção fiscal não são alterados.
 
@@ -112,7 +112,7 @@ O bloco de processamento mostra `concluídos/total`, rota atual e:
 - **Baixar XMLs (.zip)**;
 - **Imprimir DANFEs**.
 
-ZIP e impressão usam somente NF-e concluídas. Cancelar não apaga resultados já concluídos. No modo compacto de uma NF-e, ZIP e impressão conjunta são ocultados por não trazerem benefício para uma única nota. Depois do sucesso de uma única NF-e, o bloco de progresso também é ocultado para manter o resultado dentro de uma área menor.
+ZIP e impressão usam somente NF-e concluídas. Cancelar não apaga resultados já concluídos. No modo compacto de uma NF-e, ZIP e impressão conjunta são ocultados por não trazerem benefício para uma única nota. O bloco de progresso permanece visível depois da conclusão para preservar a estrutura estática do card.
 
 ## Fluxo híbrido SEFAZ → Portal
 
