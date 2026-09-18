@@ -45,6 +45,46 @@ internal static class PortalSecurityPolicy
         return Path.Combine(directory, $"{Guid.NewGuid():N}.xml");
     }
 
+    internal static int CleanupStaleTemporaryDownloads(
+        string directory,
+        DateTime utcNow,
+        TimeSpan maxAge)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(directory);
+        if (maxAge <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(maxAge));
+
+        if (!Directory.Exists(directory))
+            return 0;
+
+        var removed = 0;
+        try
+        {
+            foreach (var path in Directory.EnumerateFiles(directory, "*.xml", SearchOption.TopDirectoryOnly))
+            {
+                try
+                {
+                    var age = utcNow - File.GetLastWriteTimeUtc(path);
+                    if (age < maxAge)
+                        continue;
+
+                    File.Delete(path);
+                    removed++;
+                }
+                catch (Exception exception) when (
+                    exception is IOException or UnauthorizedAccessException)
+                {
+                }
+            }
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException)
+        {
+        }
+
+        return removed;
+    }
+
     private static bool TryCreateOfficialHttpsUri(string? uri, out Uri? parsed)
     {
         if (Uri.TryCreate(uri, UriKind.Absolute, out var candidate) &&
