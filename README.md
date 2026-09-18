@@ -13,11 +13,11 @@ NFe Agendamento é um aplicativo interno para consultar NF-e, baixar XML e gerar
 - **Helper Portal:** WinForms/WebView2 persistente para o fallback pelo Portal Nacional; hCaptcha continua sempre manual.
 - **Certificado A1:** descoberto em `CurrentUser/My`; PFX, senha e chave privada nunca são enviados ao site ou ao Cloudflare.
 - **Persistência local:** thumbprint selecionado em `%LOCALAPPDATA%/NfeAgendamentoBridge/settings.json`, regras locais de fornecedor em `supplier-rules.json` e metadados da proteção fiscal em `fiscal-usage.json`.
-- **Versão canônica atual:** `0.0.14`; a publicação da release é automatizada somente após o CI do commit `release: v0.0.14` ficar verde.
+- **Versão canônica atual:** `0.0.15`; a publicação da release é automatizada somente após o CI do commit `release: v0.0.15` ficar verde.
 
 Não existem Central, pareamento, servidor LAN, mDNS ou pasta compartilhada na arquitetura atual. Cada PC usa seu próprio Bridge.
 
-## Estado funcional — 17/09/2026
+## Estado funcional — 18/09/2026
 
 Implementado e coberto pelos gates automatizados aplicáveis:
 
@@ -167,12 +167,12 @@ O CI usa o Wrangler do lockfile e executa `./node_modules/.bin/wrangler deploy -
 
 ## Distribuição Windows
 
-Versão canônica da release: **v0.0.14**.
+Versão canônica da release: **v0.0.15**.
 
 Asset principal:
 
 ```text
-NFeAgendamentoBridge-Setup-v0.0.14.exe
+NFeAgendamentoBridge-Setup-v0.0.15.exe
 ```
 
 O instalador é por usuário, não pede administrador, mantém App + Bridge + helper Portal lado a lado, cria atalho no Menu Iniciar, registra início automático e preserva `%LOCALAPPDATA%\NfeAgendamentoBridge` — incluindo configurações locais como `settings.json`, `fiscal-usage.json` e `supplier-rules.json`.
@@ -190,7 +190,7 @@ O Microsoft Edge WebView2 Runtime é necessário para o fallback pelo Portal Nac
 
 ## Validação física
 
-O CI não consegue provar interação real com certificado A1, SEFAZ, Portal/hCaptcha ou uma impressora específica. Para declarar a v0.0.14 fisicamente validada, executar:
+O CI não consegue provar interação real com certificado A1, SEFAZ, Portal/hCaptcha ou uma impressora específica. Para declarar a v0.0.15 fisicamente validada, executar:
 
 - `docs/testing/acceptance.md`;
 - `docs/testing/batch-query.md`;
@@ -218,4 +218,4 @@ Não provoque bloqueio `656` repetindo consultas artificialmente apenas para tes
 - atualizador: `docs/testing/bridge-updater.md`;
 - DANFE: `docs/testing/danfe-layout.md`;
 - tela de consulta: `docs/ui/consultation-screen.md`;
-- release atual: `docs/releases/v0.0.14.md`.
+- release atual: `docs/releases/v0.0.15.md`.
