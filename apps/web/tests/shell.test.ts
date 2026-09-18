@@ -140,10 +140,10 @@ describe('application shell', () => {
     expect(batchCss).toContain('#batch-consultation-panel.is-compact-single #batch-form textarea');
     expect(batchCss).toContain('#batch-consultation-panel.is-compact-single .batch-toolbar-actions #batch-zip');
     expect(batchCss).toContain('#batch-consultation-panel.is-compact-single .batch-toolbar-actions #batch-print');
-    expect(batchCss).toContain(":has(.batch-item[data-state='success']) .batch-run-toolbar");
-    expect(batchCss).toContain(".batch-item[data-state='success'] .batch-order");
-    expect(batchCss).toContain(".batch-item[data-state='success'] .batch-status");
-    expect(batchCss).toContain(".batch-item[data-state='success'] .batch-details");
+    expect(batchCss).not.toContain(":has(.batch-item[data-state='success']) .batch-run-toolbar {");
+    expect(batchCss).not.toContain(".batch-item[data-state='success'] .batch-order,");
+    expect(batchCss).not.toContain(".batch-item[data-state='success'] .batch-key,");
+    expect(batchCss).not.toContain(".batch-item[data-state='success'] .batch-status {");
   });
 
   it('shows a clear message for cancelled NF-e status 653', () => {
