@@ -21,12 +21,27 @@ function createHarness() {
   let zoomDetach = 0;
   let printCalls = 0;
   let focusCalls = 0;
+  let printFocusCalls = 0;
+  let previousFocusCalls = 0;
+  let activeElement: Element | null = null;
 
+  const previousFocus = {
+    focus: () => {
+      previousFocusCalls += 1;
+      activeElement = previousFocus as unknown as Element;
+    },
+  } as unknown as HTMLElement;
+  activeElement = previousFocus;
+
+  let closeButton: HTMLButtonElement;
+  let printButton: HTMLButtonElement;
   const viewer = {
     hidden: true,
     addEventListener: (type: string, listener: EventListenerOrEventListenerObject) => {
       viewerListeners.set(type, listener as (event: Event) => void);
     },
+    removeEventListener: () => undefined,
+    querySelectorAll: () => [closeButton, printButton],
   } as unknown as HTMLElement;
 
   const title = { textContent: '' } as HTMLElement;
@@ -35,12 +50,23 @@ function createHarness() {
       contentChildren.splice(0, contentChildren.length, ...children);
     },
   } as unknown as HTMLElement;
-  const closeButton = {
-    focus: () => { focusCalls += 1; },
+  closeButton = {
+    disabled: false,
+    focus: () => {
+      focusCalls += 1;
+      activeElement = closeButton;
+    },
     addEventListener: () => undefined,
+    removeEventListener: () => undefined,
   } as unknown as HTMLButtonElement;
-  const printButton = {
+  printButton = {
+    disabled: false,
+    focus: () => {
+      printFocusCalls += 1;
+      activeElement = printButton;
+    },
     addEventListener: () => undefined,
+    removeEventListener: () => undefined,
   } as unknown as HTMLButtonElement;
 
   const deps: DanfeViewerDependencies = {
@@ -57,6 +83,7 @@ function createHarness() {
     addDocumentKeydownListener: (listener: (event: KeyboardEvent) => void) => {
       documentListeners.set('keydown', listener);
     },
+    getActiveElement: () => activeElement,
     print: () => { printCalls += 1; },
   };
 
@@ -74,6 +101,11 @@ function createHarness() {
     get zoomDetach() { return zoomDetach; },
     get printCalls() { return printCalls; },
     get focusCalls() { return focusCalls; },
+    get printFocusCalls() { return printFocusCalls; },
+    get previousFocusCalls() { return previousFocusCalls; },
+    setActiveElement: (element: Element | null) => { activeElement = element; },
+    closeButton,
+    printButton,
   };
 }
 
@@ -114,6 +146,43 @@ describe('DANFE viewer', () => {
     expect(h.contentChildren).toHaveLength(0);
     expect(h.zoomDetach).toBe(1);
     expect(h.classNames.has('danfe-open')).toBe(false);
+  });
+
+  it('restores focus to the element that opened the viewer', () => {
+    const h = createHarness();
+    h.controller.open(parsed());
+
+    h.controller.close();
+
+    expect(h.previousFocusCalls).toBe(1);
+  });
+
+  it('traps Tab and Shift+Tab inside the open dialog', () => {
+    const h = createHarness();
+    const keydown = h.documentListeners.get('keydown');
+    expect(keydown).toBeDefined();
+
+    h.controller.open(parsed());
+    h.setActiveElement(h.printButton);
+    let prevented = 0;
+    keydown?.({
+      key: 'Tab',
+      shiftKey: false,
+      preventDefault: () => { prevented += 1; },
+    } as unknown as KeyboardEvent);
+
+    expect(prevented).toBe(1);
+    expect(h.focusCalls).toBe(2);
+
+    h.setActiveElement(h.closeButton);
+    keydown?.({
+      key: 'Tab',
+      shiftKey: true,
+      preventDefault: () => { prevented += 1; },
+    } as unknown as KeyboardEvent);
+
+    expect(prevented).toBe(2);
+    expect(h.printFocusCalls).toBe(1);
   });
 
   it('handles Escape only while visible', () => {
