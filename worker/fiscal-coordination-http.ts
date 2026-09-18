@@ -1,6 +1,5 @@
 import type { FiscalCoordinationDecision } from './fiscal-coordinator-core';
 
-export const COORDINATION_RATE_LIMIT_KEY = 'fiscal-coordination';
 export const COORDINATION_RATE_LIMIT_PERIOD_SECONDS = 60;
 
 const COORDINATION_PREFIX = '/api/fiscal-coordination/';
@@ -9,7 +8,7 @@ const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 type FiscalOperation = 'reserve' | 'block';
 
 type FiscalCoordinationDependencies = Readonly<{
-  rateLimit: () => Promise<unknown>;
+  rateLimit: (key: string) => Promise<unknown>;
   executeFiscal: (
     operation: FiscalOperation,
     namespace: string,
@@ -41,7 +40,7 @@ export async function handleFiscalCoordinationRequest(
 
   let rateLimitResult: unknown;
   try {
-    rateLimitResult = await dependencies.rateLimit();
+    rateLimitResult = await dependencies.rateLimit(clientRateLimitKey(request));
   } catch {
     return json({ error: 'rate_limiter_unavailable' }, 503);
   }
@@ -64,6 +63,12 @@ export async function handleFiscalCoordinationRequest(
   const namespace = await sha256Hex(token);
   const decision = await dependencies.executeFiscal(operation, namespace);
   return decisionResponse(decision);
+}
+
+function clientRateLimitKey(request: Request): string {
+  const raw = request.headers.get('CF-Connecting-IP')?.trim() ?? '';
+  const normalized = /^[0-9A-Fa-f:.]{3,45}$/.test(raw) ? raw.toLowerCase() : 'unknown';
+  return `ip:${normalized}`;
 }
 
 function routeOperation(pathname: string): FiscalOperation | null {
