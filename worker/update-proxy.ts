@@ -8,6 +8,9 @@ const SHA256_PATTERN = /^sha256:[0-9a-f]{64}$/i;
 
 type UpdateProxyDependencies = Readonly<{
   fetchUpstream: (request: Request) => Promise<Response>;
+  rateLimit?: (key: string) => Promise<unknown>;
+  cacheMatch?: (request: Request) => Promise<Response | undefined>;
+  cachePut?: (request: Request, response: Response) => Promise<void>;
 }>;
 
 type GithubAsset = Readonly<{
@@ -36,7 +39,27 @@ export async function handleUpdateRequest(
       return json({ error: 'method_not_allowed' }, 405, { Allow: 'GET' });
     }
 
-    return proxyLatestRelease(url.origin, dependencies);
+    const rateLimited = await applyRateLimit(request, dependencies);
+    if (rateLimited) return rateLimited;
+
+    const cacheKey = new Request(url.toString(), { method: 'GET' });
+    try {
+      const cached = await dependencies.cacheMatch?.(cacheKey);
+      if (cached) return withHeader(cached, 'X-NFe-Update-Cache', 'HIT');
+    } catch {
+      // Cache é otimização: falha do edge cache não bloqueia atualização.
+    }
+
+    const response = await proxyLatestRelease(url.origin, dependencies);
+    if (!response.ok) return response;
+
+    const cacheable = withHeader(response, 'X-NFe-Update-Cache', 'MISS');
+    try {
+      await dependencies.cachePut?.(cacheKey, cacheable.clone());
+    } catch {
+      // Cache é best-effort; a resposta validada ainda pode ser usada.
+    }
+    return cacheable;
   }
 
   if (url.pathname.startsWith(DOWNLOAD_PREFIX)) {
@@ -44,6 +67,8 @@ export async function handleUpdateRequest(
       return json({ error: 'method_not_allowed' }, 405, { Allow: 'GET' });
     }
 
+    const rateLimited = await applyRateLimit(request, dependencies);
+    if (rateLimited) return rateLimited;
     return proxyInstaller(url.pathname, dependencies);
   }
 
@@ -117,7 +142,7 @@ async function proxyLatestRelease(
       },
     ],
   }, 200, {
-    'Cache-Control': 'no-store',
+    'Cache-Control': 'public, max-age=60, s-maxage=300',
   });
 }
 
@@ -173,6 +198,56 @@ function parseInstallerPath(pathname: string): Readonly<{ tag: string; name: str
   }
 
   return { tag: match[1], name: match[2] };
+}
+
+async function applyRateLimit(
+  request: Request,
+  dependencies: UpdateProxyDependencies,
+): Promise<Response | null> {
+  if (!dependencies.rateLimit) return null;
+
+  let result: unknown;
+  try {
+    result = await dependencies.rateLimit(clientRateLimitKey(request));
+  } catch {
+    return json({ error: 'rate_limiter_unavailable' }, 503);
+  }
+
+  if (!isRateLimitResult(result)) {
+    return json({ error: 'rate_limiter_unavailable' }, 503);
+  }
+
+  if (!result.success) {
+    return json(
+      { error: 'rate_limited', retryAfterSeconds: 60 },
+      429,
+      { 'Retry-After': '60' },
+    );
+  }
+
+  return null;
+}
+
+function clientRateLimitKey(request: Request): string {
+  const raw = request.headers.get('CF-Connecting-IP')?.trim() ?? '';
+  const normalized = /^[0-9A-Fa-f:.]{3,45}$/.test(raw) ? raw.toLowerCase() : 'unknown';
+  return `ip:${normalized}`;
+}
+
+function isRateLimitResult(value: unknown): value is Readonly<{ success: boolean }> {
+  return typeof value === 'object'
+    && value !== null
+    && typeof (value as { success?: unknown }).success === 'boolean';
+}
+
+function withHeader(response: Response, name: string, value: string): Response {
+  const headers = new Headers(response.headers);
+  headers.set(name, value);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 }
 
 function githubHeaders(userAgent: string): Headers {
