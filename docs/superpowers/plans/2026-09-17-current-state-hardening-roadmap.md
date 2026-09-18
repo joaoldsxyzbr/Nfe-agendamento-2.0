@@ -583,6 +583,8 @@ Merge only after full CI/CodeQL.
 
 ### Task 6: Extract certificate/Bridge UI coordination
 
+Status: implementado no PR #15 com RED comprovado antes da criação do controller; integração condicionada ao CI/CodeQL verde do head final.
+
 **Files:**
 - Create: `apps/web/src/bridge/certificate-controller.ts`
 - Create: `apps/web/tests/certificate-controller.test.ts`
@@ -604,7 +606,7 @@ export function createCertificateController(
 ): CertificateController;
 ```
 
-- [ ] **Step 1: Branch from current `main` after PR C**
+- [x] **Step 1: Branch from current `main` after PR C**
 
 ```bash
 git switch main
@@ -612,7 +614,7 @@ git pull --ff-only
 git switch -c refactor/certificate-controller
 ```
 
-- [ ] **Step 2: Write characterization tests**
+- [x] **Step 2: Write characterization tests**
 
 Cover:
 
@@ -627,7 +629,7 @@ apply failure -> readable error and controls restored when options exist
 PFX/password/private-key data never appears in UI contract
 ```
 
-- [ ] **Step 3: Verify RED**
+- [x] **Step 3: Verify RED**
 
 ```bash
 npm run test:web -- --run apps/web/tests/certificate-controller.test.ts
@@ -635,11 +637,11 @@ npm run test:web -- --run apps/web/tests/certificate-controller.test.ts
 
 Expected: FAIL because controller does not exist.
 
-- [ ] **Step 4: Extract existing certificate UI functions**
+- [x] **Step 4: Extract existing certificate UI functions**
 
 Move `refreshBridgeAndCertificates`, `applyCertificateSelection`, catalog rendering and bridge/certificate UI state helpers que are exclusively owned by this flow. Keep `BridgeClient` unchanged.
 
-- [ ] **Step 5: Wire `main.ts` and verify**
+- [x] **Step 5: Wire `main.ts` and verify**
 
 ```bash
 npm run test:web -- --run apps/web/tests/certificate-controller.test.ts apps/web/tests/bridge-client.test.ts
@@ -652,7 +654,7 @@ npm run build:web
 
 Expected: all pass.
 
-- [ ] **Step 6: Commit and open PR D**
+- [x] **Step 6: Commit and open PR D**
 
 ```bash
 git add apps/web/src/bridge/certificate-controller.ts apps/web/src/main.ts apps/web/tests/certificate-controller.test.ts
