@@ -79,7 +79,7 @@
 .payment-item + .payment-item { border-left: 1px solid #111; }
 
 .refined-total-grid { display: block; }
-.total-row { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+.total-row-primary, .total-row-secondary { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
 .total-row + .total-row { border-top: 1px solid #111; }
 .total-row > div { min-height: 27px; padding: 3px 4px 2px; border-right: 1px solid #111; }
 .total-row > div:last-child { border-right: 0; }
