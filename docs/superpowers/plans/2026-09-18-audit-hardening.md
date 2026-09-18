@@ -129,7 +129,7 @@
 
 ## Fechamento em 18/09/2026
 
-- HEAD validado: `f8fa77de6e17a18d3c7e303dab1cd0881b7b6b04`.
+- Snapshot técnico validado antes do fechamento documental: `f8fa77de6e17a18d3c7e303dab1cd0881b7b6b04`; commits posteriores deste fechamento alteram somente documentação do plano.
 - CI: `web`, `bridge`, `fiscal-compatibility`, `danfe-print` e `windows-package` concluídos com sucesso.
 - Web: 169 testes, 29 arquivos, cobertura V8 registrada (55,07% statements / 54,68% branches / 62,45% functions / 56,98% lines).
 - Bridge: 210 testes, 0 erros/falhas; build concluído.
