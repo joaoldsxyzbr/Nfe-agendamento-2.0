@@ -64,17 +64,19 @@ Certificados sem chave RSA não têm uma derivação estável segura implementad
 
 Antes de calcular o namespace fiscal ou acessar `FiscalCoordinator`, o Worker aplica o binding nativo `COORDINATION_RATE_LIMITER` do Cloudflare Workers como uma barreira grosseira contra abuso e custo.
 
-Política inicial:
+Política atual:
 
-- chave lógica global: `fiscal-coordination`;
-- limite: 300 requisições por 60 segundos;
+- chave de abuso derivada do `CF-Connecting-IP` do cliente, sem dado fiscal;
+- limite: 60 requisições por 60 segundos por chave de IP no binding;
 - `429` com `Retry-After: 60` quando o limiter negar;
 - `503` quando o binding falhar ou retornar resultado inválido;
 - nenhum caminho `429`/`503` por esse gate acessa o `FiscalCoordinator`.
 
 O rate limiter HTTP **não** é o mecanismo de contabilidade fiscal. Seus contadores podem ser aproximados e distribuídos pela infraestrutura Cloudflare. O teto fiscal conservador e exato continua pertencendo ao `FiscalUsageGuard` local e ao `FiscalCoordinator` transacional.
 
-A ordem do Worker é: validar método, bearer e rota conhecida; aplicar o rate limiter; somente depois calcular SHA-256 da credencial e acessar o Durable Object. O binding recebe somente a chave constante `fiscal-coordination`; esta camada não adiciona CNPJ, chave NF-e, XML, PFX, senha, thumbprint ou chave privada ao tráfego Cloudflare.
+A ordem do Worker é: validar método, formato do bearer e rota conhecida; aplicar o rate limiter por IP; somente depois calcular SHA-256 da credencial e acessar o Durable Object. O limiter recebe apenas o IP técnico fornecido pela borda Cloudflare; esta camada não adiciona CNPJ, chave NF-e, XML, PFX, senha, thumbprint ou chave privada ao tráfego Cloudflare.
+
+O Worker **não autentica criptograficamente que um bearer foi gerado por um A1**: ele valida o formato e usa o hash da credencial como namespace. Provar essa origem remotamente exigiria um protocolo adicional de registro/desafio e alteraria a fronteira de privacidade atual. O hardening HTTP, portanto, é uma barreira contra abuso/custo; a proteção fiscal exata continua no par `FiscalUsageGuard` + `FiscalCoordinator`.
 
 ## Janela e limite
 
@@ -85,7 +87,7 @@ O estado do Durable Object contém apenas:
 - timestamps UTC das reservas ainda dentro da janela;
 - `blockedUntilUtc` quando houver cooldown compartilhado.
 
-O teto é proteção da rota SEFAZ, não limite de tamanho do lote. O lote pode conter mais itens e muda para Portal quando recebe `consumption_limit`.
+O teto fiscal protege a rota SEFAZ e é independente do limite operacional da interface. A interface aceita no máximo **100 NF-e válidas por lote** para limitar uso de memória; dentro desse teto, o lote muda para Portal quando recebe `consumption_limit`.
 
 ## Eventos de bloqueio
 
