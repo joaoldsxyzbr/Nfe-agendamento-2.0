@@ -162,7 +162,12 @@ jobs:
           $version = "${{ steps.version.outputs.version }}"
           ./scripts/sign-windows-artifacts.ps1 "artifacts/installer/NFeAgendamentoBridge-Setup-v$version.exe"
       - name: Require Authenticode on release commits
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, 'release: v')
+        if: >-
+          ${{
+            github.event_name == 'push' &&
+            github.ref == 'refs/heads/main' &&
+            startsWith(github.event.head_commit.message, 'release: v')
+          }}
         shell: pwsh
         run: |
           $version = "${{ steps.version.outputs.version }}"
