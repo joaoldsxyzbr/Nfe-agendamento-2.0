@@ -311,7 +311,7 @@ describe('batch controller', () => {
     await harness.controller.start();
 
     expect(harness.route.textContent).toBe('Bridge offline durante a consulta');
-    expect(lastItems(harness)[0]?.status).toBe('cancelled');
+    expect(lastItems(harness)[0]?.status).toBe('transport_error');
   });
 
   it('does not retry SEFAZ after a cancelled Portal fallback', async () => {
