@@ -15,7 +15,8 @@ public sealed record UpdateCheckResult(
 
 public static class UpdateReleaseParser
 {
-    private const string RepositoryPath = "/joaoldsxyzbr/Nfe-agendamento-2.0/releases/download/";
+    private const string RepositoryHost = "nfeagendamento.joaolds.xyz.br";
+    private const string RepositoryPath = "/downloads/windows/";
 
     public static UpdateCheckResult Parse(string json, Version currentVersion)
     {
@@ -70,8 +71,8 @@ public static class UpdateReleaseParser
         var downloadUrlText = RequiredString(selectedAsset, "browser_download_url");
         if (!Uri.TryCreate(downloadUrlText, UriKind.Absolute, out var downloadUrl) ||
             !string.Equals(downloadUrl.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) ||
-            !string.Equals(downloadUrl.Host, "github.com", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("A URL do instalador não pertence ao GitHub esperado.");
+            !string.Equals(downloadUrl.Host, RepositoryHost, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("A URL do instalador não pertence ao domínio oficial.");
 
         var expectedPath = RepositoryPath + Uri.EscapeDataString(tag) + "/" + Uri.EscapeDataString(expectedName);
         if (!string.Equals(downloadUrl.AbsolutePath, expectedPath, StringComparison.Ordinal))

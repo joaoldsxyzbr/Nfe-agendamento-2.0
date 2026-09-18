@@ -6,7 +6,7 @@ namespace NfeAgendamento.App.Updater;
 public sealed class UpdateService
 {
     private static readonly Uri LatestReleaseUri = new(
-        "https://api.github.com/repos/joaoldsxyzbr/Nfe-agendamento-2.0/releases/latest");
+        "https://nfeagendamento.joaolds.xyz.br/api/update/latest");
 
     public const long MaxInstallerBytes = 256L * 1024 * 1024;
 

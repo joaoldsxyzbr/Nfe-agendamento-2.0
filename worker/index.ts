@@ -4,6 +4,7 @@ import {
   COORDINATION_RATE_LIMIT_KEY,
   handleFiscalCoordinationRequest,
 } from './fiscal-coordination-http';
+import { handleUpdateRequest } from './update-proxy';
 
 const STATE_KEY = 'fiscal-usage-v1';
 
@@ -27,6 +28,11 @@ export class FiscalCoordinator extends DurableObject {
 
 export default {
   async fetch(request, env) {
+    const updateResponse = await handleUpdateRequest(request, {
+      fetchUpstream: (upstreamRequest) => fetch(upstreamRequest),
+    });
+    if (updateResponse !== null) return updateResponse;
+
     const coordinationResponse = await handleFiscalCoordinationRequest(request, {
       rateLimit: () => env.COORDINATION_RATE_LIMITER.limit({
         key: COORDINATION_RATE_LIMIT_KEY,
