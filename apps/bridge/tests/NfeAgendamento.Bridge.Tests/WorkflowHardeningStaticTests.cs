@@ -38,6 +38,28 @@ public sealed class WorkflowHardeningStaticTests
     }
 
     [Fact]
+    public void Codeql_actions_are_pinned_to_an_immutable_commit_sha()
+    {
+        var codeql = RepositoryFile(".github", "workflows", "codeql.yml");
+        var matches = Regex.Matches(codeql, @"uses:\s+github/codeql-action/[^\s@]+@([^\s#]+)");
+
+        Assert.NotEmpty(matches);
+        foreach (Match match in matches)
+            Assert.Matches("^[0-9a-f]{40}$", match.Groups[1].Value);
+    }
+
+    [Fact]
+    public void Release_commits_require_valid_authenticode_before_artifacts_are_uploaded()
+    {
+        var ci = RepositoryFile(".github", "workflows", "ci.yml");
+
+        Assert.Contains("Require Authenticode on release commits", ci);
+        Assert.Contains("startsWith(github.event.head_commit.message, 'release: v')", ci);
+        Assert.Contains("Get-AuthenticodeSignature", ci);
+        Assert.Contains("Status -ne 'Valid'", ci);
+    }
+
+    [Fact]
     public void Authenticode_script_fails_closed_when_partially_configured_and_cleans_up_credentials()
     {
         var script = RepositoryFile("scripts", "sign-windows-artifacts.ps1");
