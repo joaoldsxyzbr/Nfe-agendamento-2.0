@@ -20,7 +20,15 @@
       "name": "COORDINATION_RATE_LIMITER",
       "namespace_id": "1361318030",
       "simple": {
-        "limit": 300,
+        "limit": 60,
+        "period": 60
+      }
+    },
+    {
+      "name": "UPDATE_RATE_LIMITER",
+      "namespace_id": "1361318031",
+      "simple": {
+        "limit": 30,
         "period": 60
       }
     }
