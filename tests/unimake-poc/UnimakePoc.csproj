@@ -11,7 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Unimake.DFe" Version="[20260908.1441.34]" />
+    <PackageReference Include="Unimake.DFe" Version="[20260915.1624.35]" />
   </ItemGroup>
 
   <ItemGroup>
