@@ -209,6 +209,7 @@ const danfeViewerController = createDanfeViewer({
   bodyClassList: document.body.classList,
   addDocumentKeydownListener: (listener) => document.addEventListener('keydown', listener),
   removeDocumentKeydownListener: (listener) => document.removeEventListener('keydown', listener),
+  getActiveElement: () => document.activeElement,
   print: () => window.print(),
 });
 
