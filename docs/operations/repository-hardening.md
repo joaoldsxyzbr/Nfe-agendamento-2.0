@@ -14,6 +14,7 @@ O CI segue estas regras:
 - Wrangler é executado a partir da dependência instalada pelo lockfile, sem fallback de download pelo `npx`;
 - Inno Setup é fixado em `6.7.1`, instalado da fonte oficial do Chocolatey com verificação de checksum obrigatória e versão conferida antes do build;
 - Playwright fica isolado em `tests/playwright`, com versão/lockfile fixos; o job `danfe-print` gera PDFs A4 reais e executa também um fluxo de navegador da consulta unitária com Bridge interceptado;
+- o job `web` mede cobertura V8 do frontend/Worker e mantém o resumo no log do CI, sem impor um percentual arbitrário como substituto de testes comportamentais;
 - o job `fiscal-compatibility` executa o POC fiscal do `Unimake.DFe` antes de liberar o empacotamento Windows;
 - `windows-package` depende de `web`, `danfe-print`, `bridge` e `fiscal-compatibility`;
 - artifacts de release continuam vindo exclusivamente do mesmo CI verde que validou o commit;
