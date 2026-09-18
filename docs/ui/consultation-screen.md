@@ -10,7 +10,7 @@ A área de ações do canto superior direito contém, nesta ordem:
 2. atalho quadrado **Baixar app para Windows**;
 3. botão quadrado de **Configurações**.
 
-O atalho de download aponta para o Setup da versão canônica publicada (`v0.0.14`). O teste `apps/web/tests/settings-panel.test.ts` cruza a URL do Setup com `Directory.Build.props`, para que um futuro bump de versão não deixe o link silenciosamente desatualizado.
+O atalho de download aponta para o Setup da versão canônica publicada (`v0.0.16`). O teste `apps/web/tests/settings-panel.test.ts` cruza a URL do Setup com `Directory.Build.props`, para que um futuro bump de versão não deixe o link silenciosamente desatualizado.
 
 O cabeçalho usa um único bloco visual à esquerda: símbolo da aplicação e, ao lado, o nome quebrado em duas linhas, **NF-e** e **Agendamento**, separados por uma divisória vertical discreta. A frase de apoio fica logo abaixo do conjunto.
 
@@ -40,7 +40,7 @@ Existe um único campo de consulta:
 - com uma chave válida, o fluxo processa uma NF-e;
 - com várias chaves válidas, o mesmo fluxo monta a lista e processa uma NF-e por vez;
 - duplicadas e inválidas continuam sendo contabilizadas antes da consulta;
-- não existe teto rígido de quantidade imposto pela interface;
+- existe teto operacional de **100 NF-e válidas por lote** para evitar crescimento ilimitado de memória no navegador;
 - certificado, Bridge, DANFE, fallback e proteção fiscal continuam compartilhando as mesmas regras.
 
 O fluxo visível reutiliza o orquestrador sequencial já usado pelo lote. O endpoint fiscal continua unitário: cada NF-e é consultada individualmente, sem chamada fiscal paralela.
@@ -108,7 +108,7 @@ Enquanto não existe XML validado, as duas ações ficam desabilitadas. Assim qu
 
 O bloco de processamento mostra `concluídos/total`, rota atual e:
 
-- **Cancelar lote** durante o processamento;
+- **Cancelar lote** somente durante o processamento; o atributo `hidden` possui regra CSS explícita para não ser sobreposto pelo estilo genérico dos botões;
 - **Baixar XMLs (.zip)**;
 - **Imprimir DANFEs**.
 
@@ -125,7 +125,7 @@ A consulta começa pela SEFAZ e nunca processa duas chaves em paralelo.
 - erro ambíguo de transporte não é repetido automaticamente;
 - falha Portal deixa a linha em erro e oferece ação manual **Tentar pelo Portal**.
 
-A ausência de limite rígido não significa que o Portal seja tratado como serviço oficialmente ilimitado. A interface apenas deixa de impor um teto artificial; o processamento continua sequencial, sujeito ao hCaptcha e ao comportamento do Portal Nacional.
+O teto de 100 é apenas operacional e não altera a proteção fiscal. O processamento continua sequencial, sujeito ao hCaptcha e ao comportamento do Portal Nacional.
 
 Detalhes de arquitetura e aceitação: `docs/superpowers/specs/2026-09-14-batch-query-design.md` e `docs/testing/batch-query.md`.
 
@@ -163,4 +163,5 @@ XML/DANFE ficam em memória no navegador. Recarregar/fechar a página descarta e
 - `apps/web/tests/batch-input.test.ts`
 - `apps/web/tests/batch-zip.test.ts`
 - `apps/web/tests/shell.test.ts`
+- `tests/playwright/consultation-flow.spec.ts`
 - `docs/testing/batch-query.md`
