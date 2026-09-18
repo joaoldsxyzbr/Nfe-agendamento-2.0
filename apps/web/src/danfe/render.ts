@@ -6,7 +6,7 @@ import type { ParsedNfe, ParsedNfeParty, ParsedNfeProduct } from '../nfe/xml';
 const DANFE_ZOOM_MIN = 0.6;
 const DANFE_ZOOM_MAX = 2;
 const DANFE_ZOOM_STEP = 0.1;
-const FIRST_PAGE_PRODUCT_SPACE_MM = 104;
+const FIRST_PAGE_PRODUCT_SPACE_MM = 110;
 const CONTINUATION_PRODUCT_SPACE_MM = 204;
 const ACCESS_KEY_BARCODE_PATTERN = /^[0-9]{6}[A-Z0-9]{12}[0-9]{26}$/;
 
@@ -238,37 +238,42 @@ function buildIssuerRegistry(nfe: ParsedNfe): string {
 function buildRecipient(nfe: ParsedNfe): string {
   const dest = nfe.recipient;
   const address = dest?.address;
+  const exitDateTime = [datePart(nfe.exitedAt), timePart(nfe.exitedAt)].filter(hasText).join(' · ');
+  const cityState = [address?.city, address?.state].filter(hasText).join(' / ');
+  const stateRegistration = [
+    dest?.stateRegistration || '',
+    dest?.stateRegistrationIndicator ? `Ind. ${dest.stateRegistrationIndicator}` : '',
+  ].filter(hasText).join(' · ');
+
   return `<div class="danfe-section-title">Destinatário / Remetente</div>
-    <section class="danfe-block recipient-grid">
-      ${fiscalCell('Nome / Razão social', dest?.name || '')}
-      ${fiscalCell('CNPJ / CPF', formatDocument(dest?.taxId || ''))}
-      ${fiscalCell('Data da emissão', datePart(nfe.issuedAt))}
-      ${fiscalCell('Endereço', joinAddress(address))}
-      ${fiscalCell('Bairro / Distrito', address?.district || '')}
-      ${fiscalCell('CEP', formatCep(address?.postalCode || ''))}
-      ${fiscalCell('Data saída / entrada', datePart(nfe.exitedAt))}
-      ${fiscalCell('Município', address?.city || '')}
-      ${fiscalCell('Fone / Fax', address?.phone || '')}
-      ${fiscalCell('UF', address?.state || '')}
-      ${fiscalCell('Inscrição estadual', dest?.stateRegistration || '')}
-      ${fiscalCell('Hora saída / entrada', timePart(nfe.exitedAt))}
-      ${fiscalCell('Indicador IE', dest?.stateRegistrationIndicator || '')}
-      ${fiscalCell('E-mail', dest?.email || '')}
+    <section class="danfe-block recipient-grid recipient-grid-refined">
+      ${fiscalCell('Nome / Razão social', dest?.name || '', 'recipient-name')}
+      ${fiscalCell('CNPJ / CPF', formatDocument(dest?.taxId || ''), 'recipient-document')}
+      ${fiscalCell('Data da emissão', datePart(nfe.issuedAt), 'recipient-issued')}
+      ${fiscalCell('Endereço', joinAddress(address), 'recipient-address')}
+      ${fiscalCell('Bairro / Distrito', address?.district || '', 'recipient-district')}
+      ${fiscalCell('CEP', formatCep(address?.postalCode || ''), 'recipient-postal')}
+      ${fiscalCell('Data / hora saída / entrada', exitDateTime, 'recipient-exit')}
+      ${fiscalCell('Município / UF', cityState, 'recipient-city')}
+      ${fiscalCell('Fone / Fax', address?.phone || '', 'recipient-phone')}
+      ${fiscalCell('Inscrição estadual / Indicador IE', stateRegistration, 'recipient-state-registration')}
+      ${fiscalCell('E-mail', dest?.email || '', 'recipient-email')}
     </section>`;
 }
 
 function buildPayments(nfe: ParsedNfe): string {
-  const blocks: string[] = [];
+  const groups: string[] = [];
+  const billingItems: string[] = [];
   const invoice = nfe.billing.invoice;
-  if (invoice || nfe.billing.duplicates.length) {
-    const items: string[] = [];
-    if (invoice) {
-      items.push(`<div class="payment-item"><span class="fiscal-label">Fatura</span><strong class="fiscal-value">Nº ${escapeHtml(invoice.number)} · Original ${money(invoice.original)} · Líquido ${money(invoice.net)}</strong></div>`);
-    }
-    for (const duplicate of nfe.billing.duplicates) {
-      items.push(`<div class="payment-item"><span class="fiscal-label">Duplicata ${escapeHtml(duplicate.number)}</span><strong class="fiscal-value">Venc. ${escapeHtml(formatDateOnly(duplicate.dueDate))} · ${money(duplicate.value)}</strong></div>`);
-    }
-    blocks.push(`<div class="danfe-section-title">FATURA / DUPLICATA</div><section class="danfe-block payment-wrap">${items.join('')}</section>`);
+
+  if (invoice) {
+    billingItems.push(`<div class="payment-item"><span class="fiscal-label">Fatura</span><strong class="fiscal-value">Nº ${escapeHtml(invoice.number)} · Original ${money(invoice.original)} · Líquido ${money(invoice.net)}</strong></div>`);
+  }
+  for (const duplicate of nfe.billing.duplicates) {
+    billingItems.push(`<div class="payment-item"><span class="fiscal-label">Duplicata ${escapeHtml(duplicate.number)}</span><strong class="fiscal-value">Venc. ${escapeHtml(formatDateOnly(duplicate.dueDate))} · ${money(duplicate.value)}</strong></div>`);
+  }
+  if (billingItems.length) {
+    groups.push(`<div class="financial-group"><span class="financial-heading">FATURA / DUPLICATA</span><div class="payment-wrap">${billingItems.join('')}</div></div>`);
   }
 
   if (nfe.payments.length) {
@@ -276,22 +281,44 @@ function buildPayments(nfe: ParsedNfe): string {
       const name = payment.methodName || PAYMENT_NAMES[payment.methodCode] || payment.methodCode || 'Não informado';
       return `<div class="payment-item"><span class="fiscal-label">Forma de pagamento</span><strong class="fiscal-value">${escapeHtml(name)} · ${money(payment.value)}</strong></div>`;
     }).join('');
-    blocks.push(`<div class="danfe-section-title">PAGAMENTO</div><section class="danfe-block payment-wrap">${items}</section>`);
+    groups.push(`<div class="financial-group"><span class="financial-heading">PAGAMENTO</span><div class="payment-wrap">${items}</div></div>`);
   }
-  return blocks.join('');
+
+  if (!groups.length) return '';
+  return `<div class="danfe-section-title">Fatura / Duplicata / Pagamento</div><section class="danfe-block financial-strip">${groups.join('')}</section>`;
 }
 
 function buildTotals(nfe: ParsedNfe): string {
   const t = nfe.totals;
-  const fields: Array<[string, number]> = [
-    ['Base de cálc. do ICMS', t.icmsBase], ['Valor do ICMS', t.icms], ['BASE DE CÁLC. ICMS S.T.', t.icmsStBase], ['VALOR DO ICMS SUBST.', t.icmsSt],
-    ['V. Imp. importação', t.importTax], ['V. ICMS UF remet.', t.icmsUfRemet], ['V. FCP UF dest.', t.fcpUfDest], ['VALOR DO PIS', t.pis], ['V. total produtos', t.products],
-    ['Valor do frete', t.freight], ['Valor do seguro', t.insurance], ['Desconto', t.discount], ['Outras despesas', t.other], ['Valor total IPI', t.ipi],
+  const primaryFields: Array<[string, number, string?]> = [
+    ['Base de cálc. do ICMS', t.icmsBase],
+    ['Valor do ICMS', t.icms],
+    ['BASE DE CÁLC. ICMS S.T.', t.icmsStBase],
+    ['VALOR DO ICMS SUBST.', t.icmsSt],
+    ['V. Imp. importação', t.importTax],
+    ['V. ICMS UF remet.', t.icmsUfRemet],
+    ['V. FCP UF dest.', t.fcpUfDest],
+    ['VALOR DO PIS', t.pis],
+    ['V. total produtos', t.products, 'products-total'],
   ];
-  if (nfe.originalXml.includes('<vICMSUFDest>')) fields.push(['V. ICMS UF dest.', t.icmsUfDest]);
-  if (nfe.originalXml.includes('<vTotTrib>')) fields.push(['V. tot. trib.', t.totalTax]);
-  fields.push(['VALOR DA COFINS', t.cofins], ['V. total da nota', t.invoice]);
-  return `<div class="danfe-section-title">Cálculo do imposto</div><section class="danfe-block total-grid">${fields.map(([label, value], index) => fiscalCell(label, moneyFiscal(value), index === fields.length - 1 ? 'invoice-total' : '')).join('')}</section>`;
+  const secondaryFields: Array<[string, number, string?]> = [
+    ['Valor do frete', t.freight],
+    ['Valor do seguro', t.insurance],
+    ['Desconto', t.discount],
+    ['Outras despesas', t.other],
+    ['Valor total IPI', t.ipi],
+  ];
+  if (nfe.originalXml.includes('<vICMSUFDest>')) secondaryFields.push(['V. ICMS UF dest.', t.icmsUfDest]);
+  if (nfe.originalXml.includes('<vTotTrib>')) secondaryFields.push(['V. tot. trib.', t.totalTax]);
+  secondaryFields.push(['VALOR DA COFINS', t.cofins], ['V. total da nota', t.invoice, 'invoice-total']);
+
+  const row = (fields: Array<[string, number, string?]>, className: string) =>
+    `<div class="total-row ${className}">${fields.map(([label, value, extraClass = '']) => fiscalCell(label, moneyFiscal(value), extraClass)).join('')}</div>`;
+
+  return `<div class="danfe-section-title">Cálculo do imposto</div><section class="danfe-block total-grid refined-total-grid">
+    ${row(primaryFields, 'total-row-primary')}
+    ${row(secondaryFields, 'total-row-secondary')}
+  </section>`;
 }
 
 function buildTransport(nfe: ParsedNfe): string {
@@ -300,24 +327,28 @@ function buildTransport(nfe: ParsedNfe): string {
   const carrier = transport.carrier;
   const vehicle = transport.vehicle;
   const volume = transport.volumes[0];
+  const vehiclePlateState = [vehicle.plate, vehicle.state].filter(hasText).join(' / ');
+  const carrierCityState = [carrier.city, carrier.state].filter(hasText).join(' / ');
+  const quantitySpecies = [volume?.quantity ? String(volume.quantity) : '', volume?.species || ''].filter(hasText).join(' / ');
+  const brandNumber = [volume?.brand || '', volume?.number || ''].filter(hasText).join(' / ');
+  const weights = [
+    volume?.grossWeight ? decimal(volume.grossWeight, 3, 3) : '',
+    volume?.netWeight ? decimal(volume.netWeight, 3, 3) : '',
+  ].filter(hasText).join(' / ');
+
   return `<div class="danfe-section-title">Transportador / Volumes transportados</div>
-    <section class="danfe-block transport-grid">
-      ${fiscalCell('Nome / Razão social', carrier.name)}
-      ${fiscalCell('Frete por conta', FREIGHT_NAMES[transport.freightMode] || transport.freightMode)}
-      ${fiscalCell('Código ANTT', vehicle.rntc)}
-      ${fiscalCell('Placa do veículo', vehicle.plate)}
-      ${fiscalCell('UF', vehicle.state)}
-      ${fiscalCell('CNPJ / CPF', formatDocument(carrier.taxId))}
-      ${fiscalCell('Endereço', carrier.address)}
-      ${fiscalCell('Município', carrier.city)}
-      ${fiscalCell('UF', carrier.state)}
-      ${fiscalCell('Inscrição estadual', carrier.stateRegistration)}
-      ${fiscalCell('Quantidade', volume?.quantity ? String(volume.quantity) : '')}
-      ${fiscalCell('Espécie', volume?.species || '')}
-      ${fiscalCell('Marca', volume?.brand || '')}
-      ${fiscalCell('Numeração', volume?.number || '')}
-      ${fiscalCell('Peso bruto', volume?.grossWeight ? decimal(volume.grossWeight, 3, 3) : '')}
-      ${fiscalCell('Peso líquido', volume?.netWeight ? decimal(volume.netWeight, 3, 3) : '')}
+    <section class="danfe-block transport-grid refined-transport-grid">
+      ${fiscalCell('Nome / Razão social', carrier.name, 'transport-name')}
+      ${fiscalCell('Frete por conta', FREIGHT_NAMES[transport.freightMode] || transport.freightMode, 'transport-freight')}
+      ${fiscalCell('CNPJ / CPF', formatDocument(carrier.taxId), 'transport-document')}
+      ${fiscalCell('Código ANTT', vehicle.rntc, 'transport-rntc')}
+      ${fiscalCell('Placa / UF', vehiclePlateState, 'transport-vehicle')}
+      ${fiscalCell('Endereço', carrier.address, 'transport-address')}
+      ${fiscalCell('Município / UF', carrierCityState, 'transport-city')}
+      ${fiscalCell('Inscrição estadual', carrier.stateRegistration, 'transport-state-registration')}
+      ${fiscalCell('Quantidade / Espécie', quantitySpecies, 'transport-volume')}
+      ${fiscalCell('Marca / Numeração', brandNumber, 'transport-brand-number')}
+      ${fiscalCell('Peso bruto / líquido', weights, 'transport-weight')}
     </section>`;
 }
 

@@ -20,6 +20,18 @@ O renderer continua próprio porque também atende regras operacionais internas 
 - grade de produtos com linha vazia `products-filler` para ocupar apenas o espaço restante, sem esticar mercadorias reais;
 - zoom do preview por `Ctrl + scroll`, sem transferir zoom para impressão/PDF.
 
+## Faixa intermediária — tradicional refinado
+
+A faixa entre o cabeçalho fiscal e a grade de produtos segue o padrão **tradicional refinado**: continua com aparência de DANFE convencional, mas reduz subdivisões pequenas e melhora a hierarquia dos dados.
+
+- **Destinatário / Remetente:** 11 células operacionais distribuídas em três linhas. Município/UF, IE/indicador e data/hora de saída são agrupados sem descartar nenhum valor do XML.
+- **Fatura / Duplicata / Pagamento:** cobrança e pagamento compartilham uma única faixa externa; cada grupo mantém seu próprio título fiscal e os itens continuam individualizados.
+- **Cálculo do imposto:** os valores são divididos em duas linhas explícitas. `V. total produtos` e `V. total da nota` recebem ênfase tipográfica, sem alterar os valores ou a origem dos dados.
+- **Transportador / Volumes transportados:** o bloco usa duas linhas lógicas. Placa/UF, município/UF, quantidade/espécie, marca/numeração e pesos bruto/líquido são agrupados para reduzir fragmentação visual.
+- **Grade de produtos:** permanece exatamente no contrato operacional de 13 colunas descrito abaixo.
+
+A compactação libera espaço vertical na primeira folha. O orçamento determinístico de produtos da primeira página passa de **104 mm para 110 mm**; folhas adicionais continuam com 204 mm. O CI `danfe-print` continua sendo o gate para impedir overflow ou regressões A4.
+
 ## Colunas de produtos
 
 A grade visual usa **13 colunas** e prioriza os dados operacionais usados no recebimento. A coluna **Item** é a primeira coluna. **NCM/SH**, **Valor IPI** e **Alíq. IPI** não são exibidos na grade principal; esses dados continuam preservados no XML/modelo fiscal e os totais do DANFE não são alterados.
