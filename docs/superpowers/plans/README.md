@@ -7,7 +7,7 @@ Este diretório preserva planos de implementação como **registro histórico** 
 - estabilização/hardening concluído no código: `2026-09-09-stabilization-hardening-implementation.md`;
 - arquitetura vigente: `../specs/2026-09-09-stabilization-hardening-design.md` + `../../architecture/bridge-security.md`;
 - pendências de validação física: `../../testing/acceptance.md`;
-- release pública atual: `../../releases/v0.0.6.md`.
+- release pública atual: `../../releases/v0.0.16.md`.
 
 ## Planos históricos/superseded
 
@@ -21,11 +21,10 @@ Os planos abaixo registram decisões e passos da época, mas não representam o 
 
 Quando houver conflito entre um plano histórico e o código/documentação atual, prevalecem a spec de estabilização, `README.md`, `docs/architecture/bridge-security.md` e os testes automatizados do HEAD atual.
 
-## Pendências reais após a estabilização
+## Estado atual
 
-O código/CI da rodada de estabilização está concluído. Permanecem fora dessa conclusão:
+O código/CI da rodada de estabilização e do hardening pós-auditoria está concluído.
 
-- teste físico Windows/A1/SEFAZ/Portal conforme `docs/testing/acceptance.md`;
-- Authenticode, quando houver certificado de code signing disponível;
-- branch protection/required status checks, por configuração administrativa do GitHub;
-- publicação de uma nova release somente quando explicitamente solicitada e após validação do commit que será distribuído.
+Authenticode e branch protection/required status checks são opcionais por decisão do projeto em 18/09/2026 e não representam backlog.
+
+A validação física Windows/A1/SEFAZ/Portal permanece separada do CI e só é necessária quando se quiser declarar o comportamento físico do ambiente real validado. Nova release deve ser publicada somente quando explicitamente solicitada e após validação do commit que será distribuído.
