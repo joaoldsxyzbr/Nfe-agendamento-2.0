@@ -96,6 +96,11 @@
 - [x] Adicionar E2E em Chromium cobrindo consulta unitária, botão Cancelar, card estático, ações e Nova consulta.
 - [ ] Confirmar GREEN no CI final.
 
+### Cobertura automatizada
+
+- [x] Adicionar `@vitest/coverage-v8` 5.0.0 pelo lockfile gerado pelo npm.
+- [x] Medir `apps/web/src/**/*.ts` e `worker/**/*.ts` no job web e registrar o resumo no CI.
+
 ## Task 6: Supply chain e documentação
 
 **Files:**
