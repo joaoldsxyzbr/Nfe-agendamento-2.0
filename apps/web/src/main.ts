@@ -4,6 +4,7 @@ import { BridgeClient } from './bridge/client';
 import type { CertificateCatalog, CertificateSummary, NfeLookupResult } from './bridge/contracts';
 import { attachDanfeZoom, renderDanfe } from './danfe/render';
 import { validateAccessKey } from './nfe/access-key';
+import { createConsultationController } from './nfe/consultation-controller';
 import { parseNfeXml, type ParsedNfe } from './nfe/xml';
 import { PortalFallbackController } from './portal/fallback';
 import './styles.css';
@@ -192,7 +193,6 @@ const danfeClose = requireElement<HTMLButtonElement>('#danfe-close');
 const danfePrint = requireElement<HTMLButtonElement>('#danfe-print');
 let currentDownloadUrl: string | null = null;
 let detachDanfeZoom: (() => void) | null = null;
-let activePortalOperationId: string | null = null;
 let consultationMode: ConsultationMode = 'single';
 
 const batchController = createBatchController({
@@ -222,6 +222,24 @@ const batchController = createBatchController({
   hasSelectableCertificates: () => certificateSelect.options.length > 1,
 });
 
+const consultationController = createConsultationController({
+  getAccessKey: () => accessKeyInput.value,
+  clearAccessKey: () => {
+    accessKeyInput.value = '';
+  },
+  validateAccessKey,
+  bridge: bridgeClient,
+  portal: portalFallback,
+  parseXml: parseNfeXml,
+  renderState: renderLookupState,
+  renderFailure: renderLookupFailure,
+  renderSuccess: renderLookupSuccess,
+  renderInvalidXml,
+  setBusy: setLookupBusy,
+  focusInput: () => accessKeyInput.focus(),
+  resetView: renderInitialResult,
+});
+
 certificateApply.addEventListener('click', () => {
   void applyCertificateSelection();
 });
@@ -231,7 +249,7 @@ modeBatch.addEventListener('click', () => setConsultationMode('batch'));
 
 lookupForm.addEventListener('submit', (event) => {
   event.preventDefault();
-  void submitLookup();
+  void consultationController.submit();
 });
 
 batchForm.addEventListener('submit', (event) => {
@@ -245,7 +263,7 @@ batchCancel.addEventListener('click', () => {
 batchZip.addEventListener('click', () => batchController.downloadZip());
 batchPrint.addEventListener('click', () => batchController.printDanfes());
 
-lookupReset.addEventListener('click', resetConsultation);
+lookupReset.addEventListener('click', () => consultationController.reset());
 danfeClose.addEventListener('click', closeDanfe);
 danfePrint.addEventListener('click', () => window.print());
 danfeViewer.addEventListener('click', (event) => {
@@ -256,12 +274,7 @@ document.addEventListener('keydown', (event) => {
 });
 window.addEventListener('pagehide', () => {
   batchController.dispose();
-  if (!activePortalOperationId) return;
-  const operationId = activePortalOperationId;
-  activePortalOperationId = null;
-  void portalFallback.cancel(operationId).catch(() => {
-    // Cancelamento no unload é best-effort; o Bridge também aplica retenção/limpeza terminal.
-  });
+  void consultationController.cancelActivePortal();
 });
 
 void refreshBridgeAndCertificates();
@@ -299,109 +312,6 @@ async function applyCertificateSelection(): Promise<void> {
       ? `Não foi possível selecionar o certificado: ${error.message}`
       : 'Não foi possível selecionar o certificado.';
     setCertificateControlsEnabled(certificateSelect.options.length > 1);
-  }
-}
-
-async function submitLookup(): Promise<void> {
-  const validation = validateAccessKey(accessKeyInput.value);
-  if (!validation.valid) {
-    renderLookupState('Chave inválida', validation.error);
-    accessKeyInput.focus();
-    return;
-  }
-
-  setLookupBusy(true);
-  renderLookupState('Consultando NF-e', 'Aguardando resposta da SEFAZ pelo Bridge local…');
-
-  try {
-    const lookup = await bridgeClient.lookupNfe(validation.value);
-    if (lookup.category === 'success' && lookup.xml) {
-      try {
-        const parsed = await withSupplierRule(parseNfeXml(lookup.xml, validation.value));
-        renderLookupSuccess(parsed);
-      } catch (error) {
-        renderInvalidXml(error);
-      }
-      return;
-    }
-
-    if (
-      lookup.category === 'consumption_limit'
-      || (lookup.category === 'fiscal_status' && lookup.cStat === '217')
-    ) {
-      await runPortalFallback(validation.value, lookup);
-      return;
-    }
-
-    renderLookupFailure(lookup);
-  } catch (error) {
-    renderLookupState(
-      'Consulta não concluída',
-      error instanceof Error ? error.message : 'Não foi possível concluir a consulta da NF-e.',
-    );
-  } finally {
-    setLookupBusy(false);
-  }
-}
-
-async function runPortalFallback(accessKey: string, lookup: NfeLookupResult): Promise<void> {
-  const sefazMessage = lookup.message ?? 'A consulta direta da SEFAZ não retornou o XML e será tentada pelo Portal Nacional.';
-  const sefazStatus = lookup.cStat ? `Status SEFAZ ${lookup.cStat}. ${sefazMessage}` : sefazMessage;
-
-  renderLookupState(
-    'Abrindo consulta alternativa',
-    `${sefazStatus} Abrindo o Portal Nacional da NF-e neste computador. Resolva o hCaptcha manualmente e solicite o XML.`,
-  );
-
-  const operationId = await portalFallback.start(accessKey);
-  activePortalOperationId = operationId;
-  renderLookupState(
-    'Portal Nacional aberto',
-    'Resolva o hCaptcha manualmente na janela do Portal e conclua a consulta. Esta página receberá o XML automaticamente.',
-  );
-
-  try {
-    const portalStatus = await portalFallback.waitForResult(operationId);
-    if (portalStatus.state === 'completed' && portalStatus.xml) {
-      try {
-        const parsed = await withSupplierRule(parseNfeXml(portalStatus.xml, accessKey));
-        renderLookupSuccess(parsed);
-      } catch (error) {
-        renderInvalidXml(error);
-      }
-      return;
-    }
-
-    if (portalStatus.state === 'cancelled') {
-      renderLookupState(
-        'Consulta pelo Portal cancelada',
-        portalStatus.message ?? 'A janela do Portal foi fechada antes de concluir o download do XML.',
-      );
-      return;
-    }
-
-    if (portalStatus.state === 'failed') {
-      renderLookupState(
-        'Portal da NF-e indisponível',
-        portalStatus.message ?? 'Não foi possível concluir a consulta pelo Portal Nacional da NF-e.',
-      );
-      return;
-    }
-
-    renderLookupState('Consulta pelo Portal não concluída', portalStatus.message ?? 'O Portal não retornou XML.');
-  } finally {
-    if (activePortalOperationId === operationId) {
-      activePortalOperationId = null;
-    }
-  }
-}
-
-async function withSupplierRule(parsed: ParsedNfe, signal?: AbortSignal): Promise<ParsedNfe> {
-  try {
-    const resolution = await bridgeClient.resolveSupplier(parsed.issuer.taxId, signal);
-    return { ...parsed, supplierRuleId: resolution.supplierId };
-  } catch {
-    return { ...parsed, supplierRuleId: null };
   }
 }
 
@@ -537,12 +447,6 @@ function renderLookupState(titleText: string, messageText: string): void {
   resetResult();
   lookupReset.hidden = false;
   appendResultState(titleText, messageText);
-}
-
-function resetConsultation(): void {
-  accessKeyInput.value = '';
-  renderInitialResult();
-  accessKeyInput.focus();
 }
 
 function renderInitialResult(): void {

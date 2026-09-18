@@ -22,7 +22,8 @@ describe('site theme', () => {
     expect(main).toContain('<div class="lookup-result" id="result"');
     expect(main).not.toContain('class="result-card"');
     expect(main).toContain('id="lookup-reset"');
-    expect(main).toContain("lookupReset.addEventListener('click', resetConsultation);");
+    expect(main).toContain("lookupReset.addEventListener('click', () => consultationController.reset());");
+    expect(main).toContain("clearAccessKey: () => {");
     expect(main).toContain("accessKeyInput.value = '';");
     expect(main).toContain("appendResultState('Nenhuma NF-e carregada', 'Informe uma chave para iniciar.');");
     expect(styles).toContain('.lookup-result-section');
