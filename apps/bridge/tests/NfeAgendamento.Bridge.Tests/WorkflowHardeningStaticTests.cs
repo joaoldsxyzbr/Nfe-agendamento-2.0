@@ -49,14 +49,12 @@ public sealed class WorkflowHardeningStaticTests
     }
 
     [Fact]
-    public void Release_commits_require_valid_authenticode_before_artifacts_are_uploaded()
+    public void Release_commits_do_not_require_authenticode()
     {
         var ci = RepositoryFile(".github", "workflows", "ci.yml");
 
-        Assert.Contains("Require Authenticode on release commits", ci);
-        Assert.Contains("startsWith(github.event.head_commit.message, 'release: v')", ci);
-        Assert.Contains("Get-AuthenticodeSignature", ci);
-        Assert.Contains("Status -ne 'Valid'", ci);
+        Assert.DoesNotContain("Require Authenticode on release commits", ci);
+        Assert.DoesNotContain("Get-AuthenticodeSignature", ci);
     }
 
     [Fact]
