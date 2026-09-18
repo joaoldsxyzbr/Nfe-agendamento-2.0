@@ -5,14 +5,22 @@ export type ZipTextFile = {
 
 const encoder = new TextEncoder();
 const UTF8_FLAG = 0x0800;
+const DEFAULT_MAX_ZIP_BYTES = 256 * 1024 * 1024;
 
-export function createStoredZip(files: readonly ZipTextFile[]): Blob {
+export function createStoredZip(
+  files: readonly ZipTextFile[],
+  maxBytes = DEFAULT_MAX_ZIP_BYTES,
+): Blob {
   if (files.length === 0) throw new Error('Nenhum arquivo disponível para o ZIP.');
   if (files.length > 0xffff) throw new Error('Quantidade de arquivos excede o limite do ZIP.');
+  if (!Number.isSafeInteger(maxBytes) || maxBytes <= 22) {
+    throw new Error('Limite de tamanho do ZIP inválido.');
+  }
 
   const localParts: Uint8Array[] = [];
   const centralParts: Uint8Array[] = [];
   let localOffset = 0;
+  let projectedArchiveBytes = 22;
 
   for (const file of files) {
     const name = sanitizeName(file.name);
@@ -34,7 +42,6 @@ export function createStoredZip(files: readonly ZipTextFile[]): Blob {
     localView.setUint16(26, nameBytes.length, true);
     localView.setUint16(28, 0, true);
     localHeader.set(nameBytes, 30);
-    localParts.push(localHeader, data);
 
     const centralHeader = new Uint8Array(46 + nameBytes.length);
     const centralView = new DataView(centralHeader.buffer);
@@ -56,8 +63,14 @@ export function createStoredZip(files: readonly ZipTextFile[]): Blob {
     centralView.setUint32(38, 0, true);
     centralView.setUint32(42, localOffset, true);
     centralHeader.set(nameBytes, 46);
-    centralParts.push(centralHeader);
 
+    projectedArchiveBytes += localHeader.length + data.length + centralHeader.length;
+    if (projectedArchiveBytes > maxBytes) {
+      throw new Error('O lote excede o tamanho seguro para gerar o ZIP no navegador.');
+    }
+
+    localParts.push(localHeader, data);
+    centralParts.push(centralHeader);
     localOffset += localHeader.length + data.length;
   }
 
@@ -75,15 +88,7 @@ export function createStoredZip(files: readonly ZipTextFile[]): Blob {
   endView.setUint16(20, 0, true);
 
   const parts = [...localParts, ...centralParts, end];
-  const totalLength = parts.reduce((total, part) => total + part.length, 0);
-  const archive = new Uint8Array(totalLength);
-  let offset = 0;
-  for (const part of parts) {
-    archive.set(part, offset);
-    offset += part.length;
-  }
-
-  return new Blob([archive.buffer], { type: 'application/zip' });
+  return new Blob(parts as BlobPart[], { type: 'application/zip' });
 }
 
 function sanitizeName(name: string): string {
