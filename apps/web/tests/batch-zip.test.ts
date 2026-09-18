@@ -20,4 +20,11 @@ describe('batch ZIP', () => {
   it('rejects empty archives', () => {
     expect(() => createStoredZip([])).toThrow('Nenhum arquivo disponível');
   });
+
+  it('rejects an archive whose aggregate size exceeds the configured safety budget', () => {
+    expect(() => createStoredZip([
+      { name: 'nota-1.xml', content: '1234567890' },
+      { name: 'nota-2.xml', content: 'abcdefghij' },
+    ], 16)).toThrow('tamanho seguro');
+  });
 });
