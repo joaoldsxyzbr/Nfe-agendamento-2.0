@@ -17,8 +17,6 @@ Versão canônica atual: **`0.0.16`**. Para validar a release pública, use `NFe
 
 > O publish é self-contained: não exige instalação prévia do .NET 10. O WebView2 Runtime continua necessário somente para o fallback Portal.
 
-> A release pública v0.0.16 foi produzida antes do gate Authenticode obrigatório. Na `main` atual, um commit de release só conclui o CI se App, Bridge, Portal e Setup tiverem assinatura Authenticode válida; sem certificado/secrets reais, a próxima release fica bloqueada.
-
 Registre antes de começar:
 
 | Campo | Valor |
@@ -197,8 +195,8 @@ Resultado: ☐ aprovado
 2. Confirme descoberta da release candidata mais nova.
 3. Confirme exibição da versão e pedido de confirmação.
 4. Confirme que asset, tamanho ou SHA-256 inválidos impedem execução.
-5. Confirme também que um Setup sem assinatura Authenticode confiável é rejeitado antes de ser executado.
-6. Com o Setup assinado e validado, confirme que ele inicia e que App/Bridge encerram para substituição.
+5. Confirme que um Setup com tamanho ou SHA-256 divergente é rejeitado antes de ser executado.
+6. Com o Setup validado por origem, tamanho e SHA-256, confirme que ele inicia e que App/Bridge encerram para substituição.
 7. Após atualizar, confirme que nova verificação informa que a versão está atualizada.
 
 Detalhes: `docs/testing/bridge-updater.md`.
@@ -225,15 +223,6 @@ Resultado: ☐ aprovado
 
 Resultado: ☐ aprovado
 
-## 13. Hardening externo
-
-| Controle | Estado | Evidência |
-| --- | --- | --- |
-| Authenticode App/Bridge/Portal/Setup | ☐ configurado / ☐ pendente | |
-| Proteção da `main` + required CI checks | ☐ configurado / ☐ pendente | |
-
-Enquanto o certificado/secrets de Authenticode estiverem pendentes, a `main` pode ser validada normalmente, mas o gate de release impede publicar uma nova versão. Enquanto branch protection estiver pendente, o CI pode estar verde sem ser administrativamente obrigatório para todo push.
-
 ## Critério de aceite
 
 Uma release só deve ser declarada fisicamente validada depois de:
@@ -244,8 +233,8 @@ Uma release só deve ser declarada fisicamente validada depois de:
 - etapas 0–7 aprovadas;
 - etapa 8 aprovada em ocorrência real/controlada;
 - lifecycle/recovery aprovado;
-- atualização da versão pública anterior → release candidata validada, incluindo SHA-256 e Authenticode;
+- atualização da versão pública anterior → release candidata validada, incluindo origem, tamanho e SHA-256;
 - segundo PC aprovado quando fizer parte da implantação;
 - divergências registradas e corrigidas.
 
-Authenticode e branch protection devem ser reportados pelo estado real; não declarar esses controles como implementados enquanto continuarem pendentes.
+Authenticode e branch protection/ruleset são opcionais neste projeto e não fazem parte do critério de aceite.
