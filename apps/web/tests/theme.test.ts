@@ -6,12 +6,12 @@ const styles = readFileSync(new URL('../src/styles.css', import.meta.url), 'utf8
 const danfeStyles = readFileSync(new URL('../src/danfe/styles.css', import.meta.url), 'utf8');
 
 describe('site theme', () => {
-  it('keeps the application dark with blue and yellow accents while DANFE stays white', () => {
+  it('keeps the application dark with a restrained blue primary while DANFE stays white', () => {
     expect(styles).toContain('color-scheme: dark');
-    expect(styles).toContain('--bg: #070b12');
-    expect(styles).toContain('--blue: #4b8dff');
-    expect(styles).toContain('--blue-strong: #2f73ea');
-    expect(styles).toContain('--yellow: #f5c542');
+    expect(styles).toContain('--bg: #0b0f14');
+    expect(styles).toContain('--blue: #4c8dff');
+    expect(styles).toContain('--blue-strong: #3378e8');
+    expect(styles).toContain('--yellow: #d9ae42');
     expect(styles).toMatch(/\.certificate-card, \.lookup-card[\s\S]*background:/);
     expect(danfeStyles).toMatch(/\.danfe-page[\s\S]*background:\s*#fff/);
   });

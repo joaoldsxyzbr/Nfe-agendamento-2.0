@@ -193,16 +193,16 @@
   background: #10171f;
 }
 
-.batch-item[data-state="success"] {
+.batch-item[data-state='success'] {
   border-left: 3px solid var(--green);
 }
 
-.batch-item[data-state="portal_waiting_user"] {
+.batch-item[data-state='portal_waiting_user'] {
   border-left: 3px solid var(--yellow);
 }
 
-.batch-item[data-state="transport_error"],
-.batch-item[data-state="portal_error"] {
+.batch-item[data-state='transport_error'],
+.batch-item[data-state='portal_error'] {
   border-left: 3px solid var(--danger);
 }
 
@@ -264,18 +264,18 @@
   white-space: nowrap;
 }
 
-.batch-item[data-state="success"] .batch-status-badge {
+.batch-item[data-state='success'] .batch-status-badge {
   border-color: rgba(79, 195, 148, 0.4);
   color: var(--green);
 }
 
-.batch-item[data-state="portal_waiting_user"] .batch-status-badge {
+.batch-item[data-state='portal_waiting_user'] .batch-status-badge {
   border-color: rgba(217, 174, 66, 0.45);
   color: var(--yellow-soft);
 }
 
-.batch-item[data-state="transport_error"] .batch-status-badge,
-.batch-item[data-state="portal_error"] .batch-status-badge {
+.batch-item[data-state='transport_error'] .batch-status-badge,
+.batch-item[data-state='portal_error'] .batch-status-badge {
   border-color: rgba(239, 113, 128, 0.45);
   color: var(--danger);
 }
@@ -338,27 +338,27 @@
   padding: 9px 10px;
 }
 
-#batch-consultation-panel.is-compact-single:has(.batch-item[data-state="success"]) .batch-run-toolbar {
+#batch-consultation-panel.is-compact-single:has(.batch-item[data-state='success']) .batch-run-toolbar {
   display: none;
 }
 
-#batch-consultation-panel.is-compact-single .batch-item[data-state="success"] {
+#batch-consultation-panel.is-compact-single .batch-item[data-state='success'] {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
   padding: 10px;
 }
 
-#batch-consultation-panel.is-compact-single .batch-item[data-state="success"] .batch-order,
-#batch-consultation-panel.is-compact-single .batch-item[data-state="success"] .batch-key,
-#batch-consultation-panel.is-compact-single .batch-item[data-state="success"] .batch-status {
+#batch-consultation-panel.is-compact-single .batch-item[data-state='success'] .batch-order,
+#batch-consultation-panel.is-compact-single .batch-item[data-state='success'] .batch-key,
+#batch-consultation-panel.is-compact-single .batch-item[data-state='success'] .batch-status {
   display: none;
 }
 
-#batch-consultation-panel.is-compact-single .batch-item[data-state="success"] .batch-item-info {
+#batch-consultation-panel.is-compact-single .batch-item[data-state='success'] .batch-item-info {
   gap: 0;
 }
 
-#batch-consultation-panel.is-compact-single .batch-item[data-state="success"] .batch-details {
+#batch-consultation-panel.is-compact-single .batch-item[data-state='success'] .batch-details {
   color: #e9eff5;
   font-size: 13.5px;
   font-weight: 650;
@@ -366,12 +366,12 @@
   white-space: normal;
 }
 
-#batch-consultation-panel.is-compact-single .batch-item[data-state="success"] .batch-item-actions {
+#batch-consultation-panel.is-compact-single .batch-item[data-state='success'] .batch-item-actions {
   flex-wrap: nowrap;
   justify-content: flex-end;
 }
 
-#batch-consultation-panel.is-compact-single .batch-item[data-state="success"] .batch-action {
+#batch-consultation-panel.is-compact-single .batch-item[data-state='success'] .batch-action {
   min-height: 38px;
   padding: 0 13px;
   font-size: 12.5px;
@@ -435,11 +435,11 @@
     white-space: normal;
   }
 
-  #batch-consultation-panel.is-compact-single .batch-item[data-state="success"] {
+  #batch-consultation-panel.is-compact-single .batch-item[data-state='success'] {
     grid-template-columns: 1fr;
   }
 
-  #batch-consultation-panel.is-compact-single .batch-item[data-state="success"] .batch-item-actions {
+  #batch-consultation-panel.is-compact-single .batch-item[data-state='success'] .batch-item-actions {
     grid-column: 1;
   }
 }
