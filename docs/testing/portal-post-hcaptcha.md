@@ -53,6 +53,37 @@ Além do fluxo físico abaixo, validar:
 - Bridge antigo, sem `capabilities.portalPrewarm`, não recebe chamada de prewarm;
 - nenhuma chamada SEFAZ é gerada apenas por abrir o site.
 
+## Recuperação manual de XML — v0.0.18
+
+A importação manual existe somente como contingência quando o helper do Portal termina em falha. Ela não aparece durante consulta direta, durante o hCaptcha, em cancelamento voluntário nem como caminho normal de operação.
+
+Quando `GET /api/v1/health` informa `capabilities.manualXmlImport=true`, uma falha terminal do helper permite a ação **Importar XML baixado manualmente**.
+
+Regras da recuperação:
+
+- seletor aceita somente arquivo com extensão `.xml`;
+- arquivo vazio é rejeitado;
+- limite máximo de 10 MiB;
+- o XML passa pelo mesmo `parseNfeXml` usado pelo site;
+- a chave em `infNFe/@Id` deve corresponder exatamente à chave consultada;
+- resolução local de fornecedor continua fail-soft antes de renderizar o resultado;
+- DANFE, download XML e demais ações usam o pipeline visual já existente;
+- cancelar o seletor não altera o estado atual;
+- erro de validação mantém a opção de tentar outro XML;
+- nenhum upload para nuvem é feito e a chave privada A1 não participa dessa importação.
+
+A capability é aditiva: Bridge antigo, sem `manualXmlImport=true`, não exibe a ação no site novo.
+
+### Aceitação da recuperação manual
+
+1. provocar apenas uma falha controlada do helper, sem repetir consulta fiscal;
+2. confirmar que o botão de importação só aparece após a falha terminal;
+3. cancelar o seletor e confirmar que nada muda;
+4. selecionar arquivo não XML, vazio e acima de 10 MiB e confirmar rejeição;
+5. selecionar XML de outra chave e confirmar rejeição;
+6. selecionar XML válido da chave consultada e confirmar renderização normal do DANFE/ações;
+7. confirmar que não houve nova chamada SEFAZ causada pela importação.
+
 ## Causa da falha corrigida
 
 A v0.0.10 continha um handler `ScriptDialogOpening` correto em intenção, com validação por origem, tipo, mensagem e janela temporal. Porém o WebView2 continuava com `AreDefaultScriptDialogsEnabled` no valor padrão (`true`).
