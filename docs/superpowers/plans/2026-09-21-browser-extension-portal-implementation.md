@@ -64,7 +64,7 @@ Criar testes que falham porque a extensão ainda não existe:
    - `manifest_version === 3`;
    - sem `<all_urls>`;
    - hosts apenas site oficial e Fazenda;
-   - permissões exatamente necessárias;
+   - permissões exatamente `scripting`, `webRequest` e `storage`;
    - content scripts somente nos dois hosts;
    - service worker configurado.
 
