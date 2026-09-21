@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-O site oficial é a interface normal para diagnosticar e atualizar o componente Windows. Na transição da Release B, `NfeAgendamento.App.exe` continua empacotado como supervisor/rollback, mas roda headless: não exibe bandeja, menu de atualização, duplo clique ou abertura automática do site.
+O site oficial é a única interface para diagnosticar e descobrir atualizações do componente Windows. Desde a v0.0.20, o pacote não contém `NfeAgendamento.App.exe`; o Bridge standalone é iniciado diretamente pelo Windows.
 
 A atualização nunca é instalada silenciosamente. O site apenas apresenta o Setup oficial quando existe versão estável mais nova; o usuário decide baixar e executar o instalador.
 
@@ -51,17 +51,15 @@ O navegador não substitui um verificador de assinatura/hash do arquivo já baix
 
 A falha da metadata de update é best-effort: não transforma um Bridge saudável em indisponível.
 
-## Supervisor de transição
+## Lifecycle Windows final
 
-Na Release B:
+Desde a v0.0.20:
 
-- `NfeAgendamento.App.exe` continua no pacote;
-- o modo padrão do instalador ainda pode usar o App como supervisor do Bridge gerenciado;
-- o App não expõe menu, `NotifyIcon` visível ou ação de atualização;
-- `UpdateService.cs` e seus testes permanecem temporariamente no código para preservar rollback e histórico de segurança até o gate final;
-- o piloto `BridgeAutostartMode=standalone` pode iniciar o Bridge diretamente, conforme `docs/testing/standalone-bridge.md`.
-
-A remoção física do updater/App pertence à Task 8 e só pode ocorrer após uma release de transição estável.
+- o Setup inicia `NfeAgendamento.Bridge.exe` diretamente;
+- o antigo App supervisor e `UpdateService.cs` foram removidos;
+- não existe fluxo paralelo de atualização no Windows;
+- o site continua apresentando somente o Setup oficial versionado;
+- o usuário continua decidindo quando executar o instalador.
 
 ## Falhas
 
@@ -71,16 +69,14 @@ Falhas de metadata/download no site devem resultar em mensagem de atualização 
 
 - `windows-update.test.ts`: comparação de versão e validação estrita da metadata consumida pelo site.
 - `update-proxy-worker.test.ts`: reescrita/cache da metadata, rate limit por IP, streaming do Setup exato, rejeição de caminho arbitrário e falha upstream.
-- `UpdateReleaseParserTests.cs` e `UpdateServiceTests.cs`: mantidos durante a release de transição para o código de rollback ainda empacotado.
-- `TrayUpdaterStaticTests.cs` e `TrayAppStaticTests.cs`: provam que o supervisor de transição não oferece UI paralela e preserva o lifecycle do Bridge.
-- `InstallerStaticTests.cs`: prova o modo padrão e o piloto standalone.
+- `InstallerStaticTests.cs` e `WindowsLifecycleStaticTests.cs`: provam o lifecycle standalone final, ausência do App e empacotamento Bridge + Portal.
 
-## Teste físico da Release B
+## Teste físico da Release C
 
 - instalar a versão pública anterior e abrir o site;
 - confirmar que a atualização é apresentada pelo painel do site, não pelo App;
 - confirmar download pelo domínio `nfeagendamento.joaolds.xyz.br`;
 - concluir o Setup e confirmar preservação de `%LOCALAPPDATA%\\NfeAgendamentoBridge`;
 - confirmar versão nova no diagnóstico do site;
-- confirmar que o supervisor de transição não cria ícone/menu visível;
+- confirmar ausência de `NfeAgendamento.App.exe` e início do Bridge sem console;
 - para o piloto standalone, executar adicionalmente `docs/testing/standalone-bridge.md`.
