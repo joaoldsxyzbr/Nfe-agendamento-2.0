@@ -2,7 +2,7 @@ using System.Diagnostics;
 
 namespace NfeAgendamento.Bridge.Portal;
 
-public sealed class ProcessPortalWindowLauncher : IPortalWindowLauncher, IAsyncDisposable
+public sealed class ProcessPortalWindowLauncher : IPortalWindowLauncher, IPortalWarmup, IAsyncDisposable
 {
     private const string HelperFileName = "NfeAgendamento.Portal.exe";
     private readonly string _helperPath;
@@ -52,6 +52,14 @@ public sealed class ProcessPortalWindowLauncher : IPortalWindowLauncher, IAsyncD
                 return true;
             }
         }
+    }
+
+    public Task<bool> WarmUpAsync(CancellationToken cancellationToken)
+    {
+        if (!IsAvailable)
+            return Task.FromResult(false);
+
+        return _persistentClient.WarmUpAsync(cancellationToken);
     }
 
     public Task<PortalLaunchResult> OpenAsync(
