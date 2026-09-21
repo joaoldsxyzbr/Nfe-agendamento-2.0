@@ -221,6 +221,8 @@ Não provoque bloqueio `656` repetindo consultas artificialmente apenas para tes
 - RTC / IBS / CBS: `docs/architecture/rtc-ibs-cbs.md`;
 - regras de fornecedores: `docs/architecture/supplier-rules.md`;
 - hardening fiscal atual: `docs/superpowers/plans/2026-09-15-fiscal-hardening-open-source.md`;
+- arquitetura alvo site-first: `docs/superpowers/specs/2026-09-21-site-first-fiscal-agent-design.md`;
+- plano de migração site-first: `docs/superpowers/plans/2026-09-21-site-first-fiscal-agent-implementation.md`;
 - hardening do repositório: `docs/operations/repository-hardening.md`;
 - logging local: `docs/operations/local-logging.md`;
 - aceitação geral: `docs/testing/acceptance.md`;
