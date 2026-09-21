@@ -33,14 +33,9 @@ export class PortalRouter {
 
   async start(accessKey: string, signal?: AbortSignal): Promise<string> {
     if (await this.extension.isAvailable(signal)) {
-      try {
-        const operationId = await this.extension.start(accessKey, signal);
-        this.owners.set(operationId, 'extension');
-        return operationId;
-      } catch (error) {
-        signal?.throwIfAborted();
-        // Nenhuma operação foi criada com sucesso; o helper local continua como rollback.
-      }
+      const operationId = await this.extension.start(accessKey, signal);
+      this.owners.set(operationId, 'extension');
+      return operationId;
     }
 
     const operationId = await this.bridge.start(accessKey, signal);
