@@ -7,6 +7,7 @@ import { attachDanfeZoom, renderDanfe } from './danfe/render';
 import { createDanfeViewer } from './danfe/viewer';
 import { validateAccessKey } from './nfe/access-key';
 import { createConsultationController } from './nfe/consultation-controller';
+import { validateManualNfeXml } from './nfe/manual-xml-import';
 import { parseNfeXml, type ParsedNfe } from './nfe/xml';
 import { PortalFallbackController } from './portal/fallback';
 import './styles.css';
@@ -195,6 +196,7 @@ const danfeClose = requireElement<HTMLButtonElement>('#danfe-close');
 const danfePrint = requireElement<HTMLButtonElement>('#danfe-print');
 let currentDownloadUrl: string | null = null;
 let consultationMode: ConsultationMode = 'single';
+let manualXmlImportSupported = false;
 
 const danfeViewerController = createDanfeViewer({
   elements: {
@@ -263,6 +265,7 @@ const consultationController = createConsultationController({
   parseXml: parseNfeXml,
   renderState: renderLookupState,
   renderFailure: renderLookupFailure,
+  renderPortalFailure,
   renderSuccess: renderLookupSuccess,
   renderInvalidXml,
   setBusy: setLookupBusy,
@@ -302,7 +305,10 @@ window.addEventListener('pagehide', () => {
 
 void certificateController.refresh();
 void bridgeClient.health()
-  .then((health) => portalFallback.prewarm(health))
+  .then((health) => {
+    manualXmlImportSupported = health.capabilities?.manualXmlImport === true;
+    return portalFallback.prewarm(health);
+  })
   .catch(() => {
     // O diagnóstico principal já cobre Bridge ausente; prewarm não bloqueia o site.
   });
@@ -360,6 +366,66 @@ function renderLookupFailure(lookup: NfeLookupResult): void {
       break;
     default:
       renderLookupState('Consulta não concluída', status);
+  }
+}
+
+function renderPortalFailure(titleText: string, messageText: string, accessKey: string): void {
+  renderLookupState(titleText, messageText);
+  if (manualXmlImportSupported) {
+    appendManualXmlRecovery(accessKey);
+  }
+}
+
+function appendManualXmlRecovery(accessKey: string): void {
+  const recovery = document.createElement('div');
+  recovery.className = 'manual-xml-recovery';
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'manual-xml-recovery-button';
+  button.textContent = 'Importar XML baixado manualmente';
+  button.addEventListener('click', () => openManualXmlPicker(accessKey));
+
+  recovery.append(button);
+  resultCard.append(recovery);
+}
+
+function openManualXmlPicker(accessKey: string): void {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.xml,application/xml,text/xml';
+  input.hidden = true;
+
+  const cleanup = () => input.remove();
+  input.addEventListener('cancel', cleanup, { once: true });
+  input.addEventListener('change', () => {
+    const file = input.files?.item(0) ?? null;
+    cleanup();
+    void importManualXml(file, accessKey);
+  }, { once: true });
+
+  document.body.append(input);
+  input.click();
+}
+
+async function importManualXml(file: File | null, accessKey: string): Promise<void> {
+  try {
+    const parsed = await validateManualNfeXml(file, accessKey);
+    if (!parsed) return;
+
+    setLookupBusy(true);
+    renderLookupState('Importando XML', 'Validando o arquivo selecionado…');
+    await consultationController.completeManualImport(parsed);
+  } catch (error) {
+    renderLookupState(
+      'XML não importado',
+      error instanceof Error ? error.message : 'Não foi possível validar o XML selecionado.',
+    );
+    if (manualXmlImportSupported) {
+      appendManualXmlRecovery(accessKey);
+    }
+  } finally {
+    setLookupBusy(false);
   }
 }
 
