@@ -52,7 +52,8 @@ describe('Windows update discovery', () => {
   });
 
   it('accepts the four-component version returned by legacy Bridge health', async () => {
-    const fetchFn = vi.fn().mockResolvedValue(new Response(JSON.stringify(metadata()), { status: 200 }));
+    const fetchFn = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify(metadata()), { status: 200 })));
 
     await expect(checkWindowsUpdate('0.0.17.0', fetchFn)).resolves.toMatchObject({
       latestVersion: '0.0.18',
