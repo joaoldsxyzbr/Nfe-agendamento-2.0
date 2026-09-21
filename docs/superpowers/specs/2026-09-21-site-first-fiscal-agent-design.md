@@ -1,6 +1,6 @@
 # Site-first + agente fiscal local mínimo — Design
 
-**Status:** implementação incremental em andamento — Release A (`v0.0.18`) publicada; Release B (`v0.0.19`) implementada e em validação; aposentadoria do App ainda bloqueada pelo gate de estabilidade.  
+**Status:** implementação incremental em andamento — Releases A (`v0.0.18`) e B (`v0.0.19`) publicadas; aposentadoria do App ainda bloqueada pelo gate de estabilidade.  
 **Baseline original:** `main` em 21/09/2026, release pública v0.0.17. Estado atual documentado no plano de implementação.  
 **Objetivo:** fazer o NFe Agendamento ser percebido como um único produto web, mantendo no Windows somente as responsabilidades que exigem A1, confiança local ou integração controlada com o Portal Nacional.
 
