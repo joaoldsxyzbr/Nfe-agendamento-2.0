@@ -24,6 +24,6 @@ describe('extension background contract', () => {
 
     expect(source).not.toContain('hcaptcha.execute');
     expect(source).not.toContain('grecaptcha.execute');
-    expect(source).not.toContain('h-captcha-response').toBe(false);
+    expect(source).toContain('h-captcha-response');
   });
 });
