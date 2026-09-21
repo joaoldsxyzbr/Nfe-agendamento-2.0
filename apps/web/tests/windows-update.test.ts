@@ -44,7 +44,8 @@ describe('Windows update discovery', () => {
   });
 
   it('returns null when the installed version is already current or newer', async () => {
-    const fetchFn = vi.fn().mockResolvedValue(new Response(JSON.stringify(metadata()), { status: 200 }));
+    const fetchFn = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify(metadata()), { status: 200 })));
 
     await expect(checkWindowsUpdate('0.0.18', fetchFn)).resolves.toBeNull();
     await expect(checkWindowsUpdate('0.0.19', fetchFn)).resolves.toBeNull();
