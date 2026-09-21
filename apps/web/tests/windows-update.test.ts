@@ -51,6 +51,15 @@ describe('Windows update discovery', () => {
     await expect(checkWindowsUpdate('0.0.19', fetchFn)).resolves.toBeNull();
   });
 
+  it('accepts the four-component version returned by legacy Bridge health', async () => {
+    const fetchFn = vi.fn().mockResolvedValue(new Response(JSON.stringify(metadata()), { status: 200 }));
+
+    await expect(checkWindowsUpdate('0.0.17.0', fetchFn)).resolves.toMatchObject({
+      latestVersion: '0.0.18',
+    });
+    await expect(checkWindowsUpdate('0.0.18.0', fetchFn)).resolves.toBeNull();
+  });
+
   it.each([
     ['draft release', metadata('v0.0.18', { draft: true })],
     ['prerelease', metadata('v0.0.18', { prerelease: true })],
