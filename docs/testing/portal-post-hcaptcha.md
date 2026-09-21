@@ -5,6 +5,12 @@
 **Versão alvo:** `v0.0.11`  
 **Status:** interceptação do diálogo JavaScript corrigida; validação física com Portal/A1 real continua obrigatória.
 
+## Piloto de extensão — 21/09/2026
+
+A branch do piloto Manifest V3 adiciona um caminho preferencial pelo navegador quando a extensão NFe Agendamento está instalada e compatível. Nesse caminho, o Portal abre em uma janela popup do Chrome/Edge. O hCaptcha continua manual e o XML retorna ao mesmo pipeline do site.
+
+O helper WinForms/WebView2 descrito abaixo **continua preservado como fallback** durante o piloto. Nenhuma validação física da extensão está declarada como concluída; o roteiro específico está em `docs/testing/browser-extension-portal.md`.
+
 ## Objetivo
 
 Reduzir o fallback pelo Portal Nacional ao mínimo de interação humana sem automatizar ou contornar o hCaptcha.
