@@ -55,6 +55,7 @@ builder.Services.AddSingleton<CertificateService>();
 builder.Services.AddSingleton<SupplierIdentityResolver>();
 builder.Services.AddSingleton<INfeDistributionTransport, SefazDistributionTransport>();
 builder.Services.AddSingleton(_ => FiscalUsageGuard.CreateDefault());
+builder.Services.AddSingleton<NfeLookupOperationRegistry>();
 builder.Services.AddSingleton<IFiscalUsageCoordinator>(services =>
 {
     var configuration = services.GetRequiredService<IConfiguration>();
@@ -231,9 +232,10 @@ api.MapPost("/supplier/resolve", (
 api.MapPost("/nfe/lookup", async (
     NfeLookupRequest request,
     NfeLookupService lookup,
+    NfeLookupOperationRegistry operations,
     CancellationToken cancellationToken) =>
 {
-    if (!AccessKey.TryParse(request.AccessKey, out _))
+    if (!AccessKey.TryParse(request.AccessKey, out var parsedAccessKey) || parsedAccessKey is null)
     {
         return Results.BadRequest(new
         {
@@ -242,8 +244,48 @@ api.MapPost("/nfe/lookup", async (
         });
     }
 
-    var result = await lookup.LookupAsync(request.AccessKey, cancellationToken);
-    return Results.Ok(result);
+    if (request.RequestId is null)
+    {
+        var legacyResult = await lookup.LookupAsync(parsedAccessKey.Value, cancellationToken);
+        return Results.Ok(legacyResult);
+    }
+
+    var requestId = request.RequestId.Trim();
+    if (!Guid.TryParseExact(requestId, "D", out _))
+    {
+        return Results.BadRequest(new
+        {
+            error = "invalid_request_id",
+            message = "requestId deve ser um UUID válido.",
+        });
+    }
+
+    try
+    {
+        var result = await operations.ExecuteAsync(
+            requestId,
+            parsedAccessKey.Value,
+            () => lookup.LookupAsync(parsedAccessKey.Value, cancellationToken));
+        return Results.Ok(result);
+    }
+    catch (NfeLookupRequestConflictException)
+    {
+        return Results.Conflict(new
+        {
+            error = "request_id_conflict",
+            message = "Este requestId já foi usado para outra chave NF-e.",
+        });
+    }
+    catch (NfeLookupRegistryFullException)
+    {
+        return Results.Json(
+            new
+            {
+                error = "lookup_registry_full",
+                message = "O registro local de consultas está temporariamente cheio. Tente novamente em instantes.",
+            },
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
 });
 
 api.MapPost("/portal/prewarm", async (
@@ -310,7 +352,7 @@ api.MapGet("/portal/status/{operationId}", (
 app.Run();
 
 public sealed record CertificateSelectRequest(string Thumbprint);
-public sealed record NfeLookupRequest(string AccessKey);
+public sealed record NfeLookupRequest(string AccessKey, string? RequestId);
 public sealed record PortalStartRequest(string AccessKey);
 
 public partial class Program;
