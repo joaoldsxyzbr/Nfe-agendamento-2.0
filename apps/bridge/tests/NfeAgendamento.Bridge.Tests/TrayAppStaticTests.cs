@@ -15,14 +15,14 @@ public sealed class TrayAppStaticTests
     }
 
     [Fact]
-    public void Windows_launcher_is_a_real_tray_application()
+    public void Windows_launcher_is_a_headless_transition_supervisor()
     {
         var root = RepositoryRoot();
         var projectPath = Path.Combine(root, "apps", "bridge", "windows", "NfeAgendamento.App", "NfeAgendamento.App.csproj");
         var programPath = Path.Combine(root, "apps", "bridge", "windows", "NfeAgendamento.App", "Program.cs");
 
-        Assert.True(File.Exists(projectPath), "O app Windows de bandeja ainda não existe.");
-        Assert.True(File.Exists(programPath), "O código do app Windows de bandeja ainda não existe.");
+        Assert.True(File.Exists(projectPath), "O supervisor Windows ainda não existe.");
+        Assert.True(File.Exists(programPath), "O código do supervisor Windows ainda não existe.");
 
         var project = File.ReadAllText(projectPath);
         var program = File.ReadAllText(programPath);
@@ -31,8 +31,10 @@ public sealed class TrayAppStaticTests
         Assert.Contains("<OutputType>WinExe</OutputType>", project);
         Assert.Contains("<UseWindowsForms>true</UseWindowsForms>", project);
         Assert.Contains("NotifyIcon", program);
-        Assert.Contains("Abrir NFe Agendamento", program);
-        Assert.Contains("Sair", program);
+        Assert.Contains("Visible = false", program);
+        Assert.DoesNotContain("Abrir NFe Agendamento", program);
+        Assert.DoesNotContain("ContextMenuStrip", program);
+        Assert.DoesNotContain("ToolStripMenuItem", program);
     }
 
     [Fact]
