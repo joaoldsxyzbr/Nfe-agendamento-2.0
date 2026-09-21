@@ -31,6 +31,28 @@ describe('PortalRouter', () => {
     expect(await router.waitForResult(id)).toEqual(completed('ext-1'));
   });
 
+  it('does not open the Bridge when extension start returns an error', async () => {
+    const { PortalRouter } = await import('../src/portal/router');
+    let bridgeStarts = 0;
+    const router = new PortalRouter(
+      {
+        isAvailable: async () => true,
+        start: async () => Promise.reject(new Error('start failed')),
+        waitForResult: async (id: string) => completed(id),
+        cancel: async () => {},
+      },
+      {
+        prewarm: async () => {},
+        start: async () => { bridgeStarts += 1; return 'bridge-4'; },
+        waitForResult: async (id: string) => completed(id),
+        cancel: async () => {},
+      },
+    );
+
+    await expect(router.start(KEY)).rejects.toThrow('start failed');
+    expect(bridgeStarts).toBe(0);
+  });
+
   it('falls back to the Bridge only when the extension is unavailable before start', async () => {
     const { PortalRouter } = await import('../src/portal/router');
     let bridgeStarts = 0;
