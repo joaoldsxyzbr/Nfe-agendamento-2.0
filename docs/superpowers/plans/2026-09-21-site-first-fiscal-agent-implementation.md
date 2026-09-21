@@ -50,8 +50,9 @@
 **Interfaces:**
 - Consumes: `GET /api/v1/health` atual.
 - Produces: `BridgeHealth.capabilities?: BridgeCapabilities`, mantendo campos atuais.
-- Produces no Bridge novo:
-  `directLookup=true`, `portalFallback=true`, `portalPrewarm=true`, `manualXmlImport=true`.
+- Produces inicialmente no Bridge novo:
+  `directLookup=true`, `portalFallback=true`, `portalPrewarm=false`, `manualXmlImport=false`.
+- `portalPrewarm` só muda para `true` na Task 3; `manualXmlImport` só muda para `true` na Task 4.
 
 - [ ] **Step 1: escrever teste web para aceitar health antigo e novo**
 
@@ -68,8 +69,8 @@ const current = {
   capabilities: {
     directLookup: true,
     portalFallback: true,
-    portalPrewarm: true,
-    manualXmlImport: true,
+    portalPrewarm: false,
+    manualXmlImport: false,
   },
 };
 ```
@@ -118,8 +119,8 @@ capabilities = new
 {
     directLookup = true,
     portalFallback = true,
-    portalPrewarm = true,
-    manualXmlImport = true,
+    portalPrewarm = false,
+    manualXmlImport = false,
 },
 ```
 
@@ -131,8 +132,8 @@ No teste existente de health, validar:
 var capabilities = health.GetProperty("capabilities");
 Assert.True(capabilities.GetProperty("directLookup").GetBoolean());
 Assert.True(capabilities.GetProperty("portalFallback").GetBoolean());
-Assert.True(capabilities.GetProperty("portalPrewarm").GetBoolean());
-Assert.True(capabilities.GetProperty("manualXmlImport").GetBoolean());
+Assert.False(capabilities.GetProperty("portalPrewarm").GetBoolean());
+Assert.False(capabilities.GetProperty("manualXmlImport").GetBoolean());
 ```
 
 - [ ] **Step 6: rodar testes**
@@ -173,7 +174,8 @@ git commit -m "feat: add bridge capability discovery"
 - Consumes: `GET /api/update/latest`.
 - Produces: `checkWindowsUpdate(currentVersion, fetchFn)`.
 - Produces estados de diagnóstico:
-  `ok | not_running | local_access_denied | incompatible | unknown`.
+  `ok | local_access_unavailable | incompatible | unknown`.
+- `local_access_unavailable` cobre Bridge parado, conexão recusada e bloqueio de Local Network Access quando o browser não fornecer sinal suficiente para separar as causas.
 
 - [ ] **Step 1: escrever parser/testes da metadata**
 
@@ -235,12 +237,11 @@ export function classifyBridgeFailure(error: unknown): BridgeDiagnosticState
 ```
 
 Regras:
-- resposta HTTP conhecida 403 → `local_access_denied`;
-- timeout/refused → `not_running`;
-- resposta health válida porém capability/versão incompatível → `incompatible`;
+- resposta health válida porém contrato/versão incompatível → `incompatible`;
+- falha de transporte para loopback, incluindo timeout, conexão recusada ou bloqueio sem sinal específico → `local_access_unavailable`;
 - demais → `unknown`.
 
-Não prometer distinguir política do navegador quando o runtime não fornece evidência suficiente; nesse caso usar `unknown` com instrução de verificação local.
+A UI deve explicar que `local_access_unavailable` pode significar componente parado **ou** permissão de rede local bloqueada. Não inferir uma causa mais específica sem evidência do navegador.
 
 - [ ] **Step 6: atualizar testes estáticos do painel**
 
@@ -382,14 +383,18 @@ Falha é ignorada para o fluxo principal.
 
 Teste web deve simular `prewarmPortal` rejeitando e depois provar que `startPortal` ainda é chamado normalmente quando necessário.
 
-- [ ] **Step 9: rodar suites**
+- [ ] **Step 9: ativar capability somente após implementação verde**
+
+Alterar `portalPrewarm` para `true` no health somente depois de endpoint + testes passarem.
+
+- [ ] **Step 10: rodar suites**
 
 ```bash
 npm run test:web
 dotnet run --project apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeAgendamento.Bridge.Tests.csproj -c Release
 ```
 
-- [ ] **Step 10: commit**
+- [ ] **Step 11: commit**
 
 ```bash
 git add apps/bridge/src/NfeAgendamento.Bridge/Portal apps/bridge/src/NfeAgendamento.Bridge/Program.cs apps/bridge/tests/NfeAgendamento.Bridge.Tests apps/web/src apps/web/tests docs/testing/portal-post-hcaptcha.md
@@ -438,7 +443,11 @@ Texto: “Importar XML baixado manualmente”.
 
 Não abrir automaticamente o Portal normal nesta task; a ação é recuperação.
 
-- [ ] **Step 4: rodar web**
+- [ ] **Step 4: ativar capability após entrega**
+
+Alterar `manualXmlImport` para `true` no health e fixar teste de integração.
+
+- [ ] **Step 5: rodar web**
 
 ```bash
 npm run lint:web
@@ -446,7 +455,7 @@ npm run test:web
 npm run build:web
 ```
 
-- [ ] **Step 5: commit**
+- [ ] **Step 6: commit**
 
 ```bash
 git add apps/web/src/nfe/manual-xml-import.ts apps/web/tests/manual-xml-import.test.ts apps/web/src/main.ts apps/web/src/styles.css docs/testing/portal-post-hcaptcha.md
@@ -738,8 +747,8 @@ git commit -m "refactor: retire windows tray app"
 - Modify: `docs/testing/acceptance.md`
 - Modify: `docs/testing/portal-post-hcaptcha.md`
 - Modify: `docs/testing/bridge-updater.md`
-- Create: `docs/releases/v<release>.md`
-- Modify: `Directory.Build.props` somente quando a implementação estiver pronta para release.
+- Create, no milestone correspondente: `docs/releases/v0.0.18.md`, `docs/releases/v0.0.19.md` e, somente se o gate da Task 8 passar, `docs/releases/v0.0.20.md`.
+- Modify: `Directory.Build.props` separadamente em cada milestone de release.
 
 **Interfaces:**
 - README continua descrevendo apenas arquitetura realmente implementada.
@@ -761,16 +770,34 @@ Documentar:
 
 Mesmos comandos da Task 8 e status verde no CI remoto.
 
-- [ ] **Step 4: atualizar versão/release**
+- [ ] **Step 4: publicar Release A após Tasks 1–5**
 
-Seguir o fluxo canônico existente do repositório. Não publicar tag antes do CI completo do SHA final.
-
-- [ ] **Step 5: commit de release**
+Atualizar para `0.0.18`, criar `docs/releases/v0.0.18.md`, atualizar README somente com o estado realmente implementado e usar:
 
 ```bash
 git add Directory.Build.props README.md docs
-git commit -m "release: v<release>"
+git commit -m "release: v0.0.18"
 ```
+
+- [ ] **Step 5: publicar Release B após Tasks 6–7**
+
+Somente após a v0.0.18 estar estável, atualizar para `0.0.19`, criar `docs/releases/v0.0.19.md` e usar:
+
+```bash
+git add Directory.Build.props README.md docs
+git commit -m "release: v0.0.19"
+```
+
+- [ ] **Step 6: publicar Release C somente se o gate da Task 8 passar**
+
+Depois de uma release de transição estável, atualizar para `0.0.20`, criar `docs/releases/v0.0.20.md` e usar:
+
+```bash
+git add Directory.Build.props README.md docs
+git commit -m "release: v0.0.20"
+```
+
+Se o gate não passar, não remover o App apenas para cumprir numeração de versão.
 
 ## Ordem de execução obrigatória
 
