@@ -41,7 +41,7 @@ Registre antes de começar:
 7. Confirme que `NfeAgendamento.Bridge.exe` inicia sem janela de console.
 8. Confirme auto-start em `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` apontando diretamente para `NfeAgendamento.Bridge.exe`.
 9. Abra o site oficial manualmente e confirme conexão com o Bridge.
-10. Inicie novamente o App e confirme que não surge segunda instância nem listener concorrente.
+10. Inicie novamente o Bridge e confirme que o mutex impede segunda instância e listener concorrente.
 11. Reinicie sessão/PC e confirme início automático único.
 12. Execute também `docs/testing/standalone-bridge.md` para o lifecycle standalone final.
 
