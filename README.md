@@ -13,7 +13,7 @@ NFe Agendamento é um aplicativo interno para consultar NF-e, baixar XML e gerar
 - **Helper Portal:** WinForms/WebView2 persistente para o fallback pelo Portal Nacional; hCaptcha continua sempre manual.
 - **Certificado A1:** descoberto em `CurrentUser/My`; PFX, senha e chave privada nunca são enviados ao site ou ao Cloudflare.
 - **Persistência local:** thumbprint selecionado em `%LOCALAPPDATA%/NfeAgendamentoBridge/settings.json`, regras locais de fornecedor em `supplier-rules.json` e metadados da proteção fiscal em `fiscal-usage.json`.
-- **Release pública atual:** `0.0.16`; a `main` já contém hardening posterior e a próxima release depende do CI verde do commit `release: vX.Y.Z`.
+- **Release pública atual:** `0.0.17`; publicada a partir do mesmo SHA validado pelo CI completo.
 
 Não existem Central, pareamento, servidor LAN, mDNS ou pasta compartilhada na arquitetura atual. Cada PC usa seu próprio Bridge.
 

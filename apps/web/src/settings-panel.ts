@@ -1,7 +1,7 @@
 import { BridgeClient } from './bridge/client';
 import './settings-panel.css';
 
-const WINDOWS_SETUP_URL = '/downloads/windows/v0.0.16/NFeAgendamentoBridge-Setup-v0.0.16.exe';
+const WINDOWS_SETUP_URL = '/downloads/windows/v0.0.17/NFeAgendamentoBridge-Setup-v0.0.17.exe';
 const diagnosticsClient = new BridgeClient();
 
 window.addEventListener('DOMContentLoaded', initializeSettingsPanel, { once: true });

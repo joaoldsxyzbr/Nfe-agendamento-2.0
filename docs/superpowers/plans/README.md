@@ -7,7 +7,7 @@ Este diretório preserva planos de implementação como **registro histórico** 
 - estabilização/hardening concluído no código: `2026-09-09-stabilization-hardening-implementation.md`;
 - arquitetura vigente: `../specs/2026-09-09-stabilization-hardening-design.md` + `../../architecture/bridge-security.md`;
 - pendências de validação física: `../../testing/acceptance.md`;
-- release pública atual: `../../releases/v0.0.16.md`.
+- release pública atual: `../../releases/v0.0.17.md`.
 
 ## Planos históricos/superseded
 
