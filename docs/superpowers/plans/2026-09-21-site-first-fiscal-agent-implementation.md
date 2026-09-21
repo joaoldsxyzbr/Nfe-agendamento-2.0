@@ -721,7 +721,7 @@ Somente agora remover App/updater e o protocolo de lease se nenhuma outra parte 
 
 O mutex de instância única do Bridge permanece.
 
-- [x] **Step 6: rodar CI local aplicável**
+- [ ] **Step 6: rodar CI local aplicável**
 
 ```bash
 npm ci
