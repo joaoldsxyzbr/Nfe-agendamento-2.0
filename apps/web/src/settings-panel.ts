@@ -1,4 +1,6 @@
 import { BridgeClient } from './bridge/client';
+import { classifyBridgeFailure } from './bridge/diagnostics';
+import { checkWindowsUpdate } from './update/windows-update';
 import './settings-panel.css';
 
 const WINDOWS_SETUP_URL = '/downloads/windows/v0.0.17/NFeAgendamentoBridge-Setup-v0.0.17.exe';
@@ -25,8 +27,8 @@ function initializeSettingsPanel(): void {
   downloadTrigger.id = 'app-download';
   downloadTrigger.className = 'topbar-icon-action download-trigger';
   downloadTrigger.href = WINDOWS_SETUP_URL;
-  downloadTrigger.setAttribute('aria-label', 'Baixar app para Windows');
-  downloadTrigger.title = 'Baixar app para Windows';
+  downloadTrigger.setAttribute('aria-label', 'Baixar componente Windows');
+  downloadTrigger.title = 'Baixar componente Windows';
   downloadTrigger.innerHTML = `
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <path d="M12 3v12" />
@@ -99,7 +101,8 @@ function initializeSettingsPanel(): void {
       <div><dt>Portal / WebView2</dt><dd id="diagnostics-webview">—</dd></div>
       <div><dt>Última verificação</dt><dd id="diagnostics-last-check">—</dd></div>
       <div class="diagnostics-error-row"><dt>Último erro</dt><dd id="diagnostics-last-error">Nenhum erro detectado nesta sessão.</dd></div>
-    </dl>`;
+    </dl>
+    <a id="windows-update-action" class="windows-update-action" href="#" hidden>Atualização disponível</a>`;
 
   const diagnosticsRefresh = requireChild<HTMLButtonElement>(diagnosticsCard, '#diagnostics-refresh');
   const diagnosticsBridge = requireChild<HTMLElement>(diagnosticsCard, '#diagnostics-bridge');
@@ -108,6 +111,7 @@ function initializeSettingsPanel(): void {
   const diagnosticsWebView = requireChild<HTMLElement>(diagnosticsCard, '#diagnostics-webview');
   const diagnosticsLastCheck = requireChild<HTMLElement>(diagnosticsCard, '#diagnostics-last-check');
   const diagnosticsLastError = requireChild<HTMLElement>(diagnosticsCard, '#diagnostics-last-error');
+  const windowsUpdateAction = requireChild<HTMLAnchorElement>(diagnosticsCard, '#windows-update-action');
 
   const settingsContent = document.createElement('div');
   settingsContent.className = 'settings-content';
@@ -154,20 +158,35 @@ function initializeSettingsPanel(): void {
     diagnosticsRefresh.disabled = true;
     diagnosticsRefresh.textContent = 'Verificando…';
     diagnosticsBridge.textContent = 'Verificando…';
+    windowsUpdateAction.hidden = true;
+    windowsUpdateAction.removeAttribute('href');
 
     try {
       const health = await diagnosticsClient.health();
-      diagnosticsBridge.textContent = 'Conectado';
+      diagnosticsBridge.textContent = 'Componente local conectado';
       diagnosticsVersion.textContent = health.version;
       diagnosticsCertificate.textContent = health.certificateSelected ? 'Selecionado' : 'Não selecionado';
       diagnosticsWebView.textContent = health.webView2Available ? 'Disponível' : 'Indisponível';
+      diagnosticsLastError.textContent = 'Nenhum erro detectado nesta sessão.';
       diagnosticsLastCheck.textContent = new Intl.DateTimeFormat('pt-BR', {
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
       }).format(new Date());
+
+      try {
+        const update = await checkWindowsUpdate(health.version);
+        if (update) {
+          windowsUpdateAction.href = update.downloadUrl;
+          windowsUpdateAction.textContent = `Atualizar componente Windows para ${update.latestVersion}`;
+          windowsUpdateAction.hidden = false;
+        }
+      } catch {
+        // A atualização é best-effort e não altera a saúde do Bridge local.
+      }
     } catch (error) {
-      diagnosticsBridge.textContent = 'Indisponível';
+      const state = classifyBridgeFailure(error);
+      diagnosticsBridge.textContent = bridgeDiagnosticLabel(state);
       diagnosticsVersion.textContent = '—';
       diagnosticsCertificate.textContent = '—';
       diagnosticsWebView.textContent = '—';
@@ -176,7 +195,7 @@ function initializeSettingsPanel(): void {
         minute: '2-digit',
         second: '2-digit',
       }).format(new Date());
-      diagnosticsLastError.textContent = diagnosticErrorMessage(error);
+      diagnosticsLastError.textContent = diagnosticErrorMessage(error, state);
     } finally {
       diagnosticsRefresh.disabled = false;
       diagnosticsRefresh.textContent = 'Atualizar';
@@ -190,7 +209,31 @@ function requireChild<T extends Element>(root: ParentNode, selector: string): T 
   return element;
 }
 
-function diagnosticErrorMessage(error: unknown): string {
+function bridgeDiagnosticLabel(
+  state: ReturnType<typeof classifyBridgeFailure>,
+): string {
+  switch (state) {
+    case 'local_access_unavailable':
+      return 'Componente local inacessível';
+    case 'incompatible':
+      return 'Bridge incompatível';
+    default:
+      return 'Indisponível';
+  }
+}
+
+function diagnosticErrorMessage(
+  error: unknown,
+  state: ReturnType<typeof classifyBridgeFailure>,
+): string {
+  if (state === 'local_access_unavailable') {
+    return 'O componente pode estar parado ou a permissão de rede local do navegador pode estar bloqueada.';
+  }
+
+  if (state === 'incompatible') {
+    return 'O Bridge respondeu, mas o contrato local não é compatível com esta versão do site.';
+  }
+
   const raw = error instanceof Error ? error.message : 'Não foi possível acessar o Bridge local.';
   return raw.replace(/\b[A-Z0-9]{44}\b/gi, '[chave omitida]').slice(0, 240);
 }
