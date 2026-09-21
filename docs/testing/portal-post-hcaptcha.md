@@ -25,6 +25,34 @@ Experiência esperada quando o fallback é elegível (`consumption_limit` ou `fi
 
 Na prática, o único passo humano desejado no fallback é resolver o hCaptcha.
 
+## Prewarm site-first — v0.0.18
+
+Na arquitetura site-first, o site tenta aquecer o helper do Portal depois de confirmar um Bridge saudável. A otimização só é usada quando `GET /api/v1/health` informa simultaneamente `webView2Available=true` e `capabilities.portalPrewarm=true`.
+
+Fluxo:
+
+1. o site consulta `/api/v1/health`;
+2. chama `POST /api/v1/portal/prewarm` com `X-Nfe-Bridge: 1`;
+3. o Bridge cria ou reutiliza a sessão persistente do helper;
+4. em modo servidor, o helper executa `PortalWindow.PrepareAsync()` e inicializa o WebView2 antes de confirmar readiness;
+5. nenhuma mensagem `StartOperation` é enviada e a janela permanece oculta;
+6. quando um fallback real for necessário, a mesma sessão aquecida é reutilizada.
+
+O prewarm é estritamente **best-effort**: falha, timeout, WebView2 ausente ou indisponibilidade do helper não bloqueiam consulta direta, não fazem retry na SEFAZ e não impedem o fallback posterior de iniciar a frio.
+
+O prewarm também não seleciona outro certificado, não acessa a chave privada, não cria operação fiscal e não toca na SEFAZ. O endpoint novo exige o header local explícito `X-Nfe-Bridge: 1`, além das proteções de Host/Origin/CORS já existentes.
+
+### Aceitação do prewarm
+
+Além do fluxo físico abaixo, validar:
+
+- abrir/recarregar o site não deve exibir a janela do Portal;
+- com capability habilitada, o processo/helper pode ser inicializado em background;
+- a primeira operação Portal deve reutilizar o helper já preparado quando ele estiver saudável;
+- matar/reiniciar o helper ou falhar o prewarm deve preservar o cold-start como recuperação;
+- Bridge antigo, sem `capabilities.portalPrewarm`, não recebe chamada de prewarm;
+- nenhuma chamada SEFAZ é gerada apenas por abrir o site.
+
 ## Causa da falha corrigida
 
 A v0.0.10 continha um handler `ScriptDialogOpening` correto em intenção, com validação por origem, tipo, mensagem e janela temporal. Porém o WebView2 continuava com `AreDefaultScriptDialogsEnabled` no valor padrão (`true`).
