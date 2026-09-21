@@ -1,89 +1,86 @@
-# Atualizador manual do App/Bridge
+# Atualização do componente Windows — site-first
 
 ## Objetivo
 
-O `NfeAgendamento.App.exe` oferece a ação **Verificar atualizações** no menu da bandeja do Windows. A atualização nunca é instalada silenciosamente: o usuário precisa iniciar a verificação e confirmar a instalação de uma versão mais nova.
+O site oficial é a interface normal para diagnosticar e atualizar o componente Windows. Na transição da Release B, `NfeAgendamento.App.exe` continua empacotado como supervisor/rollback, mas roda headless: não exibe bandeja, menu de atualização, duplo clique ou abertura automática do site.
+
+A atualização nunca é instalada silenciosamente. O site apenas apresenta o Setup oficial quando existe versão estável mais nova; o usuário decide baixar e executar o instalador.
 
 ## Fonte da atualização
 
-Desde a v0.0.16, o App consulta somente:
+O site consulta:
 
 `https://nfeagendamento.joaolds.xyz.br/api/update/latest`
 
-O Worker consulta server-side a release estável mais recente de `joaoldsxyzbr/Nfe-agendamento-2.0`, rejeita rascunhos/pré-releases e devolve apenas a metadata necessária. A metadata validada usa cache curto no edge e as rotas de atualização possuem rate limiter próprio por IP para reduzir abuso e dependência do limite anônimo da API do GitHub. A versão instalada continua vindo do assembly do `NfeAgendamento.App.exe`.
+O Worker consulta server-side a release estável mais recente de `joaoldsxyzbr/Nfe-agendamento-2.0`, rejeita rascunhos/pré-releases e devolve somente a metadata necessária. A metadata validada usa cache curto no edge e as rotas de atualização possuem rate limiter próprio por IP.
 
-Para uma release `vX.Y.Z`, o updater aceita somente:
+Para uma release `vX.Y.Z`, o fluxo aceita somente:
 
 `NFeAgendamentoBridge-Setup-vX.Y.Z.exe`
 
-e somente a URL HTTPS:
+e somente a rota HTTPS:
 
 `https://nfeagendamento.joaolds.xyz.br/downloads/windows/vX.Y.Z/NFeAgendamentoBridge-Setup-vX.Y.Z.exe`
 
 O Worker constrói internamente a URL fixa do GitHub para esse asset e faz streaming da resposta. Não há proxy genérico nem entrada de URL/host arbitrário.
 
-## Verificações antes de executar
+## Validações da metadata
 
-O instalador somente é liberado para execução depois de todas estas verificações:
+Antes de o site oferecer a atualização, o contrato exige:
 
-1. versão da release maior que a versão instalada;
-2. asset no estado `uploaded`;
-3. tamanho publicado positivo e menor ou igual a 256 MiB;
-4. tamanho efetivamente baixado igual ao tamanho publicado pela release;
-5. digest da release no formato `sha256:<64 caracteres hexadecimais>`;
-6. SHA-256 calculado localmente igual ao digest publicado pelo GitHub.
+1. versão semver válida e maior que a versão do Bridge informada por `GET /api/v1/health`;
+2. release estável, sem draft/prerelease;
+3. asset no estado `uploaded`;
+4. nome exato do Setup versionado;
+5. tamanho positivo;
+6. digest no formato `sha256:<64 caracteres hexadecimais>`;
+7. URL reescrita para a rota versionada do domínio oficial.
 
-O download é escrito primeiro como arquivo `.download`. Em erro de rede, tamanho ou hash, o arquivo parcial/final é removido e nenhum instalador é iniciado.
+O navegador não substitui um verificador de assinatura/hash do arquivo já baixado. A proteção do fluxo web está na seleção estrita da release/asset pelo Worker e na rota de download fechada. Authenticode continua opcional no projeto.
 
-## Fluxo de usuário
+## Fluxo normal de usuário
 
-1. Clicar com o botão direito no ícone do NFe Agendamento na bandeja.
-2. Selecionar **Verificar atualizações**.
-3. Se a versão instalada já for a mais recente, o App apenas informa isso.
-4. Se houver versão mais nova, o App mostra versão instalada e nova versão e pergunta se deseja continuar.
-5. Somente após **Sim**, o instalador é baixado e verificado.
-6. Depois da validação, o App inicia o Setup oficial.
-7. O App encerra a si mesmo e o Bridge local para permitir que o instalador substitua os arquivos.
-8. O instalador continua sendo interativo; não há argumentos de instalação silenciosa.
+1. Abrir o site oficial.
+2. Abrir **Configurações**.
+3. O site lê a versão do Bridge por `GET /api/v1/health`.
+4. O site consulta `GET /api/update/latest`.
+5. Se houver versão maior, aparece **Atualizar componente Windows para X.Y.Z**.
+6. O link baixa o Setup pela rota versionada do próprio domínio.
+7. O usuário executa o Setup e conclui a instalação.
+8. Após o Bridge voltar, o diagnóstico confirma a versão instalada.
+
+A falha da metadata de update é best-effort: não transforma um Bridge saudável em indisponível.
+
+## Supervisor de transição
+
+Na Release B:
+
+- `NfeAgendamento.App.exe` continua no pacote;
+- o modo padrão do instalador ainda pode usar o App como supervisor do Bridge gerenciado;
+- o App não expõe menu, `NotifyIcon` visível ou ação de atualização;
+- `UpdateService.cs` e seus testes permanecem temporariamente no código para preservar rollback e histórico de segurança até o gate final;
+- o piloto `BridgeAutostartMode=standalone` pode iniciar o Bridge diretamente, conforme `docs/testing/standalone-bridge.md`.
+
+A remoção física do updater/App pertence à Task 8 e só pode ocorrer após uma release de transição estável.
 
 ## Falhas
 
-Falhas HTTP, timeout, erro de disco, asset inesperado, tamanho divergente, hash divergente ou falha ao iniciar o Setup são exibidas ao usuário. Nesses casos o App/Bridge permanece em execução e pode ser usado normalmente.
+Falhas de metadata/download no site devem resultar em mensagem de atualização indisponível sem alterar o estado do Bridge. Falhas de instalação são tratadas pelo próprio Setup/Windows; o site deve voltar a diagnosticar o componente quando ele estiver disponível.
 
 ## Testes automatizados
 
-- `UpdateReleaseParserTests.cs`: versão, asset exato, origem da URL e exigência de SHA-256.
-- `UpdateServiceTests.cs`: endpoint oficial de metadata, tamanho e SHA-256 do download, incluindo limpeza em falha.
-- `update-proxy-worker.test.ts`: reescrita/cache da metadata, rate limit por IP, streaming do Setup exato, rejeição de caminho arbitrário e tratamento de falha upstream.
-- `TrayUpdaterStaticTests.cs`: presença do fluxo manual no app de bandeja.
+- `windows-update.test.ts`: comparação de versão e validação estrita da metadata consumida pelo site.
+- `update-proxy-worker.test.ts`: reescrita/cache da metadata, rate limit por IP, streaming do Setup exato, rejeição de caminho arbitrário e falha upstream.
+- `UpdateReleaseParserTests.cs` e `UpdateServiceTests.cs`: mantidos durante a release de transição para o código de rollback ainda empacotado.
+- `TrayUpdaterStaticTests.cs` e `TrayAppStaticTests.cs`: provam que o supervisor de transição não oferece UI paralela e preserva o lifecycle do Bridge.
+- `InstallerStaticTests.cs`: prova o modo padrão e o piloto standalone.
 
-O CI também recompila o `NfeAgendamento.App`, o Bridge e o helper Portal e gera o pacote Windows após os jobs web/bridge ficarem verdes. Authenticode é opcional: se os secrets de code signing existirem, os artefatos são assinados; caso contrário, o build e a release continuam normalmente.
+## Teste físico da Release B
 
-## Teste físico Windows
-
-Ao publicar uma versão posterior à instalada:
-
-- confirmar que o navegador baixa o Setup pelo domínio `nfeagendamento.joaolds.xyz.br`, sem redirecionar o cliente para o GitHub;
-
-- confirmar que **Verificar atualizações** detecta a versão nova;
-- clicar **Não** e confirmar que nada é baixado/instalado;
-- repetir, clicar **Sim** e confirmar o download;
-- confirmar que o Setup só abre depois da verificação SHA-256;
-- confirmar que App/Bridge fecham para a instalação;
-- concluir o Setup e confirmar que o novo App inicia normalmente;
-- usar **Verificar atualizações** novamente e confirmar a mensagem de versão mais recente.
-
-
-## Migração site-first
-
-Durante a Release A, o updater do App continua disponível como fallback, mas o site passa a ser o ponto principal de descoberta de atualização.
-
-O painel **Configurações**:
-
-1. lê a versão instalada via `GET /api/v1/health`;
-2. consulta `GET /api/update/latest`;
-3. valida tag, estado da release, nome exato do asset, tamanho, digest SHA-256 e URL do domínio oficial;
-4. se houver versão maior, mostra **Atualizar componente Windows para X.Y.Z**;
-5. o link baixa o mesmo Setup oficial já protegido pelo Worker.
-
-A checagem no site é best-effort: falha da metadata de update não muda o estado de saúde do Bridge. O App não é removido nesta etapa.
+- instalar a versão pública anterior e abrir o site;
+- confirmar que a atualização é apresentada pelo painel do site, não pelo App;
+- confirmar download pelo domínio `nfeagendamento.joaolds.xyz.br`;
+- concluir o Setup e confirmar preservação de `%LOCALAPPDATA%\\NfeAgendamentoBridge`;
+- confirmar versão nova no diagnóstico do site;
+- confirmar que o supervisor de transição não cria ícone/menu visível;
+- para o piloto standalone, executar adicionalmente `docs/testing/standalone-bridge.md`.

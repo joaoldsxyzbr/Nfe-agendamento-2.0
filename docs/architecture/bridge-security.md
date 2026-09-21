@@ -115,15 +115,15 @@ Se o Bridge controlado cair inesperadamente, o App aplica backoff de reinício:
 1 s → 2 s → 5 s
 ```
 
-As falhas são limitadas por uma janela/circuit breaker de aproximadamente 30 s. Depois do limite, o tray passa a `Bridge indisponível` em vez de entrar em crash-loop infinito.
+As falhas são limitadas por uma janela/circuit breaker de aproximadamente 30 s. Depois do limite, o supervisor deixa de reiniciar agressivamente o Bridge em vez de entrar em crash-loop infinito.
 
-O texto do `NotifyIcon` acompanha o estado efetivo: ativo, reconectando ou indisponível.
+Na Release B o `NotifyIcon` permanece apenas como objeto de lifecycle do WinForms e fica invisível (`Visible = false`). Não há menu, duplo clique, abertura do site ou atualização pelo App; diagnóstico e atualização pertencem ao site.
 
-### Sair
+### Encerramento do supervisor
 
-Ao escolher **Sair**:
+Quando o supervisor é encerrado:
 
-1. o App interrompe seu monitoramento;
+1. interrompe seu monitoramento;
 2. envia `Shutdown` pelo control pipe usando o lease válido;
 3. aguarda encerramento gracioso;
 4. se o processo não terminar, término forçado só pode atingir o PID previamente identificado e somente após validar novamente o caminho do executável esperado.
@@ -253,7 +253,7 @@ Builds/publishes desktop são validados em `windows-latest` antes de gerar o ins
 
 ## Atualizações e versionamento
 
-O App oferece somente atualização **manual e confirmada**. Desde a v0.0.16, cliente e navegador usam o domínio oficial em vez de acessar diretamente a API/download do GitHub:
+A atualização normal é apresentada pelo **site**. Desde a v0.0.16, os clientes usam o domínio oficial em vez de acessar diretamente a API/download do GitHub:
 
 ```text
 GET https://nfeagendamento.joaolds.xyz.br/api/update/latest
@@ -264,7 +264,7 @@ O Worker consulta a release estável oficial server-side, exige tag semver, asse
 
 A rota de download aceita somente `vX.Y.Z` e `NFeAgendamentoBridge-Setup-vX.Y.Z.exe` com a mesma versão. Ela constrói internamente a URL fixa do repositório e faz streaming do conteúdo; não existe parâmetro de host/URL arbitrário nem proxy genérico.
 
-No App, a origem do asset também é validada como `nfeagendamento.joaolds.xyz.br`. O instalador só é executado depois de confirmar tamanho e SHA-256 localmente. Falha upstream é tratada como indisponibilidade da fonte e não libera arquivo parcial.
+O código legado de `UpdateService` continua empacotado e testado durante a Release B apenas como rollback técnico, mas o supervisor headless não expõe essa UI. O site valida a metadata estrita recebida do Worker e oferece somente a rota versionada do domínio oficial. Falha upstream é tratada como indisponibilidade da fonte sem transformar o Bridge saudável em erro.
 
 A versão canônica fica em `Directory.Build.props`. Bridge, App, Portal, CI, instalador e release derivam dessa fonte; o workflow `.github/workflows/release.yml` é genérico e publica somente artifacts de um CI verde do mesmo commit marcador `release: v<versão>`.
 
