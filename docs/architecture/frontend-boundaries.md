@@ -59,16 +59,17 @@ A apresentação do resultado continua em callbacks fornecidos pelo composition 
 
 O controller nunca recebe PFX, senha ou chave privada. O contrato do site continua limitado aos metadados públicos já expostos pelo Bridge e ao thumbprint.
 
-## Lifecycle Windows de transição
+## Lifecycle Windows final
 
-O site é a única interface normal. Durante a Release B, o Windows mantém dois caminhos de lifecycle sem mudar as fronteiras fiscais:
+O site é a única interface do produto. Desde a v0.0.20, o Windows mantém somente o Bridge fiscal e o helper Portal:
 
-- modo padrão `app`: `NfeAgendamento.App.exe` roda headless e supervisiona o Bridge gerenciado por Named Pipe/lease;
-- piloto `standalone`: o instalador pode iniciar diretamente `NfeAgendamento.Bridge.exe` sem `--managed`;
-- em ambos, A1, SEFAZ e Portal continuam pertencendo ao Bridge/helper local;
-- o App permanece empacotado durante a transição para rollback e só pode ser removido depois do gate de estabilidade.
+- `NfeAgendamento.Bridge.exe` inicia diretamente pelo auto-start HKCU, sem `--managed`;
+- o mutex do Bridge garante instância única;
+- o Bridge é `WinExe`, sem janela de console no logon;
+- o helper Portal permanece subordinado ao Bridge e só aparece quando a interação humana com Portal/hCaptcha é necessária;
+- diagnóstico e atualização pertencem exclusivamente ao site.
 
-Diagnóstico e atualização pertencem ao site; o supervisor não cria uma segunda UX.
+O antigo `NfeAgendamento.App.exe`, seu updater e o protocolo de lease/heartbeat foram removidos após a release de transição v0.0.19.
 
 ## Viewer DANFE
 
