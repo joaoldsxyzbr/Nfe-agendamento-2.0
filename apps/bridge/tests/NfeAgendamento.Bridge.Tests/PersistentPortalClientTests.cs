@@ -8,6 +8,23 @@ public sealed class PersistentPortalClientTests
     private const string Key = "42260812345678000123550010000012341000012342";
 
     [Fact]
+    public async Task Warmup_creates_one_session_without_starting_an_operation()
+    {
+        var session = new ScriptedSession();
+        var creates = 0;
+        var client = new PersistentPortalClient(_ =>
+        {
+            creates += 1;
+            return Task.FromResult<IPortalIpcSession>(session);
+        });
+
+        Assert.True(await client.WarmUpAsync(TestContext.Current.CancellationToken));
+        Assert.True(await client.WarmUpAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(1, creates);
+        Assert.Empty(session.Sent);
+    }
+
+    [Fact]
     public async Task Sequential_operations_reuse_the_same_healthy_session()
     {
         var session = new ScriptedSession(
