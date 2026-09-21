@@ -129,6 +129,17 @@ describe('single consultation controller', () => {
     expect(harness.busy).toEqual([true, false]);
   });
 
+  it('applies supplier resolution to a validated manually imported XML', async () => {
+    const harness = createHarness({
+      resolveSupplier: async () => ({ supplierId: 'fernando-klein' }),
+    });
+
+    await harness.controller.completeManualImport(parsed('<manual/>'));
+
+    expect(harness.successes).toHaveLength(1);
+    expect(harness.successes[0]?.supplierRuleId).toBe('fernando-klein');
+  });
+
   it('renders invalid XML without exposing success', async () => {
     const error = new Error('xml inválido');
     const harness = createHarness({
