@@ -250,6 +250,26 @@ describe('BridgeClient', () => {
     expect(aborted).toBe(true);
   });
 
+  it('prewarms Portal only through the guarded local endpoint', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ state: 'ready' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    await expect(new BridgeClient().prewarmPortal()).resolves.toBe('ready');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${BRIDGE_BASE_URL}/portal/prewarm`,
+      expect.objectContaining({
+        method: 'POST',
+        cache: 'no-store',
+        headers: expect.objectContaining({ 'X-Nfe-Bridge': '1' }),
+      }),
+    );
+  });
+
   it('portal calls do not inherit the short health timeout', async () => {
     vi.useFakeTimers();
     let aborted = false;
