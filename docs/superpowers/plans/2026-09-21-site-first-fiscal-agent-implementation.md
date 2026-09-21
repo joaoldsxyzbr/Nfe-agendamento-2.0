@@ -15,7 +15,7 @@
 - **Release A / v0.0.18:** Tasks 1–5 implementadas, integradas à `main` e publicadas com CI/Release/CodeQL verdes.
 - **Release B / v0.0.19:** Tasks 6–7 implementadas e integradas à `main`: instalador com piloto `BridgeAutostartMode=standalone`, compilação standalone no CI e App convertido em supervisor headless. O App permanece empacotado para rollback.
 - **Release C / v0.0.20:** Task 8 executada em 21/09/2026 após a release de transição v0.0.19. O proprietário autorizou avançar sem usar os testes físicos como gate de implementação; eles continuam documentados separadamente e não são apresentados como validados.
-- **Task 9:** Releases A/B publicadas; documentação e pipeline preparados para a Release C `v0.0.20`, com Bridge standalone final e App removido.
+- **Task 9:** Release C publicada como `v0.0.20` a partir do commit canônico `release: v0.0.20` (`eed874d1711e440a5c22676dba5d982538f4079f`), com CI, CodeQL e workflow de Release concluídos com sucesso.
 
 ## Global Constraints
 

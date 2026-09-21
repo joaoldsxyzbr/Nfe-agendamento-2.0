@@ -7,7 +7,7 @@ Este diretório preserva planos de implementação como **registro histórico** 
 - estabilização/hardening concluído no código: `2026-09-09-stabilization-hardening-implementation.md`;
 - arquitetura vigente: `../specs/2026-09-21-site-first-fiscal-agent-design.md` + `../../architecture/bridge-security.md`;
 - pendências de validação física: `../../testing/acceptance.md`;
-- release final preparada: `../../releases/v0.0.20.md`.
+- release pública atual: `../../releases/v0.0.20.md`.
 
 ## Planos históricos/superseded
 
