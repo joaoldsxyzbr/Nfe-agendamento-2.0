@@ -87,14 +87,17 @@ Permissões mínimas planejadas:
 - `scripting`;
 - `tabs`;
 - `windows`;
+- `webRequest` apenas para observar a requisição oficial de download do XML;
 - `storage` somente se necessário para estado efêmero/recovery;
-- host permission estrita para `https://www.nfe.fazenda.gov.br/*`;
-- acesso externo somente ao domínio oficial do NFe Agendamento por `externally_connectable`.
+- host permissions estritas para `https://www.nfe.fazenda.gov.br/*` e para o domínio oficial do NFe Agendamento;
+- content script no site oficial para fazer a ponte com o service worker sem depender de um ID de extensão hardcoded.
 
 Não usar:
 
 - `<all_urls>`;
+- `externally_connectable` no piloto;
 - permissões de leitura arbitrária do disco;
+- `downloads` para ler histórico/arquivos;
 - Native Messaging;
 - automação de captcha;
 - `webRequestBlocking`;
@@ -102,7 +105,16 @@ Não usar:
 
 ## Comunicação site ↔ extensão
 
-O site não deve depender de um ID hardcoded para lógica de negócio. O cliente da extensão terá uma pequena camada de transporte configurável.
+O site não deve depender de um ID hardcoded. Um content script injetado somente no domínio oficial atua como ponte entre a página e o service worker da extensão.
+
+Fluxo do canal:
+
+1. o site publica uma mensagem em `window.postMessage` com marcador e schema próprios;
+2. o content script valida `event.source === window`, `event.origin` e o schema;
+3. o content script encaminha apenas comandos conhecidos por `chrome.runtime.sendMessage`;
+4. o service worker responde;
+5. o content script devolve a resposta ao mesmo `window`;
+6. o cliente do site correlaciona por `requestId`.
 
 Contrato lógico:
 
@@ -146,9 +158,11 @@ Assim, consultation controller e batch controller não precisam conhecer detalhe
 
 ### Site
 
-A extensão aceita mensagens externas apenas da origem oficial do projeto:
+O content script da ponte existe apenas na origem oficial:
 
 `https://nfeagendamento.joaolds.xyz.br/*`
+
+Ele aceita mensagens somente da própria janela e da origem esperada, valida tipos/campos antes de encaminhar e não expõe uma API genérica de `fetch`, criação de tabs ou execução de scripts.
 
 Nenhuma outra página web pode iniciar operações.
 
@@ -197,21 +211,25 @@ A extensão pode somente detectar que a resposta humana já existe e então acio
 
 ## Obtenção do XML
 
-A extensão tentará primeiro obter o XML sem depender de leitura do arquivo baixado no Windows.
+A extensão tentará obter o XML sem ler o arquivo baixado no Windows.
 
 Estratégia preferida:
 
 1. reconhecer que a página oficial terminou a consulta;
-2. localizar o endpoint/controle oficial de download já autorizado;
-3. executar uma requisição na própria origem/sessão do Portal, usando código no contexto apropriado da página quando necessário;
-4. receber o corpo XML em memória;
-5. validar tamanho máximo e estrutura mínima na extensão;
-6. enviar o XML ao site;
-7. o site executa a validação canônica atual contra a chave consultada.
+2. acionar somente o controle oficial de download já identificado;
+3. o service worker observa, via `webRequest` não bloqueante e limitado ao host/path oficial, a requisição real de download;
+4. capturar somente URL, método e corpo necessário daquela requisição;
+5. reproduzir a mesma requisição a partir do service worker com `fetch`, usando a sessão/cookies do host permitidos pelo navegador;
+6. receber o corpo XML em memória;
+7. validar limite de 10 MiB e estrutura mínima na extensão;
+8. enviar somente o XML ao site;
+9. o site executa a validação canônica atual contra a chave consultada.
 
-A extensão **não** ganha acesso genérico ao sistema de arquivos.
+O listener ignora requisições iniciadas pela própria extensão para impedir recursão e rejeita qualquer host/path fora da allowlist.
 
-Se o Portal impedir a leitura programática do XML na sessão real, o piloto deve falhar de forma explícita e preservar o helper WebView2 como fallback. Não será criada uma permissão invasiva apenas para contornar esse limite.
+A extensão **não** ganha acesso genérico ao sistema de arquivos nem permissão de histórico de downloads.
+
+Se o Portal impedir a reprodução segura da requisição na sessão real, o piloto deve falhar de forma explícita e preservar o helper WebView2 como fallback. Não será criada uma permissão invasiva apenas para contornar esse limite.
 
 ## Integração no site
 
@@ -275,9 +293,11 @@ apps/extension/
   src/
     background.ts
     protocol.ts
+    site-bridge.ts
     portal-content.ts
     portal-dom.ts
     portal-session.ts
+    portal-request.ts
   tests/
     protocol.test.ts
     portal-dom.test.ts
