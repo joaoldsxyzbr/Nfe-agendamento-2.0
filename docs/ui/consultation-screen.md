@@ -10,7 +10,7 @@ A área de ações do canto superior direito contém, nesta ordem:
 2. atalho quadrado **Baixar app para Windows**;
 3. botão quadrado de **Configurações**.
 
-O atalho de download aponta para o Setup da versão canônica publicada (`v0.0.16`). O teste `apps/web/tests/settings-panel.test.ts` cruza a URL do Setup com `Directory.Build.props`, para que um futuro bump de versão não deixe o link silenciosamente desatualizado.
+O atalho de download aponta para o Setup da versão canônica publicada (`v0.0.17`). O teste `apps/web/tests/settings-panel.test.ts` cruza a URL do Setup com `Directory.Build.props`, para que um futuro bump de versão não deixe o link silenciosamente desatualizado.
 
 O cabeçalho usa um único bloco visual à esquerda: símbolo da aplicação e, ao lado, o nome quebrado em duas linhas, **NF-e** e **Agendamento**, separados por uma divisória vertical discreta. A frase de apoio fica logo abaixo do conjunto.
 
