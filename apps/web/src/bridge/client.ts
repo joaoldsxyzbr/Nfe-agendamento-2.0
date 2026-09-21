@@ -1,5 +1,6 @@
 import {
   BRIDGE_BASE_URL,
+  type BridgeCapabilities,
   type BridgeHealth,
   type CertificateCatalog,
   type CertificateSummary,
@@ -25,6 +26,12 @@ const DEFAULT_TIMEOUTS: BridgeTimeouts = {
   portalMs: 8_000,
 };
 
+const BRIDGE_CAPABILITY_KEYS = [
+  'directLookup',
+  'manualXmlImport',
+  'portalFallback',
+  'portalPrewarm',
+] as const;
 const CERTIFICATE_KEYS = ['issuer', 'notAfter', 'notBefore', 'subject', 'thumbprint'] as const;
 const LOOKUP_KEYS = ['cStat', 'category', 'message', 'xml'] as const;
 const PORTAL_STATUS_KEYS = ['message', 'operationId', 'state', 'xml'] as const;
@@ -170,10 +177,24 @@ export class BridgeClient {
 }
 
 function isBridgeHealth(value: unknown): value is BridgeHealth {
-  if (!value || typeof value !== 'object') return false;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const health = value as Record<string, unknown>;
-  return typeof health.version === 'string' && health.version.length > 0 && health.status === 'ok' &&
-    typeof health.webView2Available === 'boolean' && typeof health.certificateSelected === 'boolean';
+  if (typeof health.version !== 'string' || health.version.length === 0 || health.status !== 'ok' ||
+      typeof health.webView2Available !== 'boolean' || typeof health.certificateSelected !== 'boolean') {
+    return false;
+  }
+
+  return !Object.hasOwn(health, 'capabilities') || isBridgeCapabilities(health.capabilities);
+}
+
+function isBridgeCapabilities(value: unknown): value is BridgeCapabilities {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const capabilities = value as Record<string, unknown>;
+  return hasExactKeys(capabilities, BRIDGE_CAPABILITY_KEYS) &&
+    typeof capabilities.directLookup === 'boolean' &&
+    typeof capabilities.portalFallback === 'boolean' &&
+    typeof capabilities.portalPrewarm === 'boolean' &&
+    typeof capabilities.manualXmlImport === 'boolean';
 }
 
 function isCertificateCatalog(value: unknown): value is CertificateCatalog {
