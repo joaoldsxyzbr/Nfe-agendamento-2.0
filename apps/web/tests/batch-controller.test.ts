@@ -20,7 +20,7 @@ function portalCompleted(operationId: string, xml = '<nfe/>'): PortalOperationSt
 }
 
 type HarnessOptions = {
-  lookup?: (accessKey: string, signal?: AbortSignal) => Promise<NfeLookupResult>;
+  lookup?: (accessKey: string, signal?: AbortSignal, requestId?: string) => Promise<NfeLookupResult>;
   resolveSupplier?: (taxId: string, signal?: AbortSignal) => Promise<SupplierResolution>;
   portalStart?: (accessKey: string, signal?: AbortSignal) => Promise<string>;
   portalWait?: (operationId: string, signal?: AbortSignal) => Promise<PortalOperationStatus>;
@@ -40,6 +40,7 @@ function createHarness(options: HarnessOptions = {}) {
 
   const rendered: BatchItemView[][] = [];
   const lookups: string[] = [];
+  const lookupRequestIds: Array<string | undefined> = [];
   const supplierResolutions: string[] = [];
   const portalStarts: string[] = [];
   const portalCancels: string[] = [];
@@ -68,9 +69,10 @@ function createHarness(options: HarnessOptions = {}) {
         webView2Available: true,
         certificateSelected: true,
       }),
-      lookupNfe: async (accessKey, signal) => {
+      lookupNfe: async (accessKey, signal, requestId) => {
         lookups.push(accessKey);
-        return options.lookup?.(accessKey, signal) ?? success(`<nfe key="${accessKey}"/>`);
+        lookupRequestIds.push(requestId);
+        return options.lookup?.(accessKey, signal, requestId) ?? success(`<nfe key="${accessKey}"/>`);
       },
       resolveSupplier: async (taxId, signal) => {
         supplierResolutions.push(taxId);
@@ -133,6 +135,7 @@ function createHarness(options: HarnessOptions = {}) {
     route,
     rendered,
     lookups,
+    lookupRequestIds,
     supplierResolutions,
     portalStarts,
     portalCancels,
@@ -162,6 +165,22 @@ describe('batch controller', () => {
     expect(harness.start.disabled).toBe(false);
     expect(lastItems(harness).map((item) => item.accessKey)).toEqual([KEY_A, KEY_B]);
     expect(lastItems(harness).map((item) => item.status)).toEqual(['queued', 'queued']);
+  });
+
+  it('generates one UUID requestId for each direct batch item', async () => {
+    const harness = createHarness();
+    harness.input.value = `${KEY_A}\n${KEY_B}`;
+    harness.controller.syncDraft();
+
+    await harness.controller.start();
+
+    expect(harness.lookupRequestIds).toHaveLength(2);
+    expect(new Set(harness.lookupRequestIds).size).toBe(2);
+    for (const requestId of harness.lookupRequestIds) {
+      expect(requestId).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      );
+    }
   });
 
   it('processes direct lookups one at a time', async () => {
