@@ -37,6 +37,21 @@ describe('PortalFallbackController', () => {
     })).resolves.toBeUndefined();
 
     expect(prewarmCalls).toBe(1);
+
+    await expect(controller.prewarm({
+      version: '0.0.18',
+      status: 'ok',
+      webView2Available: true,
+      certificateSelected: true,
+      capabilities: {
+        directLookup: true,
+        portalFallback: true,
+        portalPrewarm: false,
+        manualXmlImport: false,
+      },
+    })).resolves.toBeUndefined();
+
+    expect(prewarmCalls).toBe(1);
     await expect(controller.start(KEY)).resolves.toBe('op-prewarm');
   });
 
