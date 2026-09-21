@@ -31,9 +31,11 @@ describe('portal fallback integration', () => {
       consultationController.indexOf('async function renderParsedXml'),
     );
     expect(singleFallback).not.toContain('lookupNfe(');
-    expect(consultationController).toContain('const lookup = await deps.bridge.lookupNfe(validation.value);');
+    expect(consultationController).toContain('const requestId = globalThis.crypto.randomUUID();');
+    expect(consultationController).toContain('deps.bridge.lookupNfe(validation.value, undefined, requestId)');
 
-    expect(batchController).toContain('deps.bridge.lookupNfe(item.accessKey, signal)');
+    expect(batchController).toContain('const requestId = globalThis.crypto.randomUUID();');
+    expect(batchController).toContain('deps.bridge.lookupNfe(item.accessKey, signal, requestId)');
     expect(batchController).toContain("lookup.category === 'consumption_limit'");
     expect(batchController).toContain("lookup.category === 'fiscal_status' && lookup.cStat === '217'");
     expect(batchController).toContain('deps.portal.start(item.accessKey, signal)');
