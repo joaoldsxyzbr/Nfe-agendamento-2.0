@@ -11,7 +11,7 @@ export type ConsultationController = Readonly<{
 }>;
 
 type ConsultationBridgeClient = Readonly<{
-  lookupNfe(accessKey: string, signal?: AbortSignal): Promise<NfeLookupResult>;
+  lookupNfe(accessKey: string, signal?: AbortSignal, requestId?: string): Promise<NfeLookupResult>;
   resolveSupplier(taxId: string, signal?: AbortSignal): Promise<SupplierResolution>;
 }>;
 
@@ -55,7 +55,8 @@ export function createConsultationController(
     deps.renderState('Consultando NF-e', 'Aguardando resposta da SEFAZ pelo Bridge local…');
 
     try {
-      const lookup = await deps.bridge.lookupNfe(validation.value);
+      const requestId = globalThis.crypto.randomUUID();
+      const lookup = await deps.bridge.lookupNfe(validation.value, undefined, requestId);
       if (lookup.category === 'success' && lookup.xml) {
         await renderParsedXml(lookup.xml, validation.value);
         return;
