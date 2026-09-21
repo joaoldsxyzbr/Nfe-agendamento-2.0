@@ -41,3 +41,9 @@ public interface IPortalWindowLauncher
     bool IsAvailable { get; }
     Task<PortalLaunchResult> OpenAsync(PortalLaunchRequest request, CancellationToken cancellationToken);
 }
+
+
+public interface IPortalWarmup
+{
+    Task<bool> WarmUpAsync(CancellationToken cancellationToken);
+}
