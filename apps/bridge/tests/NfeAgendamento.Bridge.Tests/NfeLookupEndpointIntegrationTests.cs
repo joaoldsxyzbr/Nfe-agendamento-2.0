@@ -18,6 +18,7 @@ public sealed class NfeLookupEndpointIntegrationTests : IAsyncDisposable
 {
     private const string AllowedOrigin = "https://nfeagendamento.example";
     private const string ValidAccessKey = "35260812345678000195550010000000011000000018";
+    private const string OtherValidAccessKey = "42260812345678000123550010000012341000012342";
 
     private readonly string _temporaryRoot;
     private readonly X509Certificate2 _certificate;
@@ -81,6 +82,96 @@ public sealed class NfeLookupEndpointIntegrationTests : IAsyncDisposable
         Assert.Equal(JsonValueKind.Null, payload.GetProperty("xml").ValueKind);
         Assert.Equal(1, _transport.CallCount);
         Assert.Equal(_certificate.Thumbprint, _transport.ObservedCertificateThumbprint);
+    }
+
+    [Fact]
+    public async Task Lookup_endpoint_rejects_invalid_request_id_before_transport()
+    {
+        using var client = CreateClient();
+        using var request = Request(HttpMethod.Post, "/api/v1/nfe/lookup");
+        request.Content = JsonContent.Create(new { accessKey = ValidAccessKey, requestId = "not-a-uuid" });
+
+        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var payload = await response.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
+        Assert.Equal("invalid_request_id", payload.GetProperty("error").GetString());
+        Assert.Equal(0, _transport.CallCount);
+    }
+
+    [Fact]
+    public async Task Lookup_endpoint_reuses_same_request_id_without_second_transport()
+    {
+        using var client = CreateClient();
+        var requestId = Guid.NewGuid().ToString("D");
+
+        using var firstRequest = Request(HttpMethod.Post, "/api/v1/nfe/lookup");
+        firstRequest.Content = JsonContent.Create(new { accessKey = ValidAccessKey, requestId });
+        using var first = await client.SendAsync(firstRequest, TestContext.Current.CancellationToken);
+
+        using var secondRequest = Request(HttpMethod.Post, "/api/v1/nfe/lookup");
+        secondRequest.Content = JsonContent.Create(new { accessKey = ValidAccessKey, requestId });
+        using var second = await client.SendAsync(secondRequest, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+        Assert.Equal(1, _transport.CallCount);
+    }
+
+    [Fact]
+    public async Task Lookup_endpoint_rejects_request_id_reused_for_different_key()
+    {
+        using var client = CreateClient();
+        var requestId = Guid.NewGuid().ToString("D");
+
+        using var firstRequest = Request(HttpMethod.Post, "/api/v1/nfe/lookup");
+        firstRequest.Content = JsonContent.Create(new { accessKey = ValidAccessKey, requestId });
+        using var first = await client.SendAsync(firstRequest, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+
+        using var secondRequest = Request(HttpMethod.Post, "/api/v1/nfe/lookup");
+        secondRequest.Content = JsonContent.Create(new { accessKey = OtherValidAccessKey, requestId });
+        using var second = await client.SendAsync(secondRequest, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
+        var payload = await second.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
+        Assert.Equal("request_id_conflict", payload.GetProperty("error").GetString());
+        Assert.Equal(1, _transport.CallCount);
+    }
+
+    [Fact]
+    public async Task Concurrent_modern_requests_for_same_key_use_one_transport_attempt()
+    {
+        _transport.Block = true;
+        using var client = CreateClient();
+
+        using var firstRequest = Request(HttpMethod.Post, "/api/v1/nfe/lookup");
+        firstRequest.Content = JsonContent.Create(new {
+            accessKey = ValidAccessKey,
+            requestId = Guid.NewGuid().ToString("D"),
+        });
+        var first = client.SendAsync(firstRequest, TestContext.Current.CancellationToken);
+
+        await _transport.Started.Task.WaitAsync(
+            TimeSpan.FromSeconds(1),
+            TestContext.Current.CancellationToken);
+
+        using var secondRequest = Request(HttpMethod.Post, "/api/v1/nfe/lookup");
+        secondRequest.Content = JsonContent.Create(new {
+            accessKey = ValidAccessKey,
+            requestId = Guid.NewGuid().ToString("D"),
+        });
+        var second = client.SendAsync(secondRequest, TestContext.Current.CancellationToken);
+
+        await Task.Delay(25, TestContext.Current.CancellationToken);
+        _transport.Release.TrySetResult();
+
+        using var firstResponse = await first;
+        using var secondResponse = await second;
+
+        Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, secondResponse.StatusCode);
+        Assert.Equal(1, _transport.CallCount);
     }
 
     [Fact]
@@ -153,17 +244,27 @@ public sealed class NfeLookupEndpointIntegrationTests : IAsyncDisposable
             _result = result;
         }
 
-        public int CallCount { get; private set; }
-        public string? ObservedCertificateThumbprint { get; private set; }
+        private int _callCount;
 
-        public Task<TransportResult> LookupAsync(
+        public int CallCount => Volatile.Read(ref _callCount);
+        public string? ObservedCertificateThumbprint { get; private set; }
+        public bool Block { get; set; }
+        public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async Task<TransportResult> LookupAsync(
             string accessKey,
             X509Certificate2 certificate,
             CancellationToken cancellationToken)
         {
-            CallCount++;
+            Interlocked.Increment(ref _callCount);
             ObservedCertificateThumbprint = certificate.Thumbprint;
-            return Task.FromResult(_result);
+            Started.TrySetResult();
+
+            if (Block)
+                await Release.Task.WaitAsync(cancellationToken);
+
+            return _result;
         }
     }
 }
