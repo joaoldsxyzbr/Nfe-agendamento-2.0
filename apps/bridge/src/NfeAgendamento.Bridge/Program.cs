@@ -87,7 +87,11 @@ builder.Services.AddScoped<NfeLookupService>(services =>
         sharedCoordinator,
         logger);
 });
-builder.Services.AddSingleton<IPortalWindowLauncher, ProcessPortalWindowLauncher>();
+builder.Services.AddSingleton<ProcessPortalWindowLauncher>();
+builder.Services.AddSingleton<IPortalWindowLauncher>(services =>
+    services.GetRequiredService<ProcessPortalWindowLauncher>());
+builder.Services.AddSingleton<IPortalWarmup>(services =>
+    services.GetRequiredService<ProcessPortalWindowLauncher>());
 builder.Services.AddSingleton<PortalFallbackService>(services =>
 {
     var launcher = services.GetRequiredService<IPortalWindowLauncher>();
@@ -181,7 +185,7 @@ api.MapGet("/health", (
     {
         directLookup = true,
         portalFallback = true,
-        portalPrewarm = false,
+        portalPrewarm = true,
         manualXmlImport = false,
     },
 }));
@@ -240,6 +244,23 @@ api.MapPost("/nfe/lookup", async (
 
     var result = await lookup.LookupAsync(request.AccessKey, cancellationToken);
     return Results.Ok(result);
+});
+
+api.MapPost("/portal/prewarm", async (
+    HttpRequest request,
+    IPortalWarmup portal,
+    CancellationToken cancellationToken) =>
+{
+    if (!string.Equals(
+        request.Headers["X-Nfe-Bridge"].ToString(),
+        "1",
+        StringComparison.Ordinal))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var ready = await portal.WarmUpAsync(cancellationToken);
+    return Results.Ok(new { state = ready ? "ready" : "unavailable" });
 });
 
 api.MapPost("/portal/start", async (
