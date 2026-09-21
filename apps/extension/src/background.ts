@@ -98,12 +98,15 @@ async function handleSiteCommand(commandValue: unknown, sender: any): Promise<un
       height: 800,
     });
     const portalWindowId = popup?.id;
-    const portalTabId = popup?.tabs?.[0]?.id;
-    if (!Number.isInteger(portalWindowId) || !Number.isInteger(portalTabId)) {
-      if (Number.isInteger(portalWindowId)) {
-        await chrome.windows.remove(portalWindowId).catch(() => {});
-      }
+    if (!Number.isInteger(portalWindowId)) {
       throw new Error('Não foi possível criar a janela do Portal.');
+    }
+
+    const popupTabs = await chrome.tabs.query({ windowId: portalWindowId });
+    const portalTabId = popupTabs?.[0]?.id;
+    if (!Number.isInteger(portalTabId)) {
+      await chrome.windows.remove(portalWindowId).catch(() => {});
+      throw new Error('Não foi possível identificar a aba do Portal.');
     }
 
     const operation: ActiveOperation = {
