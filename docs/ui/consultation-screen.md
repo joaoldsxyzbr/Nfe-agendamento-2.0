@@ -10,7 +10,7 @@ A área de ações do canto superior direito contém, nesta ordem:
 2. atalho quadrado **Baixar app para Windows**;
 3. botão quadrado de **Configurações**.
 
-O atalho de download aponta para o Setup da versão canônica publicada (`v0.0.17`). O teste `apps/web/tests/settings-panel.test.ts` cruza a URL do Setup com `Directory.Build.props`, para que um futuro bump de versão não deixe o link silenciosamente desatualizado.
+O atalho de download acompanha a versão canônica configurada no repositório. O teste `apps/web/tests/settings-panel.test.ts` cruza a URL do Setup com `Directory.Build.props`, evitando que um bump de versão deixe o link silenciosamente desatualizado.
 
 O cabeçalho usa um único bloco visual à esquerda: símbolo da aplicação e, ao lado, o nome quebrado em duas linhas, **NF-e** e **Agendamento**, separados por uma divisória vertical discreta. A frase de apoio fica logo abaixo do conjunto.
 
@@ -148,6 +148,18 @@ A verificação de atualização usa `/api/update/latest` e só aceita o Setup v
 Quando o acesso a `127.0.0.1` falha sem sinal suficiente do navegador, a UI informa de forma conservadora que o componente pode estar parado **ou** que a permissão de rede local pode estar bloqueada; ela não inventa uma causa específica.
 
 O diagnóstico não lê PFX, senha, chave privada ou XML. Mensagens exibidas removem sequências de 44 caracteres alfanuméricos para evitar exposição acidental de chave NF-e.
+
+## Supervisor Windows de transição
+
+Na Release B, o site é a única interface normal do produto. O `NfeAgendamento.App.exe` continua empacotado temporariamente para supervisão/rollback, porém roda headless:
+
+- `NotifyIcon.Visible = false`;
+- não existe menu **Abrir NFe Agendamento**;
+- não existe menu **Verificar atualizações**;
+- duplo clique não abre o site;
+- nenhuma caixa de diálogo é usada para substituir o diagnóstico do site.
+
+Quando o instalador usa o modo padrão `app`, o supervisor ainda mantém claim, heartbeat, backoff/restart e shutdown controlado do Bridge com `--managed`. O modo `standalone` é um piloto separado e opt-in; detalhes em `docs/testing/standalone-bridge.md`.
 
 ## Dados temporários
 

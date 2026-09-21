@@ -1,6 +1,6 @@
 # Aceitação física — NFe Agendamento 2.0
 
-Este checklist cobre o que o CI não consegue provar: instalação real no Windows, app na bandeja, lifecycle App/Bridge, navegador falando com loopback, certificado A1, SEFAZ, WebView2, Portal Nacional, hCaptcha, DANFE/PDF e atualização.
+Este checklist cobre o que o CI não consegue provar: instalação real no Windows, lifecycle do componente local, navegador falando com loopback, certificado A1, SEFAZ, WebView2, Portal Nacional, hCaptcha, DANFE/PDF e atualização. Na transição site-first, o App pode existir como supervisor headless; o piloto standalone possui checklist adicional próprio.
 
 > Não provoque bloqueio/656 fazendo consultas repetidas. Valide o fallback quando o limite ocorrer naturalmente ou em cenário controlado já disponível.
 
@@ -13,7 +13,7 @@ Este checklist cobre o que o CI não consegue provar: instalação real no Windo
 - site oficial disponível exatamente em `https://nfeagendamento.joaolds.xyz.br`;
 - acesso à Internet para SEFAZ, GitHub Releases e Portal Nacional da NF-e.
 
-Versão canônica atual: **`0.0.17`**. Para validar a release pública, use `NFeAgendamentoBridge-Setup-v0.0.17.exe` e registre o SHA/tag correspondentes.
+A versão em teste deve ser lida de `Directory.Build.props` e precisa coincidir com o nome do Setup, o SHA validado pelo CI e a tag/release correspondente. Este checklist não fixa um número de versão para não ficar obsoleto.
 
 > O publish é self-contained: não exige instalação prévia do .NET 10. O WebView2 Runtime continua necessário somente para o fallback Portal.
 
@@ -23,14 +23,14 @@ Registre antes de começar:
 | --- | --- |
 | Data | |
 | Commit SHA | |
-| Versão canônica | `0.0.17` |
+| Versão canônica | preencher a partir de `Directory.Build.props` |
 | Run CI / artifact | |
 | URL do site | `https://nfeagendamento.joaolds.xyz.br` |
 | Windows | |
 | Navegador + versão | |
 | PC | |
 
-## 0. Instalação, bandeja, instância única e auto-start
+## 0. Instalação, supervisor headless, instância única e auto-start
 
 1. Execute o Setup correspondente ao SHA em teste em conta de usuário comum.
 2. Confirme que a instalação não solicita UAC/admin.
@@ -38,25 +38,28 @@ Registre antes de começar:
 4. Confirme `NfeAgendamento.App.exe`, `NfeAgendamento.Bridge.exe` e `NfeAgendamento.Portal.exe` lado a lado.
 5. Confirme atalho no Menu Iniciar e ícone próprio.
 6. Confirme que nenhuma janela preta de console permanece aberta.
-7. Confirme ícone na bandeja e estado ativo.
-8. Confirme menu **Abrir NFe Agendamento**, **Verificar atualizações** e **Sair**.
-9. Dê duplo clique e confirme abertura do site oficial.
-10. Confirme auto-start em `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`.
-11. Abra novamente o atalho e confirme que não surge segunda bandeja nem listener concorrente.
-12. Use **Sair** e confirme encerramento gracioso do Bridge.
-13. Reinicie sessão/PC e confirme início automático único.
+7. No modo padrão `app`, confirme que `NfeAgendamento.App.exe` inicia sem ícone de bandeja, menu ou janela visível.
+8. Confirme auto-start em `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` apontando para o executável previsto pelo modo do Setup.
+9. Abra o site oficial manualmente e confirme conexão com o Bridge.
+10. Inicie novamente o App e confirme que não surge segunda instância nem listener concorrente.
+11. Reinicie sessão/PC e confirme início automático único.
+12. Para o piloto `BridgeAutostartMode=standalone`, execute também `docs/testing/standalone-bridge.md`.
 
 Resultado: ☐ aprovado
 
 ## 1. Lifecycle, lease e recuperação do Bridge
 
-1. Com App + Bridge ativos, finalize somente `NfeAgendamento.Bridge.exe` pelo Gerenciador de Tarefas.
-2. Confirme que o tray entra em reconexão.
-3. Confirme reinício automático conforme backoff e retorno ao estado ativo.
-4. Repita quedas controladas e confirme ausência de restart-loop infinito; ao exceder o limite, deve indicar **Bridge indisponível**.
-5. Reabra o App e confirme recuperação normal.
-6. Com instância gerenciada válida existente, abra o App novamente e confirme que ele não mata o Bridge nem cria listener concorrente.
-7. Use **Sair** e confirme shutdown controlado.
+### Modo padrão `app`
+
+1. Com supervisor headless + Bridge ativos, finalize somente `NfeAgendamento.Bridge.exe` pelo Gerenciador de Tarefas.
+2. Pelo diagnóstico do site, confirme indisponibilidade temporária e depois reconexão após o backoff do supervisor.
+3. Repita quedas controladas e confirme ausência de restart-loop infinito.
+4. Com instância gerenciada válida existente, inicie novamente o App e confirme que ele não mata o Bridge nem cria listener concorrente.
+5. Encerre o supervisor e confirme que o lease do Bridge gerenciado expira/encerra sem deixar listener órfão; reabra o App e confirme recuperação normal.
+
+### Piloto standalone
+
+Validar separadamente com `docs/testing/standalone-bridge.md`. No modo standalone não se espera reinício pelo App supervisor.
 
 Resultado: ☐ aprovado
 
@@ -64,12 +67,12 @@ Resultado: ☐ aprovado
 
 Executar em Chrome, Edge e Firefox quando disponíveis.
 
-1. Abra o site oficial com App/Bridge ativos.
+1. Abra o site oficial com o componente local ativo.
 2. Autorize acesso local quando o navegador solicitar.
 3. Confirme `Bridge conectado`.
 4. Negue/revogue a permissão uma vez e confira tratamento de permissão local quando suportado pelo navegador.
-5. Use **Sair** e confirme `Bridge não encontrado`.
-6. Reinicie o App e confirme reconexão sem configurar origem.
+5. Pare o componente local de forma controlada e confirme `Bridge não encontrado`/estado equivalente no diagnóstico.
+6. Inicie novamente o modo em teste e confirme reconexão sem configurar origem.
 7. Em origem diferente, confirme rejeição da chamada ao Bridge.
 8. Confirme, quando possível, escuta somente em `127.0.0.1:17345`.
 
@@ -130,7 +133,7 @@ Resultado: ☐ aprovado
 8. Feche por botão, `Esc` e backdrop.
 9. Use `Imprimir / PDF` e confira A4/paginação.
 10. Confirme que transporte/volumes não aparece sem conteúdo útil.
-11. Confirme que o atalho de download do app aponta para `NFeAgendamentoBridge-Setup-v0.0.17.exe`.
+11. Confirme que o atalho de download aponta para o Setup da versão canônica indicada em `Directory.Build.props`.
 
 Resultado: ☐ aprovado
 
@@ -189,15 +192,15 @@ Durante o teste do Portal:
 
 Resultado: ☐ aprovado
 
-## 10. Atualizador manual
+## 10. Atualização pelo site
 
-1. Instale a última versão pública anterior à release candidata e clique em **Verificar atualizações**.
-2. Confirme descoberta da release candidata mais nova.
-3. Confirme exibição da versão e pedido de confirmação.
-4. Confirme que asset, tamanho ou SHA-256 inválidos impedem execução.
-5. Confirme que um Setup com tamanho ou SHA-256 divergente é rejeitado antes de ser executado.
-6. Com o Setup validado por origem, tamanho e SHA-256, confirme que ele inicia e que App/Bridge encerram para substituição.
-7. Após atualizar, confirme que nova verificação informa que a versão está atualizada.
+1. Instale a última versão pública anterior à release candidata.
+2. Abra **Configurações** no site e confirme que a versão instalada vem de `GET /api/v1/health`.
+3. Confirme que uma release estável mais nova gera a ação **Atualizar componente Windows para X.Y.Z**.
+4. Confirme que o download usa somente `nfeagendamento.joaolds.xyz.br/downloads/windows/...` e o nome exato do Setup versionado.
+5. Execute o Setup e confirme preservação de `%LOCALAPPDATA%\NfeAgendamentoBridge`.
+6. Após o componente voltar, confirme no diagnóstico do site a versão nova e ausência de atualização pendente.
+7. Confirme que o supervisor headless não cria menu ou caixa de diálogo de atualização.
 
 Detalhes: `docs/testing/bridge-updater.md`.
 
@@ -214,8 +217,8 @@ Resultado: ☐ aprovado
 
 ## 12. Segundo PC independente
 
-1. Instale o mesmo Setup v0.0.17 validado.
-2. Confirme início na bandeja sem console.
+1. Instale o mesmo Setup validado pelo SHA da release em teste.
+2. Confirme início sem console e, no modo padrão, sem UI visível do supervisor.
 3. Use o A1 instalado nesse segundo PC.
 4. Abra o site oficial e faça consulta normal.
 5. Confirme ausência de Central, pareamento, pasta compartilhada ou dependência do primeiro PC.
@@ -233,7 +236,7 @@ Uma release só deve ser declarada fisicamente validada depois de:
 - etapas 0–7 aprovadas;
 - etapa 8 aprovada em ocorrência real/controlada;
 - lifecycle/recovery aprovado;
-- atualização da versão pública anterior → release candidata validada, incluindo origem, tamanho e SHA-256;
+- atualização da versão pública anterior → release candidata validada pelo fluxo site-first e Setup oficial;
 - segundo PC aprovado quando fizer parte da implantação;
 - divergências registradas e corrigidas.
 

@@ -59,6 +59,17 @@ A apresentação do resultado continua em callbacks fornecidos pelo composition 
 
 O controller nunca recebe PFX, senha ou chave privada. O contrato do site continua limitado aos metadados públicos já expostos pelo Bridge e ao thumbprint.
 
+## Lifecycle Windows de transição
+
+O site é a única interface normal. Durante a Release B, o Windows mantém dois caminhos de lifecycle sem mudar as fronteiras fiscais:
+
+- modo padrão `app`: `NfeAgendamento.App.exe` roda headless e supervisiona o Bridge gerenciado por Named Pipe/lease;
+- piloto `standalone`: o instalador pode iniciar diretamente `NfeAgendamento.Bridge.exe` sem `--managed`;
+- em ambos, A1, SEFAZ e Portal continuam pertencendo ao Bridge/helper local;
+- o App permanece empacotado durante a transição para rollback e só pode ser removido depois do gate de estabilidade.
+
+Diagnóstico e atualização pertencem ao site; o supervisor não cria uma segunda UX.
+
 ## Viewer DANFE
 
 `apps/web/src/danfe/viewer.ts` possui somente o lifecycle do modal:
@@ -85,4 +96,4 @@ O renderer fiscal continua em `apps/web/src/danfe/render.ts`. Regras de layout, 
 
 Novas responsabilidades devem permanecer no módulo que já é dono do fluxo. `main.ts` deve ser tratado como composition root, não como local padrão para lógica de negócio.
 
-As extrações acima são estruturais. Elas não mudaram a arquitetura site + App/Bridge por PC + helper Portal + Worker/Durable Object.
+As extrações acima são estruturais. A arquitetura continua site + componente Windows local por PC + helper Portal + Worker/Durable Object; o App headless é apenas um supervisor de transição, não uma interface paralela.

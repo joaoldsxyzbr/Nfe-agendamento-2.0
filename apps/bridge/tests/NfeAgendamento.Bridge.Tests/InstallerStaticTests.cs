@@ -79,6 +79,23 @@ public sealed class InstallerStaticTests
     }
 
     [Fact]
+    public void Installer_supports_standalone_pilot_without_changing_default_autostart()
+    {
+        var root = RepositoryRoot();
+        var iss = File.ReadAllText(Path.Combine(
+            root, "apps", "bridge", "installer", "NfeAgendamentoBridge.iss"));
+
+        Assert.Contains("#ifndef BridgeAutostartMode", iss);
+        Assert.Contains("#define BridgeAutostartMode \"app\"", iss);
+        Assert.Contains("#if BridgeAutostartMode == \"standalone\"", iss);
+        Assert.Contains("#define MyAppExeName \"NfeAgendamento.Bridge.exe\"", iss);
+        Assert.Contains("#define MyAppExeName \"NfeAgendamento.App.exe\"", iss);
+        Assert.Contains("ValueData: \"\"\"{app}\\{#MyAppExeName}\"\"\"", iss);
+        Assert.Contains("Filename: \"{app}\\{#MyAppExeName}\"", iss);
+        Assert.DoesNotContain("Parameters: \"--managed\"", iss, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Production_origin_is_fixed_without_installer_prompt()
     {
         var root = RepositoryRoot();
@@ -118,6 +135,18 @@ public sealed class InstallerStaticTests
         Assert.Contains("NFeAgendamentoBridge-Setup-v${{ steps.version.outputs.version }}", ci);
         Assert.Contains("name: NfeAgendamentoBridge-win-x64", ci);
         Assert.Contains("if (!(Test-Path $setup))", ci);
+    }
+
+    [Fact]
+    public void Ci_compiles_standalone_installer_mode_as_a_non_published_pilot()
+    {
+        var root = RepositoryRoot();
+        var ci = File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"));
+
+        Assert.Contains("Verify standalone installer mode compiles", ci);
+        Assert.Contains("/DBridgeAutostartMode=standalone", ci);
+        Assert.Contains("artifacts\\standalone-installer", ci);
+        Assert.Contains("NFeAgendamentoBridge-Setup-v$version.exe", ci);
     }
 
     [Fact]

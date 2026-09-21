@@ -7,7 +7,7 @@ NFe Agendamento é um aplicativo interno para consultar NF-e, baixar XML e gerar
 - **Site Cloudflare:** Vite + TypeScript para interface, parsing XML, DANFE, lote e regras de apresentação.
 - **Worker Cloudflare:** coordena o consumo fiscal entre PCs, aplica a barreira HTTP contra abuso e faz proxy estritamente limitado da metadata/Setup de atualização; os demais assets continuam servidos como site estático.
 - **Durable Object SQLite:** reserva atomicamente tentativas diretas antes da SEFAZ para computadores que usam o mesmo A1 RSA.
-- **App Windows:** `NfeAgendamento.App.exe` em WinForms; inicia oculto, fica na bandeja, gerencia o Bridge e oferece atualização manual.
+- **App Windows de transição:** `NfeAgendamento.App.exe` em WinForms permanece empacotado como supervisor/rollback, mas roda headless: sem bandeja visível, menu, abertura do site ou atualização pela UI; no modo padrão ele gerencia o Bridge via lease/heartbeat.
 - **Bridge:** ASP.NET Core .NET 10 em `http://127.0.0.1:17345`, somente loopback.
 - **Controle App → Bridge:** Named Pipe local restrito ao usuário atual, com lease, heartbeat e shutdown controlado.
 - **Helper Portal:** WinForms/WebView2 persistente para o fallback pelo Portal Nacional; hCaptcha continua sempre manual.
@@ -49,7 +49,7 @@ Implementado e coberto pelos gates automatizados aplicáveis:
 - parser estrutural complementar de IBS/CBS/IS, sem alterar prematuramente o DANFE;
 - App, Bridge e Portal publicados como self-contained `win-x64`;
 - instalador Inno Setup por usuário, sem administrador;
-- atualizador manual via domínio oficial, com metadata cacheada por curto período, rate limit próprio e validação local de release, origem, tamanho e SHA-256 antes de executar o Setup;
+- atualização apresentada pelo site via domínio oficial, com metadata cacheada por curto período, rate limit próprio e rota fechada para o Setup versionado; o updater legado permanece empacotado apenas como rollback técnico durante a transição;
 - logs locais estruturados com rotação e sem persistir chave NF-e, XML, PFX, senha ou chave privada.
 
 ## Proteção fiscal local e multi-PC
@@ -170,27 +170,27 @@ O CI usa o Wrangler do lockfile e executa `./node_modules/.bin/wrangler deploy -
 
 ## Atualizações e download do componente Windows
 
-O site e o App não dependem de acesso direto do cliente ao GitHub para baixar o Setup. Na v0.0.18, o painel do site também compara `health.version` com a metadata oficial e apresenta a atualização quando houver versão estável mais nova.
+O site é o caminho normal para descobrir e baixar atualização do componente Windows. O painel compara `health.version` com a metadata oficial e apresenta a atualização quando houver versão estável mais nova; o supervisor Windows headless não expõe fluxo de update próprio.
 
 - `GET /api/update/latest` consulta a release estável oficial server-side e devolve somente a metadata necessária, reescrevendo a URL do asset para o domínio do NFe Agendamento;
 - `GET /downloads/windows/vX.Y.Z/NFeAgendamentoBridge-Setup-vX.Y.Z.exe` valida tag/nome e faz streaming do único Setup permitido;
 - o Worker não aceita host, URL ou nome de arquivo arbitrários;
-- o App valida origem esperada, tamanho publicado e SHA-256 antes de executar o instalador;
-- a metadata validada usa cache curto no Worker e as rotas de atualização têm rate limiter próprio por IP.
+- a metadata validada usa cache curto no Worker e as rotas de atualização têm rate limiter próprio por IP;
+- `UpdateService.cs` continua no pacote/testes apenas para rollback da release de transição e não é exposto pela UI do supervisor headless.
 
 **Migração da v0.0.15:** o binário antigo ainda contém a URL direta do GitHub. Se a atualização interna da v0.0.15 falhar, baixar e instalar a v0.0.16 uma vez pelo botão do próprio site. A partir da v0.0.16, as atualizações passam pelo domínio oficial.
 
 ## Distribuição Windows
 
-Versão canônica da release: **v0.0.18**.
+Versão canônica da release: **v0.0.19**.
 
 Asset principal:
 
 ```text
-NFeAgendamentoBridge-Setup-v0.0.18.exe
+NFeAgendamentoBridge-Setup-v0.0.19.exe
 ```
 
-O instalador é por usuário, não pede administrador, mantém App + Bridge + helper Portal lado a lado, cria atalho no Menu Iniciar, registra início automático e preserva `%LOCALAPPDATA%\NfeAgendamentoBridge` — incluindo configurações locais como `settings.json`, `fiscal-usage.json` e `supplier-rules.json`.
+O instalador é por usuário, não pede administrador, mantém App + Bridge + helper Portal lado a lado e preserva `%LOCALAPPDATA%\NfeAgendamentoBridge` — incluindo `settings.json`, `fiscal-usage.json` e `supplier-rules.json`. O modo padrão continua iniciando o supervisor headless; um build de piloto pode usar `BridgeAutostartMode=standalone` para iniciar diretamente o Bridge sem remover o App do pacote.
 
 O Microsoft Edge WebView2 Runtime é necessário para o fallback pelo Portal Nacional.
 
@@ -205,7 +205,7 @@ O Microsoft Edge WebView2 Runtime é necessário para o fallback pelo Portal Nac
 
 ## Validação física
 
-O CI não consegue provar interação real com certificado A1, SEFAZ, Portal/hCaptcha ou uma impressora específica. Para declarar a v0.0.18 fisicamente validada, executar:
+O CI não consegue provar interação real com certificado A1, SEFAZ, Portal/hCaptcha ou uma impressora específica. Para declarar a v0.0.19 fisicamente validada, executar:
 
 - `docs/testing/acceptance.md`;
 - `docs/testing/batch-query.md`;
@@ -235,4 +235,4 @@ Não provoque bloqueio `656` repetindo consultas artificialmente apenas para tes
 - atualizador: `docs/testing/bridge-updater.md`;
 - DANFE: `docs/testing/danfe-layout.md`;
 - tela de consulta: `docs/ui/consultation-screen.md`;
-- release atual: `docs/releases/v0.0.18.md`.
+- release atual: `docs/releases/v0.0.19.md`;\n- release anterior: `docs/releases/v0.0.18.md`.
