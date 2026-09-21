@@ -37,10 +37,9 @@ Isso não substitui secret scanning nem revisão de commits, mas reduz o risco d
 
 O pipeline mantém suporte opcional à assinatura de:
 
-1. `NfeAgendamento.App.exe`;
-2. `NfeAgendamento.Bridge.exe`;
-3. `NfeAgendamento.Portal.exe`;
-4. Setup final do Inno Setup.
+1. `NfeAgendamento.Bridge.exe`;
+2. `NfeAgendamento.Portal.exe`;
+3. Setup final do Inno Setup.
 
 Quando `CODE_SIGNING_PFX_BASE64` e `CODE_SIGNING_PFX_PASSWORD` estiverem configurados, `scripts/sign-windows-artifacts.ps1` assina e verifica os artefatos. Quando os dois secrets estiverem ausentes, o script encerra com sucesso e os artefatos permanecem sem assinatura.
 
