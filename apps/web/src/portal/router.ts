@@ -54,9 +54,14 @@ export class PortalRouter {
 
     const client = owner === 'extension' ? this.extension : this.bridge;
     try {
-      return await client.waitForResult(operationId, signal);
-    } finally {
+      const result = await client.waitForResult(operationId, signal);
       this.owners.delete(operationId);
+      return result;
+    } catch (error) {
+      if (!signal?.aborted) {
+        this.owners.delete(operationId);
+      }
+      throw error;
     }
   }
 
