@@ -79,6 +79,23 @@ public sealed class InstallerStaticTests
     }
 
     [Fact]
+    public void Installer_supports_standalone_pilot_without_changing_default_autostart()
+    {
+        var root = RepositoryRoot();
+        var iss = File.ReadAllText(Path.Combine(
+            root, "apps", "bridge", "installer", "NfeAgendamentoBridge.iss"));
+
+        Assert.Contains("#ifndef BridgeAutostartMode", iss);
+        Assert.Contains("#define BridgeAutostartMode \"app\"", iss);
+        Assert.Contains("#if BridgeAutostartMode == \"standalone\"", iss);
+        Assert.Contains("#define MyAppExeName \"NfeAgendamento.Bridge.exe\"", iss);
+        Assert.Contains("#define MyAppExeName \"NfeAgendamento.App.exe\"", iss);
+        Assert.Contains("ValueData: \"\"\"{app}\\{#MyAppExeName}\"\"\"", iss);
+        Assert.Contains("Filename: \"{app}\\{#MyAppExeName}\"", iss);
+        Assert.DoesNotContain("Parameters: \"--managed\"", iss, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Production_origin_is_fixed_without_installer_prompt()
     {
         var root = RepositoryRoot();
