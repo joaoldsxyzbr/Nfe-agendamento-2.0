@@ -24,7 +24,7 @@ describe('settings panel', () => {
 
     expect(appVersion).not.toBe('');
     expect(settings).toContain("downloadTrigger.id = 'app-download'");
-    expect(settings).toContain("downloadTrigger.setAttribute('aria-label', 'Baixar app para Windows')");
+    expect(settings).toContain("downloadTrigger.setAttribute('aria-label', 'Baixar componente Windows')");
     expect(settings).toContain(
       `/downloads/windows/v${appVersion}/NFeAgendamentoBridge-Setup-v${appVersion}.exe`,
     );
@@ -55,9 +55,14 @@ describe('settings panel', () => {
     expect(settings).toContain('const health = await diagnosticsClient.health()');
     expect(settings).toContain("health.certificateSelected ? 'Selecionado' : 'Não selecionado'");
     expect(settings).toContain("health.webView2Available ? 'Disponível' : 'Indisponível'");
-    expect(settings).toContain('diagnosticErrorMessage(error)');
+    expect(settings).toContain("diagnosticsBridge.textContent = 'Componente local conectado'");
+    expect(settings).toContain('classifyBridgeFailure(error)');
+    expect(settings).toContain('diagnosticErrorMessage(error, state)');
     expect(styles).toContain('.diagnostics-grid');
     expect(styles).toContain('.diagnostics-error-row');
+    expect(settings).toContain("windowsUpdateAction.textContent = `Atualizar componente Windows para ${update.latestVersion}`");
+    expect(settings).toContain('const update = await checkWindowsUpdate(health.version)');
+    expect(styles).toContain('.windows-update-action');
   });
 
   it('redacts numeric and alphanumeric access keys from diagnostic errors', () => {
