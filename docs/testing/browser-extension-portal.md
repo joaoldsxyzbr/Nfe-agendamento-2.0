@@ -1,0 +1,114 @@
+# Portal via extensão Chromium MV3 — instalação e aceitação
+
+**Data:** 2026-09-21  
+**Status:** piloto técnico; validação física com Portal/A1 real ainda obrigatória.
+
+## Objetivo
+
+Validar o novo fallback do Portal Nacional dentro do próprio Chrome/Edge, preservando o helper WebView2 atual como rollback.
+
+A extensão não substitui a consulta direta SEFAZ nesta fase. O Bridge continua responsável por A1/SEFAZ, proteção fiscal, coordenação multi-PC e regras locais de fornecedor.
+
+## Obter o pacote
+
+O job `extension` do GitHub Actions produz o artifact:
+
+`NFeAgendamento-Extension-MV3`
+
+Dentro dele existe:
+
+`NFeAgendamento-Extension-MV3.zip`
+
+Extraia o ZIP para uma pasta local antes de carregar a extensão. O pacote é uma extensão **não compactada** para teste interno; esta fase não publica automaticamente na Chrome Web Store.
+
+## Instalar no Chrome
+
+1. abra `chrome://extensions`;
+2. ative **Modo do desenvolvedor**;
+3. clique em **Carregar sem compactação**;
+4. selecione a pasta extraída que contém `manifest.json`;
+5. confirme que a extensão aparece como **NFe Agendamento - Portal**.
+
+## Instalar no Edge
+
+1. abra `edge://extensions`;
+2. habilite o modo de desenvolvedor;
+3. escolha **Carregar descompactado**;
+4. selecione a pasta extraída.
+
+## Permissões esperadas
+
+O Manifest V3 deve declarar somente:
+
+- `scripting`;
+- `storage`;
+- `webRequest`.
+
+Host permissions:
+
+- `https://nfeagendamento.joaolds.xyz.br/*`;
+- `https://www.nfe.fazenda.gov.br/*`.
+
+Não são esperados:
+
+- `<all_urls>`;
+- `downloads`;
+- Native Messaging;
+- acesso genérico ao sistema de arquivos;
+- `webRequestBlocking`;
+- permissão para outros sites.
+
+## Fluxo esperado
+
+Quando a consulta direta entrar legitimamente no fallback por Portal:
+
+1. o site detecta a extensão;
+2. a extensão abre uma janela popup do navegador;
+3. a janela navega para o Portal Nacional;
+4. a chave NF-e aparece preenchida;
+5. o usuário resolve o **hCaptcha manualmente**;
+6. somente depois da resposta humana, a extensão aciona o botão oficial de consulta;
+7. quando o resultado estiver disponível, a extensão aciona o controle oficial **Download do Documento**;
+8. a extensão observa somente a requisição oficial de download e tenta obter o XML pela mesma sessão do navegador;
+9. o XML volta ao site;
+10. o site aplica a validação canônica contra a chave, parser, regra de fornecedor e DANFE atuais;
+11. a janela do Portal fecha ao terminar.
+
+A extensão não executa, resolve ou contorna captcha.
+
+## Rollback
+
+Se a extensão estiver ausente ou não responder **antes de uma operação ser criada**, o site usa o helper WebView2 atual.
+
+Se a extensão já iniciou uma operação e ela falhar depois, o site não abre automaticamente um segundo Portal para a mesma tentativa. O erro é apresentado e uma nova ação explícita pode usar o caminho de recuperação apropriado.
+
+Para testar o rollback:
+
+1. desabilite a extensão em `chrome://extensions` ou `edge://extensions`;
+2. recarregue o site;
+3. em uma ocorrência legítima de fallback, confirme que o helper WebView2 atual continua abrindo.
+
+## Gate físico
+
+Antes de remover o helper WebView2, validar em Windows real:
+
+1. Chrome e Edge;
+2. A1 válido instalado no Windows;
+3. popup do navegador;
+4. chave preenchida corretamente;
+5. hCaptcha resolvido manualmente;
+6. uso normal do certificado pelo navegador/Portal;
+7. retorno do XML ao site;
+8. DANFE e download XML;
+9. segunda operação na mesma sessão;
+10. lote sequencial com pelo menos duas NF-e que passem pelo Portal;
+11. fechamento/cancelamento da janela;
+12. rollback com a extensão desabilitada.
+
+Não provoque `656` por repetição artificial de consultas apenas para chegar ao Portal.
+
+## Falha de captura do XML
+
+O Portal é externo e pode alterar DOM, scripts ou a forma como inicia o download. Se a reprodução segura da requisição oficial não funcionar no navegador real, o resultado esperado do piloto é uma falha explícita, mantendo WebView2 como fallback.
+
+Não ampliar permissões da extensão, não adicionar acesso genérico ao disco e não automatizar captcha para contornar uma incompatibilidade do Portal.
