@@ -78,9 +78,9 @@ A extensão não executa, resolve ou contorna captcha.
 
 ## Rollback
 
-Se a extensão estiver ausente ou não responder **antes de uma operação ser criada**, o site usa o helper WebView2 atual.
+Se a extensão estiver ausente ou falhar no **handshake inicial**, antes de ser escolhida para a tentativa, o site usa o helper WebView2 atual.
 
-Se a extensão já iniciou uma operação e ela falhar depois, o site não abre automaticamente um segundo Portal para a mesma tentativa. O erro é apresentado e uma nova ação explícita pode usar o caminho de recuperação apropriado.
+Depois que a extensão respondeu ao handshake e foi escolhida, qualquer erro no `start` ou durante a operação falha de modo fechado: o site **não** abre automaticamente um segundo Portal para a mesma tentativa. Isso evita popup da extensão + WebView2 simultâneos caso a resposta do `start` se perca após a criação da janela. Uma nova ação explícita pode usar o caminho de recuperação apropriado.
 
 Para testar o rollback:
 
