@@ -119,6 +119,40 @@ public sealed class NfeLookupEndpointIntegrationTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task Cancelled_http_client_does_not_repeat_transport_for_same_request_id()
+    {
+        _transport.Block = true;
+        using var client = CreateClient();
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            TestContext.Current.CancellationToken);
+        var requestId = Guid.NewGuid().ToString("D");
+
+        using var firstRequest = Request(HttpMethod.Post, "/api/v1/nfe/lookup");
+        firstRequest.Content = JsonContent.Create(new { accessKey = ValidAccessKey, requestId });
+        var first = client.SendAsync(firstRequest, cancellation.Token);
+
+        await _transport.Started.Task.WaitAsync(
+            TimeSpan.FromSeconds(1),
+            TestContext.Current.CancellationToken);
+        cancellation.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await first);
+        await Task.Delay(100, TestContext.Current.CancellationToken);
+
+        using var replayRequest = Request(HttpMethod.Post, "/api/v1/nfe/lookup");
+        replayRequest.Content = JsonContent.Create(new { accessKey = ValidAccessKey, requestId });
+        var replay = client.SendAsync(replayRequest, TestContext.Current.CancellationToken);
+
+        await Task.Delay(25, TestContext.Current.CancellationToken);
+        var callsBeforeRelease = _transport.CallCount;
+        _transport.Release.TrySetResult();
+
+        using var replayResponse = await replay;
+        Assert.Equal(HttpStatusCode.OK, replayResponse.StatusCode);
+        Assert.Equal(1, callsBeforeRelease);
+        Assert.Equal(1, _transport.CallCount);
+    }
+
+    [Fact]
     public async Task Lookup_endpoint_rejects_request_id_reused_for_different_key()
     {
         using var client = CreateClient();

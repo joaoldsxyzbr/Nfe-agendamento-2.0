@@ -23,6 +23,16 @@ describe('manual XML import', () => {
       .rejects.toThrow('A chave do XML não corresponde à NF-e consultada.');
   });
 
+  it('rejects XML containing a DTD before parsing', async () => {
+    const withDtd = validXml.replace(
+      /^(<\\?xml[^>]*\\?>)/,
+      '$1\\n<!DOCTYPE nfeProc>',
+    );
+
+    await expect(validateManualNfeXml(xmlFile(withDtd), KEY))
+      .rejects.toThrow('XML com DTD não é permitido.');
+  });
+
   it('rejects empty XML files', async () => {
     await expect(validateManualNfeXml(xmlFile(''), KEY))
       .rejects.toThrow('O arquivo XML está vazio.');

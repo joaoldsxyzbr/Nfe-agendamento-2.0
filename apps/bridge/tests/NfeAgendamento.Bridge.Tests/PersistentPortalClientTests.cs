@@ -25,6 +25,29 @@ public sealed class PersistentPortalClientTests
     }
 
     [Fact]
+    public async Task Failed_warmup_does_not_block_immediate_cold_start()
+    {
+        var healthy = new ScriptedSession(
+            Envelope(PortalIpcMessageType.Completed, "op-1", xml: "<nfeProc />")
+        );
+        var creates = 0;
+        var client = new PersistentPortalClient(_ =>
+        {
+            creates += 1;
+            return creates == 1
+                ? Task.FromException<IPortalIpcSession>(new IOException("warmup failed"))
+                : Task.FromResult<IPortalIpcSession>(healthy);
+        });
+
+        Assert.False(await client.WarmUpAsync(TestContext.Current.CancellationToken));
+
+        var result = await client.OpenAsync(Request("op-1"), TestContext.Current.CancellationToken);
+
+        Assert.Equal(PortalLaunchOutcome.Completed, result.Outcome);
+        Assert.Equal(2, creates);
+    }
+
+    [Fact]
     public async Task Sequential_operations_reuse_the_same_healthy_session()
     {
         var session = new ScriptedSession(
