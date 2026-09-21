@@ -177,6 +177,13 @@ api.MapGet("/health", (
     status = "ok",
     webView2Available = portalLauncher.IsAvailable,
     certificateSelected = certificates.GetSelected() is not null,
+    capabilities = new
+    {
+        directLookup = true,
+        portalFallback = true,
+        portalPrewarm = false,
+        manualXmlImport = false,
+    },
 }));
 
 api.MapGet("/certificates", (CertificateService certificates) => Results.Ok(new
