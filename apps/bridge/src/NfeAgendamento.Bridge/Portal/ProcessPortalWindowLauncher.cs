@@ -12,6 +12,7 @@ public sealed class ProcessPortalWindowLauncher : IPortalWindowLauncher, IPortal
     private readonly PersistentPortalClient _persistentClient;
     private readonly object _probeGate = new();
     private bool _runtimeAvailable;
+    private int _disposed;
 
     public ProcessPortalWindowLauncher()
         : this(Path.Combine(AppContext.BaseDirectory, HelperFileName), runtimeProbe: null)
@@ -77,6 +78,9 @@ public sealed class ProcessPortalWindowLauncher : IPortalWindowLauncher, IPortal
 
     public async ValueTask DisposeAsync()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            return;
+
         await _persistentClient.DisposeAsync();
         await _sessions.DisposeAsync();
     }
