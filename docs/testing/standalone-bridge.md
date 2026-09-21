@@ -22,7 +22,7 @@ No modo `standalone`:
 - o auto-start HKCU aponta para `NfeAgendamento.Bridge.exe`;
 - o start pós-instalação aponta para `NfeAgendamento.Bridge.exe`;
 - não é passado `--managed`;
-- `NfeAgendamento.App.exe` continua empacotado para rollback;
+- `NfeAgendamento.App.exe` continua empacotado para que o Setup padrão possa restaurar o modo supervisionado;
 - não é criado serviço, Scheduled Task ou requisito de administrador.
 
 ## Gates automatizados
@@ -51,7 +51,8 @@ Executar somente em uma instalação de teste da Release B:
 8. validar abertura do helper Portal e retorno ao site;
 9. instalar uma atualização por Setup e confirmar preservação de `%LOCALAPPDATA%\\NfeAgendamentoBridge`;
 10. encerrar manualmente o Bridge e confirmar que o site diagnostica a indisponibilidade sem inventar uma causa;
-11. executar o App empacotado como rollback e confirmar o fluxo gerenciado previsto para a release de transição.
+11. reinstalar o Setup padrão `BridgeAutostartMode=app` e confirmar que o auto-start volta a apontar para `NfeAgendamento.App.exe`, que então inicia/controla o Bridge com `--managed`;
+12. não usar a execução direta do App como rollback enquanto o Bridge standalone estiver ativo.
 
 ## Critério para a Task 8
 
