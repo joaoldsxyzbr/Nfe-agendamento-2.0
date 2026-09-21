@@ -92,7 +92,7 @@ function isReleaseMetadata(value: unknown): value is ReleaseMetadata {
 }
 
 function parseVersion(value: string): readonly [number, number, number] | null {
-  const match = value.match(/^(\d+)\.(\d+)\.(\d+)$/);
+  const match = value.match(/^(\d+)\.(\d+)\.(\d+)(?:\.0)?$/);
   if (!match) return null;
   return [Number(match[1]), Number(match[2]), Number(match[3])];
 }
