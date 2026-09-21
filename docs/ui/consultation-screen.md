@@ -133,16 +133,21 @@ Detalhes de arquitetura e aceitação: `docs/superpowers/specs/2026-09-14-batch-
 
 A seleção do certificado A1 continua fora da área principal e fica no painel aberto pela engrenagem.
 
-Desde a v0.0.12, o painel também contém **Diagnóstico local**. Ao abrir Configurações ou clicar em **Atualizar**, o site consulta `/api/v1/health` e apresenta:
+Desde a v0.0.12, o painel também contém **Diagnóstico local**. Na migração site-first, ao abrir Configurações ou clicar em **Atualizar**, o site consulta `/api/v1/health` e apresenta:
 
-- conexão do Bridge;
+- conexão do componente local;
 - versão do Bridge;
 - existência de certificado A1 selecionado;
 - disponibilidade do Portal/WebView2;
 - horário da última verificação;
-- último erro da própria verificação.
+- último erro da própria verificação;
+- atualização disponível do componente Windows, quando a metadata oficial indicar versão mais nova.
 
-O diagnóstico não lê PFX, senha, chave privada ou XML. Mensagens exibidas removem sequências de 44 dígitos para evitar exposição acidental de chave NF-e.
+A verificação de atualização usa `/api/update/latest` e só aceita o Setup versionado servido pelo domínio oficial. Falha da fonte de atualização não transforma um Bridge saudável em erro.
+
+Quando o acesso a `127.0.0.1` falha sem sinal suficiente do navegador, a UI informa de forma conservadora que o componente pode estar parado **ou** que a permissão de rede local pode estar bloqueada; ela não inventa uma causa específica.
+
+O diagnóstico não lê PFX, senha, chave privada ou XML. Mensagens exibidas removem sequências de 44 caracteres alfanuméricos para evitar exposição acidental de chave NF-e.
 
 ## Dados temporários
 
