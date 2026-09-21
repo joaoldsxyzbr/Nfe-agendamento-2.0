@@ -1,10 +1,18 @@
 export const BRIDGE_BASE_URL = 'http://127.0.0.1:17345/api/v1' as const;
 
+export type BridgeCapabilities = {
+  directLookup: boolean;
+  portalFallback: boolean;
+  portalPrewarm: boolean;
+  manualXmlImport: boolean;
+};
+
 export type BridgeHealth = {
   version: string;
   status: 'ok';
   webView2Available: boolean;
   certificateSelected: boolean;
+  capabilities?: BridgeCapabilities;
 };
 
 export type CertificateSummary = {
