@@ -18,6 +18,56 @@ test('NF-e curta gera exatamente uma A4 sem overflow', async ({ page }, testInfo
   expect(pdfPages).toBe(renderedPages);
 });
 
+
+test('campos longos do destinatário permanecem dentro das células', async ({ page }) => {
+  const base = createNfe(NUMERIC_KEY, 4);
+  const nfe: ParsedNfe = {
+    ...base,
+    recipient: {
+      ...base.recipient!,
+      email: 'AGENDAMENTO@PRADOSUPERMERCADOS.COM.BR',
+      name: 'DESTINATÁRIO COM NOME EXTENSO PARA VALIDAR CONTENÇÃO VISUAL DO DANFE',
+      stateRegistration: '123456789012345678901234567890',
+      address: {
+        ...base.recipient!.address!,
+        street: 'AVENIDA COM NOME EXTENSO PARA VALIDAR QUEBRA SEM ULTRAPASSAR A BORDA DA CÉLULA',
+        district: 'BAIRRO COM NOME EXTENSO PARA TESTE',
+      },
+    },
+  };
+
+  await renderForPrint(page, nfe);
+
+  const leaking = await page.locator('.recipient-grid-refined > div').evaluateAll((cells) =>
+    cells.filter((cell) => {
+      const cellRect = cell.getBoundingClientRect();
+      return Array.from(cell.children).some((child) => {
+        const childRect = child.getBoundingClientRect();
+        return childRect.left < cellRect.left - 1 || childRect.right > cellRect.right + 1;
+      });
+    }).length,
+  );
+  expect(leaking).toBe(0);
+
+  const email = page.locator('.recipient-email .fiscal-value');
+  await expect(email).toContainText('AGENDAMENTO@PRADOSUPERMERCADOS.COM.BR');
+
+  const emailMetrics = await email.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+      overflow: style.overflow,
+      textOverflow: style.textOverflow,
+      whiteSpace: style.whiteSpace,
+    };
+  });
+  expect(emailMetrics.overflow).toBe('hidden');
+  expect(emailMetrics.textOverflow).toBe('ellipsis');
+  expect(emailMetrics.whiteSpace).toBe('nowrap');
+  expect(emailMetrics.scrollWidth).toBeGreaterThanOrEqual(emailMetrics.clientWidth);
+});
+
 test('NF-e longa preserva paginação, grade simplificada e cabeçalho fiscal nas continuações', async ({ page }, testInfo) => {
   const nfe = createNfe(ALPHA_KEY, 85, true);
   const renderedPages = await renderForPrint(page, nfe);
