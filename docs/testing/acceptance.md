@@ -13,7 +13,7 @@ Este checklist cobre o que o CI não consegue provar: instalação real no Windo
 - site oficial disponível exatamente em `https://nfeagendamento.joaolds.xyz.br`;
 - acesso à Internet para SEFAZ, GitHub Releases e Portal Nacional da NF-e.
 
-Versão canônica atual: **`0.0.16`**. Para validar a release pública, use `NFeAgendamentoBridge-Setup-v0.0.16.exe` e registre o SHA/tag correspondentes.
+Versão canônica atual: **`0.0.17`**. Para validar a release pública, use `NFeAgendamentoBridge-Setup-v0.0.17.exe` e registre o SHA/tag correspondentes.
 
 > O publish é self-contained: não exige instalação prévia do .NET 10. O WebView2 Runtime continua necessário somente para o fallback Portal.
 
@@ -23,7 +23,7 @@ Registre antes de começar:
 | --- | --- |
 | Data | |
 | Commit SHA | |
-| Versão canônica | `0.0.16` |
+| Versão canônica | `0.0.17` |
 | Run CI / artifact | |
 | URL do site | `https://nfeagendamento.joaolds.xyz.br` |
 | Windows | |
@@ -130,7 +130,7 @@ Resultado: ☐ aprovado
 8. Feche por botão, `Esc` e backdrop.
 9. Use `Imprimir / PDF` e confira A4/paginação.
 10. Confirme que transporte/volumes não aparece sem conteúdo útil.
-11. Confirme que o atalho de download do app aponta para `NFeAgendamentoBridge-Setup-v0.0.16.exe`.
+11. Confirme que o atalho de download do app aponta para `NFeAgendamentoBridge-Setup-v0.0.17.exe`.
 
 Resultado: ☐ aprovado
 
@@ -214,7 +214,7 @@ Resultado: ☐ aprovado
 
 ## 12. Segundo PC independente
 
-1. Instale o mesmo Setup v0.0.16 validado.
+1. Instale o mesmo Setup v0.0.17 validado.
 2. Confirme início na bandeja sem console.
 3. Use o A1 instalado nesse segundo PC.
 4. Abra o site oficial e faça consulta normal.
