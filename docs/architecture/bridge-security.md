@@ -18,11 +18,6 @@ https://nfeagendamento.joaolds.xyz.br
    ├─ CurrentUser/My → certificado A1 + chave privada
    ├─ SEFAZ → NFeDistribuicaoDFe
    └─ helper WebView2 → Portal Nacional da NF-e
-
-NfeAgendamento.App.exe
-   │ Named Pipe CurrentUserOnly + lease
-   ▼
-NfeAgendamento.Bridge.exe --managed
 ```
 
 O site recebe somente metadados do certificado, status fiscais e XML da NF-e. A chave privada nunca é serializada nem enviada ao site/cloud.
@@ -61,78 +56,20 @@ O site publica `apps/web/public/_headers` com CSP restritiva. Em produção, `co
 
 Não adicionar wildcard nem origem arbitrária para contornar problemas de implantação.
 
-## Instância única, controle e ownership do Bridge
+## Instância única e lifecycle standalone do Bridge
 
-O executável real do Bridge continua adquirindo um mutex nomeado antes de subir o host. Isso impede duas cópias de criarem listeners concorrentes em `127.0.0.1:17345`.
+O executável real do Bridge adquire um mutex nomeado antes de subir o host. Isso impede duas cópias de criarem listeners concorrentes em `127.0.0.1:17345`.
 
-Na instalação normal, o App inicia o Bridge com `--managed`. O modo gerenciado cria um canal de controle separado da API HTTP:
+A partir da v0.0.20, o Bridge é o único executável de lifecycle do componente Windows:
 
-```text
-Named Pipe: NfeAgendamento.Bridge.Control.v1
-Proteção: PipeOptions.CurrentUserOnly
-```
+- o Setup registra `NfeAgendamento.Bridge.exe` diretamente no auto-start HKCU;
+- o start pós-instalação inicia o mesmo executável;
+- não existe `--managed`, App supervisor, lease, heartbeat ou canal de controle dedicado;
+- o projeto do Bridge usa `OutputType=WinExe`, portanto o início no logon não deixa janela de console;
+- o helper Portal continua sendo criado/reutilizado pelo Bridge somente quando necessário;
+- encerramento manual ou crash deixa o site diagnosticar o componente como indisponível; não existe reinício silencioso por um segundo supervisor.
 
-O protocolo é versionado e limitado a identificação, claim do lease, heartbeat e shutdown. A identidade retornada pelo Bridge inclui PID, versão, caminho do executável, `instanceId` e indicação de modo gerenciado.
-
-Antes de assumir uma instância existente, o App exige:
-
-- modo gerenciado válido;
-- PID positivo;
-- `instanceId` presente;
-- versão exatamente igual à versão esperada do App;
-- caminho normalizado exatamente correspondente ao `NfeAgendamento.Bridge.exe` instalado esperado.
-
-Se a identidade não puder ser validada, o App falha fechado e não mata o processo.
-
-### Piloto standalone de transição
-
-O instalador suporta o define de build `BridgeAutostartMode=app|standalone`. O valor padrão continua sendo `app`, portanto instalações normais permanecem iniciando `NfeAgendamento.App.exe` e o comportamento da v0.0.18 não muda silenciosamente.
-
-Quando um Setup de piloto é compilado com `BridgeAutostartMode=standalone`, somente o auto-start em `HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run` e o start pós-instalação apontam diretamente para `NfeAgendamento.Bridge.exe`, sem `--managed`. O App continua empacotado para permitir rollback pela reinstalação do Setup padrão `app`.
-
-O App não deve ser iniciado como “rollback” enquanto uma instância standalone já está ativa: o supervisor valida e controla apenas Bridges iniciados com `--managed`. Para voltar ao modo supervisionado, reinstale o Setup padrão, que restaura o auto-start do App e reinicia o lifecycle gerenciado.
-
-O piloto não cria serviço, Scheduled Task, elevação administrativa, listener LAN ou segundo mecanismo de supervisão. O mutex do próprio Bridge continua impedindo duas instâncias concorrentes.
-
-### Lease e watchdog
-
-Uma instância gerenciada aceita somente um controlador válido por vez.
-
-Valores centralizados atuais:
-
-- heartbeat do App: **2 s**;
-- expiração do lease: **8 s**;
-- prazo inicial para o Bridge receber um lease: **10 s**;
-- verificação do watchdog: **500 ms**.
-
-Se o App desaparecer sem executar shutdown, o lease expira e o próprio Bridge inicia encerramento gracioso. A execução standalone do piloto não depende desse lease.
-
-### Adoção e reinício
-
-Ao iniciar, o App tenta primeiro conectar ao control pipe e reivindicar uma instância gerenciada válida já existente. Só inicia uma nova cópia quando não existe uma instância controlável.
-
-Se o Bridge controlado cair inesperadamente, o App aplica backoff de reinício:
-
-```text
-1 s → 2 s → 5 s
-```
-
-As falhas são limitadas por uma janela/circuit breaker de aproximadamente 30 s. Depois do limite, o supervisor deixa de reiniciar agressivamente o Bridge em vez de entrar em crash-loop infinito.
-
-Na Release B o `NotifyIcon` permanece apenas como objeto de lifecycle do WinForms e fica invisível (`Visible = false`). Não há menu, duplo clique, abertura do site ou atualização pelo App; diagnóstico e atualização pertencem ao site.
-
-### Encerramento do supervisor
-
-Quando o supervisor é encerrado:
-
-1. interrompe seu monitoramento;
-2. envia `Shutdown` pelo control pipe usando o lease válido;
-3. aguarda encerramento gracioso;
-4. se o processo não terminar, término forçado só pode atingir o PID previamente identificado e somente após validar novamente o caminho do executável esperado.
-
-Não existe varredura seguida de `Kill` por nome de processo.
-
-A proteção é aplicada ao executável real; hosts in-process dos testes continuam independentes.
+A retirada do App ocorreu somente depois da release de transição v0.0.19. A validação física continua separada e não é apresentada como evidência do CI.
 
 ## API local
 
@@ -266,9 +203,9 @@ O Worker consulta a release estável oficial server-side, exige tag semver, asse
 
 A rota de download aceita somente `vX.Y.Z` e `NFeAgendamentoBridge-Setup-vX.Y.Z.exe` com a mesma versão. Ela constrói internamente a URL fixa do repositório e faz streaming do conteúdo; não existe parâmetro de host/URL arbitrário nem proxy genérico.
 
-O código legado de `UpdateService` continua empacotado e testado durante a Release B apenas como rollback técnico, mas o supervisor headless não expõe essa UI. O site valida a metadata estrita recebida do Worker e oferece somente a rota versionada do domínio oficial. Falha upstream é tratada como indisponibilidade da fonte sem transformar o Bridge saudável em erro.
+O updater legado do App foi removido na v0.0.20. O site valida a metadata estrita recebida do Worker e oferece somente a rota versionada do domínio oficial. Falha upstream é tratada como indisponibilidade da fonte sem transformar o Bridge saudável em erro.
 
-A versão canônica fica em `Directory.Build.props`. Bridge, App, Portal, CI, instalador e release derivam dessa fonte; o workflow `.github/workflows/release.yml` é genérico e publica somente artifacts de um CI verde do mesmo commit marcador `release: v<versão>`.
+A versão canônica fica em `Directory.Build.props`. Bridge, Portal, CI, instalador e release derivam dessa fonte; o workflow `.github/workflows/release.yml` é genérico e publica somente artifacts de um CI verde do mesmo commit marcador `release: v<versão>`.
 
 O workflow de release cria/valida a tag contra o SHA exato aprovado pelo `workflow_run`, evitando que avanço posterior da `main` altere o target da release.
 

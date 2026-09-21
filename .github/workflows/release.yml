@@ -75,7 +75,6 @@ jobs:
           setup="release/installer/NFeAgendamentoBridge-Setup-v${version}.exe"
           package="release/NfeAgendamentoBridge-win-x64-v${version}.zip"
           test -s "$setup"
-          test -s "release/package/NfeAgendamento.App.exe"
           test -s "release/package/NfeAgendamento.Bridge.exe"
           test -s "release/package/NfeAgendamento.Portal.exe"
 

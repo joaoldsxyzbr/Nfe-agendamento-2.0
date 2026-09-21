@@ -5,9 +5,9 @@ Este diretório preserva planos de implementação como **registro histórico** 
 ## Fonte atual de verdade
 
 - estabilização/hardening concluído no código: `2026-09-09-stabilization-hardening-implementation.md`;
-- arquitetura vigente: `../specs/2026-09-09-stabilization-hardening-design.md` + `../../architecture/bridge-security.md`;
+- arquitetura vigente: `../specs/2026-09-21-site-first-fiscal-agent-design.md` + `../../architecture/bridge-security.md`;
 - pendências de validação física: `../../testing/acceptance.md`;
-- release pública atual: `../../releases/v0.0.17.md`.
+- release final preparada: `../../releases/v0.0.20.md`.
 
 ## Planos históricos/superseded
 
@@ -23,7 +23,7 @@ Quando houver conflito entre um plano histórico e o código/documentação atua
 
 ## Estado atual
 
-O código/CI da rodada de estabilização e do hardening pós-auditoria está concluído.
+O código/CI da migração site-first está concluído até a Release C: Bridge standalone como lifecycle final, App supervisor removido e site como única UX.
 
 Authenticode e branch protection/required status checks são opcionais por decisão do projeto em 18/09/2026 e não representam backlog.
 

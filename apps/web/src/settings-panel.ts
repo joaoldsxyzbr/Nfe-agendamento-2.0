@@ -3,7 +3,7 @@ import { classifyBridgeFailure } from './bridge/diagnostics';
 import { checkWindowsUpdate } from './update/windows-update';
 import './settings-panel.css';
 
-const WINDOWS_SETUP_URL = '/downloads/windows/v0.0.19/NFeAgendamentoBridge-Setup-v0.0.19.exe';
+const WINDOWS_SETUP_URL = '/downloads/windows/v0.0.20/NFeAgendamentoBridge-Setup-v0.0.20.exe';
 const diagnosticsClient = new BridgeClient();
 
 window.addEventListener('DOMContentLoaded', initializeSettingsPanel, { once: true });

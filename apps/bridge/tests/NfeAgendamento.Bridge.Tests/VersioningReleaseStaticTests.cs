@@ -18,7 +18,6 @@ public sealed class VersioningReleaseStaticTests
         var projectPaths = new[]
         {
             Path.Combine(root, "apps", "bridge", "src", "NfeAgendamento.Bridge", "NfeAgendamento.Bridge.csproj"),
-            Path.Combine(root, "apps", "bridge", "windows", "NfeAgendamento.App", "NfeAgendamento.App.csproj"),
             Path.Combine(root, "apps", "bridge", "windows", "NfeAgendamento.Portal", "NfeAgendamento.Portal.csproj"),
         };
 
@@ -29,6 +28,8 @@ public sealed class VersioningReleaseStaticTests
             Assert.DoesNotContain("<FileVersion>", project);
             Assert.DoesNotContain("<AssemblyVersion>", project);
         }
+
+        Assert.False(Directory.Exists(Path.Combine(root, "apps", "bridge", "windows", "NfeAgendamento.App")));
 
         var installer = File.ReadAllText(Path.Combine(root, "apps", "bridge", "installer", "NfeAgendamentoBridge.iss"));
         Assert.DoesNotContain(version, installer);

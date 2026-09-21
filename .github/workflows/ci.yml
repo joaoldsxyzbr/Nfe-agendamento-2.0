@@ -111,8 +111,6 @@ jobs:
         run: dotnet publish apps/bridge/src/NfeAgendamento.Bridge/NfeAgendamento.Bridge.csproj -c Release -r win-x64 --self-contained true -o artifacts/NfeAgendamentoBridge
       - name: Publish Portal helper
         run: dotnet publish apps/bridge/windows/NfeAgendamento.Portal/NfeAgendamento.Portal.csproj -c Release -r win-x64 --self-contained true -o artifacts/NfeAgendamentoBridge
-      - name: Publish tray app
-        run: dotnet publish apps/bridge/windows/NfeAgendamento.App/NfeAgendamento.App.csproj -c Release -r win-x64 --self-contained true -o artifacts/NfeAgendamentoBridge
       - name: Sign packaged executables when Authenticode is configured
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: pwsh
@@ -120,7 +118,7 @@ jobs:
           CODE_SIGNING_PFX_BASE64: ${{ secrets.CODE_SIGNING_PFX_BASE64 }}
           CODE_SIGNING_PFX_PASSWORD: ${{ secrets.CODE_SIGNING_PFX_PASSWORD }}
         run: |
-          ./scripts/sign-windows-artifacts.ps1 "artifacts/NfeAgendamentoBridge/NfeAgendamento.App.exe" "artifacts/NfeAgendamentoBridge/NfeAgendamento.Bridge.exe" "artifacts/NfeAgendamentoBridge/NfeAgendamento.Portal.exe"
+          ./scripts/sign-windows-artifacts.ps1 "artifacts/NfeAgendamentoBridge/NfeAgendamento.Bridge.exe" "artifacts/NfeAgendamentoBridge/NfeAgendamento.Portal.exe"
       - name: Install pinned Inno Setup
         shell: pwsh
         run: |
@@ -154,21 +152,6 @@ jobs:
           $setup = "artifacts\installer\NFeAgendamentoBridge-Setup-v$version.exe"
           if (!(Test-Path $setup)) {
             throw "Setup não gerado em $setup"
-          }
-      - name: Verify standalone installer mode compiles
-        shell: pwsh
-        run: |
-          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
-          $version = "${{ steps.version.outputs.version }}"
-          $pilotDir = "artifacts\standalone-installer"
-          New-Item -ItemType Directory -Force -Path $pilotDir | Out-Null
-          & $iscc "/DMyAppVersion=$version" "/DBridgeAutostartMode=standalone" "/O$pilotDir" "apps\bridge\installer\NfeAgendamentoBridge.iss"
-          if ($LASTEXITCODE -ne 0) {
-            exit $LASTEXITCODE
-          }
-          $pilotSetup = "$pilotDir\NFeAgendamentoBridge-Setup-v$version.exe"
-          if (!(Test-Path $pilotSetup)) {
-            throw "Setup standalone de piloto não gerado em $pilotSetup"
           }
       - name: Sign installer when Authenticode is configured
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

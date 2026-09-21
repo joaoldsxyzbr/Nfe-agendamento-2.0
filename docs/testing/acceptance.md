@@ -1,6 +1,6 @@
 # Aceitação física — NFe Agendamento 2.0
 
-Este checklist cobre o que o CI não consegue provar: instalação real no Windows, lifecycle do componente local, navegador falando com loopback, certificado A1, SEFAZ, WebView2, Portal Nacional, hCaptcha, DANFE/PDF e atualização. Na transição site-first, o App pode existir como supervisor headless; o piloto standalone possui checklist adicional próprio.
+Este checklist cobre o que o CI não consegue provar: instalação real no Windows, lifecycle do componente local, navegador falando com loopback, certificado A1, SEFAZ, WebView2, Portal Nacional, hCaptcha, DANFE/PDF e atualização. Desde a v0.0.20, o componente Windows é o Bridge standalone; o App supervisor foi removido.
 
 > Não provoque bloqueio/656 fazendo consultas repetidas. Valide o fallback quando o limite ocorrer naturalmente ou em cenário controlado já disponível.
 
@@ -30,36 +30,33 @@ Registre antes de começar:
 | Navegador + versão | |
 | PC | |
 
-## 0. Instalação, supervisor headless, instância única e auto-start
+## 0. Instalação, instância única e auto-start
 
 1. Execute o Setup correspondente ao SHA em teste em conta de usuário comum.
 2. Confirme que a instalação não solicita UAC/admin.
 3. Confirme os arquivos em `%LOCALAPPDATA%\NFe Agendamento Bridge`.
-4. Confirme `NfeAgendamento.App.exe`, `NfeAgendamento.Bridge.exe` e `NfeAgendamento.Portal.exe` lado a lado.
+4. Confirme `NfeAgendamento.Bridge.exe` e `NfeAgendamento.Portal.exe` lado a lado e a ausência de `NfeAgendamento.App.exe`.
 5. Confirme atalho no Menu Iniciar e ícone próprio.
 6. Confirme que nenhuma janela preta de console permanece aberta.
-7. No modo padrão `app`, confirme que `NfeAgendamento.App.exe` inicia sem ícone de bandeja, menu ou janela visível.
-8. Confirme auto-start em `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` apontando para o executável previsto pelo modo do Setup.
+7. Confirme que `NfeAgendamento.Bridge.exe` inicia sem janela de console.
+8. Confirme auto-start em `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` apontando diretamente para `NfeAgendamento.Bridge.exe`.
 9. Abra o site oficial manualmente e confirme conexão com o Bridge.
-10. Inicie novamente o App e confirme que não surge segunda instância nem listener concorrente.
+10. Inicie novamente o Bridge e confirme que o mutex impede segunda instância e listener concorrente.
 11. Reinicie sessão/PC e confirme início automático único.
-12. Para o piloto `BridgeAutostartMode=standalone`, execute também `docs/testing/standalone-bridge.md`.
+12. Execute também `docs/testing/standalone-bridge.md` para o lifecycle standalone final.
 
 Resultado: ☐ aprovado
 
-## 1. Lifecycle, lease e recuperação do Bridge
+## 1. Lifecycle e recuperação do Bridge
 
 ### Modo padrão `app`
 
-1. Com supervisor headless + Bridge ativos, finalize somente `NfeAgendamento.Bridge.exe` pelo Gerenciador de Tarefas.
-2. Pelo diagnóstico do site, confirme indisponibilidade temporária e depois reconexão após o backoff do supervisor.
-3. Repita quedas controladas e confirme ausência de restart-loop infinito.
-4. Com instância gerenciada válida existente, inicie novamente o App e confirme que ele não mata o Bridge nem cria listener concorrente.
-5. Encerre o supervisor e confirme que o lease do Bridge gerenciado expira/encerra sem deixar listener órfão; reabra o App e confirme recuperação normal.
-
-### Piloto standalone
-
-Validar separadamente com `docs/testing/standalone-bridge.md`. No modo standalone não se espera reinício pelo App supervisor.
+1. Com o Bridge ativo, finalize somente `NfeAgendamento.Bridge.exe` pelo Gerenciador de Tarefas.
+2. Pelo diagnóstico do site, confirme indisponibilidade clara; não deve haver reinício silencioso por supervisor.
+3. Inicie novamente o Bridge pelo auto-start/logon ou executável instalado e confirme reconexão.
+4. Tente iniciar uma segunda cópia e confirme que o mutex impede listener concorrente.
+5. Reinicie o Windows e confirme que o Bridge volta pelo HKCU Run, sem console.
+6. Confirme que settings/certificado selecionado permanecem preservados.
 
 Resultado: ☐ aprovado
 
@@ -200,7 +197,7 @@ Resultado: ☐ aprovado
 4. Confirme que o download usa somente `nfeagendamento.joaolds.xyz.br/downloads/windows/...` e o nome exato do Setup versionado.
 5. Execute o Setup e confirme preservação de `%LOCALAPPDATA%\NfeAgendamentoBridge`.
 6. Após o componente voltar, confirme no diagnóstico do site a versão nova e ausência de atualização pendente.
-7. Confirme que o supervisor headless não cria menu ou caixa de diálogo de atualização.
+7. Confirme que não existe App supervisor/updater paralelo; toda descoberta de atualização acontece pelo site.
 
 Detalhes: `docs/testing/bridge-updater.md`.
 
@@ -218,7 +215,7 @@ Resultado: ☐ aprovado
 ## 12. Segundo PC independente
 
 1. Instale o mesmo Setup validado pelo SHA da release em teste.
-2. Confirme início sem console e, no modo padrão, sem UI visível do supervisor.
+2. Confirme início direto do Bridge sem console e sem App supervisor.
 3. Use o A1 instalado nesse segundo PC.
 4. Abra o site oficial e faça consulta normal.
 5. Confirme ausência de Central, pareamento, pasta compartilhada ou dependência do primeiro PC.

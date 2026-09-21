@@ -10,9 +10,6 @@ using NfeAgendamento.Bridge.Suppliers;
 
 const string SingleInstanceName = "NfeAgendamento.Bridge";
 var isRealEntry = Assembly.GetEntryAssembly() == typeof(Program).Assembly;
-var isManaged = isRealEntry && args.Any(argument =>
-    string.Equals(argument, "--managed", StringComparison.OrdinalIgnoreCase));
-
 BridgeSingleInstance? singleInstance = null;
 if (isRealEntry && !BridgeSingleInstance.TryAcquire(SingleInstanceName, out singleInstance))
 {
@@ -28,27 +25,6 @@ if (isRealEntry)
 {
     builder.Logging.AddProvider(
         new LocalJsonFileLoggerProvider(LocalJsonFileLoggerOptions.CreateDefault()));
-}
-
-if (isManaged)
-{
-    var processPath = Path.GetFullPath(Environment.ProcessPath ?? typeof(Program).Assembly.Location);
-    var identity = new BridgeControlIdentity(
-        Environment.ProcessId,
-        typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "0.0.0",
-        processPath,
-        Guid.NewGuid().ToString("N"),
-        Managed: true);
-    var controlState = new BridgeControlState(
-        identity,
-        DateTimeOffset.UtcNow,
-        BridgeControlConstants.InitialLeaseTimeout,
-        BridgeControlConstants.LeaseTimeout);
-
-    builder.Services.AddSingleton(controlState);
-    builder.Services.AddSingleton(services =>
-        new BridgeControlRequestHandler(services.GetRequiredService<BridgeControlState>()));
-    builder.Services.AddHostedService<BridgeControlServer>();
 }
 
 builder.Services.AddSingleton<CertificateService>();

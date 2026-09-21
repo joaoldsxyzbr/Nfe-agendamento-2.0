@@ -73,7 +73,7 @@ describe('Cloudflare deploy configuration', () => {
     expect(windowsJob).toContain('runs-on: windows-2025');
     expect(windowsJob).not.toContain('runs-on: windows-latest');
     expect(windowsJob).toContain('NfeAgendamento.Portal.csproj');
-    expect(windowsJob).toContain('NfeAgendamento.App.csproj');
+    expect(windowsJob).not.toContain('NfeAgendamento.App.csproj');
   });
 
   it('ships restrictive security headers without breaking the local Bridge', async () => {
