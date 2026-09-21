@@ -12,6 +12,7 @@ describe('extension background contract', () => {
 
     expect(source).toContain('chrome.windows.create');
     expect(source).toContain("type: 'popup'");
+    expect(source).toContain('chrome.tabs.query({ windowId: portalWindowId })');
     expect(source).toContain('chrome.storage.session');
     expect(source).toContain('chrome.webRequest.onBeforeRequest');
     expect(source).not.toContain('webRequestBlocking');
