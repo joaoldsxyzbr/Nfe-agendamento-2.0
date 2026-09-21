@@ -5,21 +5,21 @@ namespace NfeAgendamento.Bridge.Tests;
 public sealed class TrayUpdaterStaticTests
 {
     [Fact]
-    public void Tray_app_exposes_manual_confirmed_update_flow()
+    public void Transition_supervisor_is_headless_and_leaves_site_as_the_only_normal_ui()
     {
         var root = RepositoryRoot();
         var program = File.ReadAllText(Path.Combine(
             root, "apps", "bridge", "windows", "NfeAgendamento.App", "Program.cs"));
 
-        Assert.Contains("Verificar atualizações", program);
-        Assert.Contains("CheckForUpdatesAsync", program);
-        Assert.Contains("new UpdateService", program);
-        Assert.Contains("MessageBoxButtons.YesNo", program);
-        Assert.Contains("DownloadAsync", program);
-        Assert.Contains("UseShellExecute = true", program);
-        Assert.Contains("ExitThread()", program);
-        Assert.Contains("Assembly.GetExecutingAssembly().GetName().Version", program);
-        Assert.DoesNotContain("AuthenticodeVerifier.VerifyTrusted", program);
+        Assert.Contains("Visible = false", program);
+        Assert.DoesNotContain("Abrir NFe Agendamento", program);
+        Assert.DoesNotContain("Verificar atualizações", program);
+        Assert.DoesNotContain("CheckForUpdatesAsync", program);
+        Assert.DoesNotContain("new UpdateService", program);
+        Assert.DoesNotContain("ContextMenuStrip", program);
+        Assert.DoesNotContain("_notifyIcon.DoubleClick", program);
+        Assert.DoesNotContain("OpenSite(", program);
+        Assert.DoesNotContain("MessageBox.Show", program);
     }
 
     [Fact]
