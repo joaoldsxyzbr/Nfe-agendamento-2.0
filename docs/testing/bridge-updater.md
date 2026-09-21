@@ -72,3 +72,18 @@ Ao publicar uma versão posterior à instalada:
 - confirmar que App/Bridge fecham para a instalação;
 - concluir o Setup e confirmar que o novo App inicia normalmente;
 - usar **Verificar atualizações** novamente e confirmar a mensagem de versão mais recente.
+
+
+## Migração site-first
+
+Durante a Release A, o updater do App continua disponível como fallback, mas o site passa a ser o ponto principal de descoberta de atualização.
+
+O painel **Configurações**:
+
+1. lê a versão instalada via `GET /api/v1/health`;
+2. consulta `GET /api/update/latest`;
+3. valida tag, estado da release, nome exato do asset, tamanho, digest SHA-256 e URL do domínio oficial;
+4. se houver versão maior, mostra **Atualizar componente Windows para X.Y.Z**;
+5. o link baixa o mesmo Setup oficial já protegido pelo Worker.
+
+A checagem no site é best-effort: falha da metadata de update não muda o estado de saúde do Bridge. O App não é removido nesta etapa.
