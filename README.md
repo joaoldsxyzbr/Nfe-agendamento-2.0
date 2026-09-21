@@ -178,12 +178,12 @@ O navegador e o App não dependem mais de acesso direto do cliente ao GitHub par
 
 ## Distribuição Windows
 
-Versão canônica da release: **v0.0.16**.
+Versão canônica da release: **v0.0.17**.
 
 Asset principal:
 
 ```text
-NFeAgendamentoBridge-Setup-v0.0.16.exe
+NFeAgendamentoBridge-Setup-v0.0.17.exe
 ```
 
 O instalador é por usuário, não pede administrador, mantém App + Bridge + helper Portal lado a lado, cria atalho no Menu Iniciar, registra início automático e preserva `%LOCALAPPDATA%\NfeAgendamentoBridge` — incluindo configurações locais como `settings.json`, `fiscal-usage.json` e `supplier-rules.json`.
@@ -201,7 +201,7 @@ O Microsoft Edge WebView2 Runtime é necessário para o fallback pelo Portal Nac
 
 ## Validação física
 
-O CI não consegue provar interação real com certificado A1, SEFAZ, Portal/hCaptcha ou uma impressora específica. Para declarar a v0.0.16 fisicamente validada, executar:
+O CI não consegue provar interação real com certificado A1, SEFAZ, Portal/hCaptcha ou uma impressora específica. Para declarar a v0.0.17 fisicamente validada, executar:
 
 - `docs/testing/acceptance.md`;
 - `docs/testing/batch-query.md`;
@@ -229,4 +229,4 @@ Não provoque bloqueio `656` repetindo consultas artificialmente apenas para tes
 - atualizador: `docs/testing/bridge-updater.md`;
 - DANFE: `docs/testing/danfe-layout.md`;
 - tela de consulta: `docs/ui/consultation-screen.md`;
-- release atual: `docs/releases/v0.0.16.md`.
+- release atual: `docs/releases/v0.0.17.md`.
