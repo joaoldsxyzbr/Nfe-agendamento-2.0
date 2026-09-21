@@ -1,7 +1,8 @@
 import { BridgeClient } from '../bridge/client';
-import type { PortalOperationStatus, PortalStartResult } from '../bridge/contracts';
+import type { BridgeHealth, PortalOperationStatus, PortalStartResult } from '../bridge/contracts';
 
 interface PortalClient {
+  prewarmPortal?(signal?: AbortSignal): Promise<'ready' | 'unavailable'>;
   startPortal(accessKey: string, signal?: AbortSignal): Promise<PortalStartResult>;
   getPortalStatus(operationId: string, signal?: AbortSignal): Promise<PortalOperationStatus>;
   cancelPortal(operationId: string): Promise<void>;
@@ -17,6 +18,20 @@ export class PortalFallbackController {
     private readonly sleep: Sleep = abortableSleep,
     private readonly pollMs = DEFAULT_POLL_MS,
   ) {}
+
+  async prewarm(health: BridgeHealth, signal?: AbortSignal): Promise<void> {
+    if (!health.webView2Available ||
+        health.capabilities?.portalPrewarm !== true ||
+        !this.client.prewarmPortal) {
+      return;
+    }
+
+    try {
+      await this.client.prewarmPortal(signal);
+    } catch {
+      // Otimização best-effort: o fallback real continua podendo iniciar a frio.
+    }
+  }
 
   async start(accessKey: string, signal?: AbortSignal): Promise<string> {
     signal?.throwIfAborted();
