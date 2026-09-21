@@ -149,17 +149,16 @@ Quando o acesso a `127.0.0.1` falha sem sinal suficiente do navegador, a UI info
 
 O diagnóstico não lê PFX, senha, chave privada ou XML. Mensagens exibidas removem sequências de 44 caracteres alfanuméricos para evitar exposição acidental de chave NF-e.
 
-## Supervisor Windows de transição
+## Componente Windows
 
-Na Release B, o site é a única interface normal do produto. O `NfeAgendamento.App.exe` continua empacotado temporariamente para supervisão/rollback, porém roda headless:
+Desde a v0.0.20, o site é a única interface normal do produto e o Windows executa diretamente `NfeAgendamento.Bridge.exe`:
 
-- `NotifyIcon.Visible = false`;
-- não existe menu **Abrir NFe Agendamento**;
-- não existe menu **Verificar atualizações**;
-- duplo clique não abre o site;
-- nenhuma caixa de diálogo é usada para substituir o diagnóstico do site.
-
-Quando o instalador usa o modo padrão `app`, o supervisor ainda mantém claim, heartbeat, backoff/restart e shutdown controlado do Bridge com `--managed`. O modo `standalone` é um piloto separado e opt-in; detalhes em `docs/testing/standalone-bridge.md`.
+- sem App de bandeja;
+- sem menu ou UI própria de atualização;
+- sem `--managed`, lease ou heartbeat;
+- com instância única pelo mutex do Bridge;
+- helper Portal aberto somente quando necessário;
+- diagnóstico e atualização apresentados pelo site.
 
 ## Dados temporários
 
