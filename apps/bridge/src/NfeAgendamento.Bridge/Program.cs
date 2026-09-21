@@ -233,6 +233,7 @@ api.MapPost("/nfe/lookup", async (
     NfeLookupRequest request,
     NfeLookupService lookup,
     NfeLookupOperationRegistry operations,
+    IHostApplicationLifetime applicationLifetime,
     CancellationToken cancellationToken) =>
 {
     if (!AccessKey.TryParse(request.AccessKey, out var parsedAccessKey) || parsedAccessKey is null)
@@ -265,7 +266,9 @@ api.MapPost("/nfe/lookup", async (
         var result = await operations.ExecuteAsync(
             requestId,
             parsedAccessKey.Value,
-            () => lookup.LookupAsync(parsedAccessKey.Value, cancellationToken));
+            () => lookup.LookupAsync(
+                parsedAccessKey.Value,
+                applicationLifetime.ApplicationStopping));
         return Results.Ok(result);
     }
     catch (NfeLookupRequestConflictException)

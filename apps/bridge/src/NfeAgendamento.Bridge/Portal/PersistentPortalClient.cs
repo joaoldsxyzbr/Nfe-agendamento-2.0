@@ -49,7 +49,6 @@ public sealed class PersistentPortalClient : IAsyncDisposable
             or UnauthorizedAccessException
             or System.ComponentModel.Win32Exception)
         {
-            EnterCooldown();
             await ResetSessionAsync();
             return false;
         }
