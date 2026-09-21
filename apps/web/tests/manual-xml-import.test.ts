@@ -25,8 +25,8 @@ describe('manual XML import', () => {
 
   it('rejects XML containing a DTD before parsing', async () => {
     const withDtd = validXml.replace(
-      /^(<\\?xml[^>]*\\?>)/,
-      '$1\\n<!DOCTYPE nfeProc>',
+      /^(<\?xml[^>]*\?>)/,
+      '$1\n<!DOCTYPE nfeProc>',
     );
 
     await expect(validateManualNfeXml(xmlFile(withDtd), KEY))
