@@ -71,7 +71,8 @@ public sealed class InstallerStaticTests
         Assert.Contains("UninstallDisplayIcon={app}\\NfeAgendamento.Bridge.exe", iss);
         Assert.Contains("ValueData: \"\"\"{app}\\NfeAgendamento.Bridge.exe\"\"\"", iss);
         Assert.Contains("Filename: \"{app}\\NfeAgendamento.Bridge.exe\"", iss);
-        Assert.DoesNotContain("NfeAgendamento.App.exe", iss, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Filename: \"{app}\\NfeAgendamento.App.exe\"", iss, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ValueData: \"\"\"{app}\\NfeAgendamento.App.exe\"\"\"", iss, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("--managed", iss, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Description: \"Iniciar NFe Agendamento\"", iss);
         Assert.Contains("WorkingDir: \"{app}\"", iss);
@@ -91,10 +92,33 @@ public sealed class InstallerStaticTests
 
         Assert.DoesNotContain("BridgeAutostartMode", iss, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("MyAppExeName", iss, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("NfeAgendamento.App.exe", iss, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Filename: \"{app}\\NfeAgendamento.App.exe\"", iss, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ValueData: \"\"\"{app}\\NfeAgendamento.App.exe\"\"\"", iss, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("--managed", iss, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("ValueData: \"\"\"{app}\\NfeAgendamento.Bridge.exe\"\"\"", iss);
         Assert.Contains("Filename: \"{app}\\NfeAgendamento.Bridge.exe\"", iss);
+    }
+
+
+    [Fact]
+    public void Installer_removes_retired_app_files_when_upgrading_from_v0_0_19()
+    {
+        var root = RepositoryRoot();
+        var iss = File.ReadAllText(Path.Combine(
+            root, "apps", "bridge", "installer", "NfeAgendamentoBridge.iss"));
+
+        Assert.Contains("[InstallDelete]", iss);
+        foreach (var file in new[]
+        {
+            "NfeAgendamento.App.exe",
+            "NfeAgendamento.App.dll",
+            "NfeAgendamento.App.deps.json",
+            "NfeAgendamento.App.runtimeconfig.json",
+            "NfeAgendamento.App.pdb",
+        })
+        {
+            Assert.Contains($"Type: files; Name: \"{{app}}\\{file}\"", iss);
+        }
     }
 
     [Fact]
