@@ -417,6 +417,29 @@ label {
   color: #fff;
 }
 
+.manual-xml-recovery {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.manual-xml-recovery-button {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid #465567;
+  border-radius: 9px;
+  background: transparent;
+  color: #d6e0ea;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.manual-xml-recovery-button:hover:not(:disabled) {
+  border-color: #5a6d82;
+  background: var(--surface-2);
+  color: #fff;
+}
+
 .action-icon {
   display: inline-flex;
   align-items: center;

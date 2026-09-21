@@ -55,6 +55,7 @@ builder.Services.AddSingleton<CertificateService>();
 builder.Services.AddSingleton<SupplierIdentityResolver>();
 builder.Services.AddSingleton<INfeDistributionTransport, SefazDistributionTransport>();
 builder.Services.AddSingleton(_ => FiscalUsageGuard.CreateDefault());
+builder.Services.AddSingleton<NfeLookupOperationRegistry>();
 builder.Services.AddSingleton<IFiscalUsageCoordinator>(services =>
 {
     var configuration = services.GetRequiredService<IConfiguration>();
@@ -87,7 +88,11 @@ builder.Services.AddScoped<NfeLookupService>(services =>
         sharedCoordinator,
         logger);
 });
-builder.Services.AddSingleton<IPortalWindowLauncher, ProcessPortalWindowLauncher>();
+builder.Services.AddSingleton<ProcessPortalWindowLauncher>();
+builder.Services.AddSingleton<IPortalWindowLauncher>(services =>
+    services.GetRequiredService<ProcessPortalWindowLauncher>());
+builder.Services.AddSingleton<IPortalWarmup>(services =>
+    services.GetRequiredService<ProcessPortalWindowLauncher>());
 builder.Services.AddSingleton<PortalFallbackService>(services =>
 {
     var launcher = services.GetRequiredService<IPortalWindowLauncher>();
@@ -177,6 +182,13 @@ api.MapGet("/health", (
     status = "ok",
     webView2Available = portalLauncher.IsAvailable,
     certificateSelected = certificates.GetSelected() is not null,
+    capabilities = new
+    {
+        directLookup = true,
+        portalFallback = true,
+        portalPrewarm = true,
+        manualXmlImport = true,
+    },
 }));
 
 api.MapGet("/certificates", (CertificateService certificates) => Results.Ok(new
@@ -220,9 +232,11 @@ api.MapPost("/supplier/resolve", (
 api.MapPost("/nfe/lookup", async (
     NfeLookupRequest request,
     NfeLookupService lookup,
+    NfeLookupOperationRegistry operations,
+    IHostApplicationLifetime applicationLifetime,
     CancellationToken cancellationToken) =>
 {
-    if (!AccessKey.TryParse(request.AccessKey, out _))
+    if (!AccessKey.TryParse(request.AccessKey, out var parsedAccessKey) || parsedAccessKey is null)
     {
         return Results.BadRequest(new
         {
@@ -231,8 +245,67 @@ api.MapPost("/nfe/lookup", async (
         });
     }
 
-    var result = await lookup.LookupAsync(request.AccessKey, cancellationToken);
-    return Results.Ok(result);
+    if (request.RequestId is null)
+    {
+        var legacyResult = await lookup.LookupAsync(parsedAccessKey.Value, cancellationToken);
+        return Results.Ok(legacyResult);
+    }
+
+    var requestId = request.RequestId.Trim();
+    if (!Guid.TryParseExact(requestId, "D", out _))
+    {
+        return Results.BadRequest(new
+        {
+            error = "invalid_request_id",
+            message = "requestId deve ser um UUID válido.",
+        });
+    }
+
+    try
+    {
+        var result = await operations.ExecuteAsync(
+            requestId,
+            parsedAccessKey.Value,
+            () => lookup.LookupAsync(
+                parsedAccessKey.Value,
+                applicationLifetime.ApplicationStopping));
+        return Results.Ok(result);
+    }
+    catch (NfeLookupRequestConflictException)
+    {
+        return Results.Conflict(new
+        {
+            error = "request_id_conflict",
+            message = "Este requestId já foi usado para outra chave NF-e.",
+        });
+    }
+    catch (NfeLookupRegistryFullException)
+    {
+        return Results.Json(
+            new
+            {
+                error = "lookup_registry_full",
+                message = "O registro local de consultas está temporariamente cheio. Tente novamente em instantes.",
+            },
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+});
+
+api.MapPost("/portal/prewarm", async (
+    HttpRequest request,
+    IPortalWarmup portal,
+    CancellationToken cancellationToken) =>
+{
+    if (!string.Equals(
+        request.Headers["X-Nfe-Bridge"].ToString(),
+        "1",
+        StringComparison.Ordinal))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var ready = await portal.WarmUpAsync(cancellationToken);
+    return Results.Ok(new { state = ready ? "ready" : "unavailable" });
 });
 
 api.MapPost("/portal/start", async (
@@ -282,7 +355,7 @@ api.MapGet("/portal/status/{operationId}", (
 app.Run();
 
 public sealed record CertificateSelectRequest(string Thumbprint);
-public sealed record NfeLookupRequest(string AccessKey);
+public sealed record NfeLookupRequest(string AccessKey, string? RequestId);
 public sealed record PortalStartRequest(string AccessKey);
 
 public partial class Program;

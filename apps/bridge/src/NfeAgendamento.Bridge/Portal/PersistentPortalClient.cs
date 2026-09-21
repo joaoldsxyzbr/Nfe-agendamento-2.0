@@ -25,6 +25,35 @@ public sealed class PersistentPortalClient : IAsyncDisposable
             throw new ArgumentOutOfRangeException(nameof(failureCooldown));
     }
 
+    public async Task<bool> WarmUpAsync(CancellationToken cancellationToken)
+    {
+        if (IsCoolingDown())
+            return false;
+
+        try
+        {
+            _ = await GetOrCreateSessionAsync(cancellationToken);
+            ClearCooldown();
+            return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception) when (
+            exception is IOException
+            or InvalidDataException
+            or ObjectDisposedException
+            or InvalidOperationException
+            or TimeoutException
+            or UnauthorizedAccessException
+            or System.ComponentModel.Win32Exception)
+        {
+            await ResetSessionAsync();
+            return false;
+        }
+    }
+
     public async Task<PortalLaunchResult> OpenAsync(
         PortalLaunchRequest request,
         CancellationToken cancellationToken)

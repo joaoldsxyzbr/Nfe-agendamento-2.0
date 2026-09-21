@@ -182,6 +182,38 @@ describe('BridgeClient', () => {
     expect(result).toEqual(payload);
   });
 
+  it('includes an optional requestId in the lookup body', async () => {
+    const payload = {
+      category: 'fiscal_status',
+      xml: null,
+      cStat: '137',
+      message: 'Nenhum documento localizado',
+    };
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(payload), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    const requestId = 'd9ecb458-34a5-4ea6-8f7a-10d49e8939d6';
+
+    await new BridgeClient().lookupNfe(
+      '35260812345678000195550010000000011000000018',
+      undefined,
+      requestId,
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${BRIDGE_BASE_URL}/nfe/lookup`,
+      expect.objectContaining({
+        body: JSON.stringify({
+          accessKey: '35260812345678000195550010000000011000000018',
+          requestId,
+        }),
+      }),
+    );
+  });
+
   it('rejects malformed lookup payloads', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({
@@ -248,6 +280,26 @@ describe('BridgeClient', () => {
     await vi.advanceTimersByTimeAsync(480);
     await rejected;
     expect(aborted).toBe(true);
+  });
+
+  it('prewarms Portal only through the guarded local endpoint', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ state: 'ready' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    await expect(new BridgeClient().prewarmPortal()).resolves.toBe('ready');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${BRIDGE_BASE_URL}/portal/prewarm`,
+      expect.objectContaining({
+        method: 'POST',
+        cache: 'no-store',
+        headers: expect.objectContaining({ 'X-Nfe-Bridge': '1' }),
+      }),
+    );
   });
 
   it('portal calls do not inherit the short health timeout', async () => {

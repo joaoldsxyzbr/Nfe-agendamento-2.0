@@ -238,3 +238,26 @@
     align-items: flex-end;
   }
 }
+
+
+.windows-update-action {
+  display: block;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+}
+
+.windows-update-action:hover {
+  border-color: #44566a;
+}
+
+.windows-update-action[hidden] {
+  display: none !important;
+}

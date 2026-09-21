@@ -13,11 +13,11 @@ NFe Agendamento é um aplicativo interno para consultar NF-e, baixar XML e gerar
 - **Helper Portal:** WinForms/WebView2 persistente para o fallback pelo Portal Nacional; hCaptcha continua sempre manual.
 - **Certificado A1:** descoberto em `CurrentUser/My`; PFX, senha e chave privada nunca são enviados ao site ou ao Cloudflare.
 - **Persistência local:** thumbprint selecionado em `%LOCALAPPDATA%/NfeAgendamentoBridge/settings.json`, regras locais de fornecedor em `supplier-rules.json` e metadados da proteção fiscal em `fiscal-usage.json`.
-- **Release pública atual:** `0.0.17`; publicada a partir do mesmo SHA validado pelo CI completo.
+- **Release pública atual:** `0.0.18`; publicada a partir do mesmo SHA validado pelo CI completo.
 
 Não existem Central, pareamento, servidor LAN, mDNS ou pasta compartilhada na arquitetura atual. Cada PC usa seu próprio Bridge.
 
-## Estado funcional — 18/09/2026
+## Estado funcional — 21/09/2026
 
 Implementado e coberto pelos gates automatizados aplicáveis:
 
@@ -25,10 +25,13 @@ Implementado e coberto pelos gates automatizados aplicáveis:
 - chave NF-e de **44 caracteres**, incluindo CNPJ/chave alfanuméricos e DV vigente;
 - rejeição explícita de NFC-e modelo 65; o produto aceita somente NF-e modelo 55;
 - seleção local de certificado A1;
+- contrato aditivo de capabilities no health do Bridge, mantendo compatibilidade do site novo com o Bridge v0.0.17;
 - transporte autenticado `NFeDistribuicaoDFe`;
 - categorias normalizadas `success`, `fiscal_status`, `consumption_limit`, `certificate_error`, `transport_unavailable` e `technical_error`;
 - tratamento de `137`, `138`, `656`, HTTP 429, timeout e falhas ambíguas sem retry fiscal automático;
 - fallback automático para o Portal após `consumption_limit` ou `cStat 217`;
+- prewarm best-effort do Portal/WebView2 após health compatível, sem bloquear consulta direta nem fallback cold-start;
+- importação manual de XML validado, disponível somente como contingência após falha terminal do helper Portal;
 - hCaptcha manual e download oficial do XML pelo helper Portal;
 - XML limitado a 10 MiB, DTD proibido e validação contra a chave consultada;
 - download XML individual e ZIP do lote, com orçamento agregado de memória e geração sem buffer monolítico duplicado;
@@ -39,6 +42,7 @@ Implementado e coberto pelos gates automatizados aplicáveis:
 - Playwright/Chromium gerando PDF A4 real no CI e validando overflow, paginação, grade simplificada, cabeçalhos, `Folha X/Y` e chave alfanumérica, além de um fluxo E2E da consulta unitária e dos estados do card;
 - regras específicas de fornecedores centralizadas, com identificação primária por CNPJ/CPF resolvida somente no Bridge local e sem identificadores fiscais fixos no bundle público;
 - proteção fiscal local persistente e fail-safe;
+- idempotência por `requestId` e coalescência de consultas simultâneas da mesma chave no Bridge, sem adicionar retry fiscal automático;
 - coordenação compartilhada do teto fiscal entre PCs que usam o mesmo A1 RSA;
 - barreira HTTP de 60 requisições por 60 segundos **por IP de cliente** antes do `FiscalCoordinator`, usando o Rate Limiting binding nativo do Cloudflare Workers;
 - POC isolado de `Unimake.DFe` para paridade de chave alfanumérica e estrutura RTC;
@@ -164,9 +168,9 @@ npx wrangler deploy
 
 O CI usa o Wrangler do lockfile e executa `./node_modules/.bin/wrangler deploy --dry-run`.
 
-## Atualizações e download do App
+## Atualizações e download do componente Windows
 
-O navegador e o App não dependem mais de acesso direto do cliente ao GitHub para baixar o Setup.
+O site e o App não dependem de acesso direto do cliente ao GitHub para baixar o Setup. Na v0.0.18, o painel do site também compara `health.version` com a metadata oficial e apresenta a atualização quando houver versão estável mais nova.
 
 - `GET /api/update/latest` consulta a release estável oficial server-side e devolve somente a metadata necessária, reescrevendo a URL do asset para o domínio do NFe Agendamento;
 - `GET /downloads/windows/vX.Y.Z/NFeAgendamentoBridge-Setup-vX.Y.Z.exe` valida tag/nome e faz streaming do único Setup permitido;
@@ -178,12 +182,12 @@ O navegador e o App não dependem mais de acesso direto do cliente ao GitHub par
 
 ## Distribuição Windows
 
-Versão canônica da release: **v0.0.17**.
+Versão canônica da release: **v0.0.18**.
 
 Asset principal:
 
 ```text
-NFeAgendamentoBridge-Setup-v0.0.17.exe
+NFeAgendamentoBridge-Setup-v0.0.18.exe
 ```
 
 O instalador é por usuário, não pede administrador, mantém App + Bridge + helper Portal lado a lado, cria atalho no Menu Iniciar, registra início automático e preserva `%LOCALAPPDATA%\NfeAgendamentoBridge` — incluindo configurações locais como `settings.json`, `fiscal-usage.json` e `supplier-rules.json`.
@@ -201,7 +205,7 @@ O Microsoft Edge WebView2 Runtime é necessário para o fallback pelo Portal Nac
 
 ## Validação física
 
-O CI não consegue provar interação real com certificado A1, SEFAZ, Portal/hCaptcha ou uma impressora específica. Para declarar a v0.0.17 fisicamente validada, executar:
+O CI não consegue provar interação real com certificado A1, SEFAZ, Portal/hCaptcha ou uma impressora específica. Para declarar a v0.0.18 fisicamente validada, executar:
 
 - `docs/testing/acceptance.md`;
 - `docs/testing/batch-query.md`;
@@ -231,4 +235,4 @@ Não provoque bloqueio `656` repetindo consultas artificialmente apenas para tes
 - atualizador: `docs/testing/bridge-updater.md`;
 - DANFE: `docs/testing/danfe-layout.md`;
 - tela de consulta: `docs/ui/consultation-screen.md`;
-- release atual: `docs/releases/v0.0.17.md`.
+- release atual: `docs/releases/v0.0.18.md`.

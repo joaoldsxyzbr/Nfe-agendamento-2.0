@@ -2,7 +2,7 @@ using System.Diagnostics;
 
 namespace NfeAgendamento.Bridge.Portal;
 
-public sealed class ProcessPortalWindowLauncher : IPortalWindowLauncher, IAsyncDisposable
+public sealed class ProcessPortalWindowLauncher : IPortalWindowLauncher, IPortalWarmup, IAsyncDisposable
 {
     private const string HelperFileName = "NfeAgendamento.Portal.exe";
     private readonly string _helperPath;
@@ -12,6 +12,7 @@ public sealed class ProcessPortalWindowLauncher : IPortalWindowLauncher, IAsyncD
     private readonly PersistentPortalClient _persistentClient;
     private readonly object _probeGate = new();
     private bool _runtimeAvailable;
+    private int _disposed;
 
     public ProcessPortalWindowLauncher()
         : this(Path.Combine(AppContext.BaseDirectory, HelperFileName), runtimeProbe: null)
@@ -54,6 +55,14 @@ public sealed class ProcessPortalWindowLauncher : IPortalWindowLauncher, IAsyncD
         }
     }
 
+    public Task<bool> WarmUpAsync(CancellationToken cancellationToken)
+    {
+        if (!IsAvailable)
+            return Task.FromResult(false);
+
+        return _persistentClient.WarmUpAsync(cancellationToken);
+    }
+
     public Task<PortalLaunchResult> OpenAsync(
         PortalLaunchRequest request,
         CancellationToken cancellationToken)
@@ -69,6 +78,9 @@ public sealed class ProcessPortalWindowLauncher : IPortalWindowLauncher, IAsyncD
 
     public async ValueTask DisposeAsync()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            return;
+
         await _persistentClient.DisposeAsync();
         await _sessions.DisposeAsync();
     }

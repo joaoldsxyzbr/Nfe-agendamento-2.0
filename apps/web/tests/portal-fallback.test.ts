@@ -5,6 +5,56 @@ import type { PortalOperationStatus } from '../src/bridge/contracts';
 const KEY = '42260812345678000123550010000012341000012342';
 
 describe('PortalFallbackController', () => {
+  it('prewarms only when the Bridge advertises support and ignores warmup failure', async () => {
+    let prewarmCalls = 0;
+    const fake = {
+      startPortal: async () => ({ operationId: 'op-prewarm' }),
+      getPortalStatus: async () => ({
+        operationId: 'op-prewarm',
+        state: 'completed' as const,
+        message: null,
+        xml: '<nfeProc />',
+      }),
+      cancelPortal: async () => {},
+      prewarmPortal: async () => {
+        prewarmCalls += 1;
+        throw new Error('warmup unavailable');
+      },
+    };
+    const controller = new PortalFallbackController(fake, async () => {});
+
+    await expect(controller.prewarm({
+      version: '0.0.18',
+      status: 'ok',
+      webView2Available: true,
+      certificateSelected: true,
+      capabilities: {
+        directLookup: true,
+        portalFallback: true,
+        portalPrewarm: true,
+        manualXmlImport: false,
+      },
+    })).resolves.toBeUndefined();
+
+    expect(prewarmCalls).toBe(1);
+
+    await expect(controller.prewarm({
+      version: '0.0.18',
+      status: 'ok',
+      webView2Available: true,
+      certificateSelected: true,
+      capabilities: {
+        directLookup: true,
+        portalFallback: true,
+        portalPrewarm: false,
+        manualXmlImport: false,
+      },
+    })).resolves.toBeUndefined();
+
+    expect(prewarmCalls).toBe(1);
+    await expect(controller.start(KEY)).resolves.toBe('op-prewarm');
+  });
+
   it('starts one local portal operation and polls until XML is completed', async () => {
     const statuses: PortalOperationStatus[] = [
       { operationId: 'op1', state: 'waiting_for_user', message: 'captcha', xml: null },

@@ -25,6 +25,67 @@ Experiência esperada quando o fallback é elegível (`consumption_limit` ou `fi
 
 Na prática, o único passo humano desejado no fallback é resolver o hCaptcha.
 
+## Prewarm site-first — v0.0.18
+
+Na arquitetura site-first, o site tenta aquecer o helper do Portal depois de confirmar um Bridge saudável. A otimização só é usada quando `GET /api/v1/health` informa simultaneamente `webView2Available=true` e `capabilities.portalPrewarm=true`.
+
+Fluxo:
+
+1. o site consulta `/api/v1/health`;
+2. chama `POST /api/v1/portal/prewarm` com `X-Nfe-Bridge: 1`;
+3. o Bridge cria ou reutiliza a sessão persistente do helper;
+4. em modo servidor, o helper executa `PortalWindow.PrepareAsync()` e inicializa o WebView2 antes de confirmar readiness;
+5. nenhuma mensagem `StartOperation` é enviada e a janela permanece oculta;
+6. quando um fallback real for necessário, a mesma sessão aquecida é reutilizada.
+
+O prewarm é estritamente **best-effort**: falha, timeout, WebView2 ausente ou indisponibilidade do helper não bloqueiam consulta direta, não fazem retry na SEFAZ e não impedem o fallback posterior de iniciar a frio.
+
+O prewarm também não seleciona outro certificado, não acessa a chave privada, não cria operação fiscal e não toca na SEFAZ. O endpoint novo exige o header local explícito `X-Nfe-Bridge: 1`, além das proteções de Host/Origin/CORS já existentes.
+
+### Aceitação do prewarm
+
+Além do fluxo físico abaixo, validar:
+
+- abrir/recarregar o site não deve exibir a janela do Portal;
+- com capability habilitada, o processo/helper pode ser inicializado em background;
+- a primeira operação Portal deve reutilizar o helper já preparado quando ele estiver saudável;
+- matar/reiniciar o helper ou falhar o prewarm deve preservar o cold-start como recuperação;
+- Bridge antigo, sem `capabilities.portalPrewarm`, não recebe chamada de prewarm;
+- nenhuma chamada SEFAZ é gerada apenas por abrir o site.
+
+## Recuperação manual de XML — v0.0.18
+
+A importação manual existe somente como contingência quando o helper do Portal termina em falha. Ela não aparece durante consulta direta, durante o hCaptcha, em cancelamento voluntário nem como caminho normal de operação.
+
+Quando `GET /api/v1/health` informa `capabilities.manualXmlImport=true`, uma falha terminal do helper permite a ação **Importar XML baixado manualmente**.
+
+Regras da recuperação:
+
+- seletor aceita somente arquivo com extensão `.xml`;
+- arquivo vazio é rejeitado;
+- limite máximo de 10 MiB;
+- declaração `DOCTYPE`/DTD é rejeitada antes do parsing;
+- o XML passa pelo mesmo `parseNfeXml` usado pelo site;
+- a chave em `infNFe/@Id` deve corresponder exatamente à chave consultada;
+- resolução local de fornecedor continua fail-soft antes de renderizar o resultado;
+- DANFE, download XML e demais ações usam o pipeline visual já existente;
+- cancelar o seletor não altera o estado atual;
+- erro de validação mantém a opção de tentar outro XML;
+- nenhum upload para nuvem é feito e a chave privada A1 não participa dessa importação.
+
+A capability é aditiva: Bridge antigo, sem `manualXmlImport=true`, não exibe a ação no site novo.
+
+### Aceitação da recuperação manual
+
+1. provocar apenas uma falha controlada do helper, sem repetir consulta fiscal;
+2. confirmar que o botão de importação só aparece após a falha terminal;
+3. cancelar o seletor e confirmar que nada muda;
+4. selecionar arquivo não XML, vazio e acima de 10 MiB e confirmar rejeição;
+5. selecionar XML com `DOCTYPE`/DTD e confirmar rejeição antes do parsing;
+6. selecionar XML de outra chave e confirmar rejeição;
+7. selecionar XML válido da chave consultada e confirmar renderização normal do DANFE/ações;
+8. confirmar que não houve nova chamada SEFAZ causada pela importação.
+
 ## Causa da falha corrigida
 
 A v0.0.10 continha um handler `ScriptDialogOpening` correto em intenção, com validação por origem, tipo, mensagem e janela temporal. Porém o WebView2 continuava com `AreDefaultScriptDialogsEnabled` no valor padrão (`true`).

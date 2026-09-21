@@ -1,5 +1,6 @@
 import {
   BRIDGE_BASE_URL,
+  type BridgeCapabilities,
   type BridgeHealth,
   type CertificateCatalog,
   type CertificateSummary,
@@ -25,6 +26,12 @@ const DEFAULT_TIMEOUTS: BridgeTimeouts = {
   portalMs: 8_000,
 };
 
+const BRIDGE_CAPABILITY_KEYS = [
+  'directLookup',
+  'manualXmlImport',
+  'portalFallback',
+  'portalPrewarm',
+] as const;
 const CERTIFICATE_KEYS = ['issuer', 'notAfter', 'notBefore', 'subject', 'thumbprint'] as const;
 const LOOKUP_KEYS = ['cStat', 'category', 'message', 'xml'] as const;
 const PORTAL_STATUS_KEYS = ['message', 'operationId', 'state', 'xml'] as const;
@@ -90,18 +97,37 @@ export class BridgeClient {
     return payload;
   }
 
-  async lookupNfe(accessKey: string, signal?: AbortSignal): Promise<NfeLookupResult> {
+  async lookupNfe(
+    accessKey: string,
+    signal?: AbortSignal,
+    requestId?: string,
+  ): Promise<NfeLookupResult> {
     const normalized = accessKey.trim();
     if (!normalized) throw new Error('Chave NF-e não informada');
+
+    const normalizedRequestId = requestId?.trim();
+    const body = normalizedRequestId
+      ? { accessKey: normalized, requestId: normalizedRequestId }
+      : { accessKey: normalized };
 
     const response = await this.request('/nfe/lookup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accessKey: normalized }),
+      body: JSON.stringify(body),
     }, this.timeouts.lookupMs, signal);
     const payload: unknown = await response.json();
     if (!isNfeLookupResult(payload)) throw new Error('Resposta inválida da consulta NF-e');
     return payload;
+  }
+
+  async prewarmPortal(signal?: AbortSignal): Promise<'ready' | 'unavailable'> {
+    const response = await this.request('/portal/prewarm', {
+      method: 'POST',
+      headers: { 'X-Nfe-Bridge': '1' },
+    }, this.timeouts.portalMs, signal);
+    const payload: unknown = await response.json();
+    if (!isPortalPrewarmResult(payload)) throw new Error('Resposta inválida ao preparar o Portal');
+    return payload.state;
   }
 
   async startPortal(accessKey: string, signal?: AbortSignal): Promise<PortalStartResult> {
@@ -170,10 +196,24 @@ export class BridgeClient {
 }
 
 function isBridgeHealth(value: unknown): value is BridgeHealth {
-  if (!value || typeof value !== 'object') return false;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const health = value as Record<string, unknown>;
-  return typeof health.version === 'string' && health.version.length > 0 && health.status === 'ok' &&
-    typeof health.webView2Available === 'boolean' && typeof health.certificateSelected === 'boolean';
+  if (typeof health.version !== 'string' || health.version.length === 0 || health.status !== 'ok' ||
+      typeof health.webView2Available !== 'boolean' || typeof health.certificateSelected !== 'boolean') {
+    return false;
+  }
+
+  return !Object.hasOwn(health, 'capabilities') || isBridgeCapabilities(health.capabilities);
+}
+
+function isBridgeCapabilities(value: unknown): value is BridgeCapabilities {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const capabilities = value as Record<string, unknown>;
+  return hasExactKeys(capabilities, BRIDGE_CAPABILITY_KEYS) &&
+    typeof capabilities.directLookup === 'boolean' &&
+    typeof capabilities.portalFallback === 'boolean' &&
+    typeof capabilities.portalPrewarm === 'boolean' &&
+    typeof capabilities.manualXmlImport === 'boolean';
 }
 
 function isCertificateCatalog(value: unknown): value is CertificateCatalog {
@@ -207,6 +247,13 @@ function isNfeLookupResult(value: unknown): value is NfeLookupResult {
   if (result.cStat !== null && typeof result.cStat !== 'string') return false;
   if (result.message !== null && typeof result.message !== 'string') return false;
   return result.category === 'success' ? typeof result.xml === 'string' && result.xml.length > 0 : result.xml === null;
+}
+
+function isPortalPrewarmResult(value: unknown): value is { state: 'ready' | 'unavailable' } {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const result = value as Record<string, unknown>;
+  return hasExactKeys(result, ['state']) &&
+    (result.state === 'ready' || result.state === 'unavailable');
 }
 
 function isPortalStartResult(value: unknown): value is PortalStartResult {

@@ -16,12 +16,14 @@ public sealed class PortalEndpointsIntegrationTests : IAsyncDisposable
     private const string AllowedOrigin = "https://nfeagendamento.example";
     private const string AccessKey = "42260812345678000123550010000012341000012342";
     private readonly FakeLauncher _launcher;
+    private readonly FakeWarmup _warmup;
     private readonly PortalFallbackService _portal;
     private readonly WebApplicationFactory<Program> _factory;
 
     public PortalEndpointsIntegrationTests()
     {
         _launcher = new FakeLauncher();
+        _warmup = new FakeWarmup();
         _portal = new PortalFallbackService(_launcher, () => "ABC123");
         _factory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
@@ -37,9 +39,31 @@ public sealed class PortalEndpointsIntegrationTests : IAsyncDisposable
                 builder.ConfigureServices(services =>
                 {
                     services.RemoveAll<PortalFallbackService>();
+                    services.RemoveAll<IPortalWarmup>();
                     services.AddSingleton(_portal);
+                    services.AddSingleton<IPortalWarmup>(_warmup);
                 });
             });
+    }
+
+    [Fact]
+    public async Task Prewarm_endpoint_requires_bridge_header_and_reports_ready()
+    {
+        using var client = CreateClient();
+
+        using var denied = Request(HttpMethod.Post, "/api/v1/portal/prewarm");
+        using var deniedResponse = await client.SendAsync(denied, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Forbidden, deniedResponse.StatusCode);
+        Assert.Equal(0, _warmup.Calls);
+
+        using var allowed = Request(HttpMethod.Post, "/api/v1/portal/prewarm");
+        allowed.Headers.Add("X-Nfe-Bridge", "1");
+        using var allowedResponse = await client.SendAsync(allowed, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, allowedResponse.StatusCode);
+        var payload = await allowedResponse.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
+        Assert.Equal("ready", payload.GetProperty("state").GetString());
+        Assert.Equal(1, _warmup.Calls);
     }
 
     [Fact]
@@ -121,6 +145,18 @@ public sealed class PortalEndpointsIntegrationTests : IAsyncDisposable
         request.Headers.Host = "127.0.0.1:17345";
         request.Headers.TryAddWithoutValidation("Origin", AllowedOrigin);
         return request;
+    }
+
+    private sealed class FakeWarmup : IPortalWarmup
+    {
+        public int Calls { get; private set; }
+
+        public Task<bool> WarmUpAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Calls += 1;
+            return Task.FromResult(true);
+        }
     }
 
     private sealed class FakeLauncher : IPortalWindowLauncher

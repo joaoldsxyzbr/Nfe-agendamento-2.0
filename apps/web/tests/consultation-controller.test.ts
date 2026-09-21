@@ -30,11 +30,13 @@ function createHarness(options: {
   let input = KEY;
   const states: Array<{ title: string; message: string }> = [];
   const failures: NfeLookupResult[] = [];
+  const portalRecoveries: Array<{ title: string; message: string; accessKey: string }> = [];
   const successes: ParsedNfe[] = [];
   const invalidXml: unknown[] = [];
   const busy: boolean[] = [];
   const portalStarts: string[] = [];
   const portalCancels: string[] = [];
+  const lookupRequestIds: Array<string | undefined> = [];
   let focusCalls = 0;
   let resetCalls = 0;
   let lookupCalls = 0;
@@ -45,8 +47,9 @@ function createHarness(options: {
     clearAccessKey: () => { input = ''; },
     validateAccessKey: () => options.validation ?? { valid: true, value: KEY, ufAutor: '42' },
     bridge: {
-      lookupNfe: async () => {
+      lookupNfe: async (_accessKey, _signal, requestId) => {
         lookupCalls += 1;
+        lookupRequestIds.push(requestId);
         return options.lookup?.() ?? success();
       },
       resolveSupplier: async () => options.resolveSupplier?.() ?? { supplierId: null },
@@ -73,6 +76,7 @@ function createHarness(options: {
     },
     renderState: (title, message) => states.push({ title, message }),
     renderFailure: (lookup) => failures.push(lookup),
+    renderPortalFailure: (title, message, accessKey) => portalRecoveries.push({ title, message, accessKey }),
     renderSuccess: (value) => successes.push(value),
     renderInvalidXml: (error) => invalidXml.push(error),
     setBusy: (value) => busy.push(value),
@@ -86,11 +90,13 @@ function createHarness(options: {
     controller,
     states,
     failures,
+    portalRecoveries,
     successes,
     invalidXml,
     busy,
     portalStarts,
     portalCancels,
+    lookupRequestIds,
     get focusCalls() { return focusCalls; },
     get resetCalls() { return resetCalls; },
     get lookupCalls() { return lookupCalls; },
@@ -112,6 +118,17 @@ describe('single consultation controller', () => {
     expect(harness.focusCalls).toBe(1);
   });
 
+  it('generates one UUID requestId for the direct lookup operation', async () => {
+    const harness = createHarness();
+
+    await harness.controller.submit();
+
+    expect(harness.lookupRequestIds).toHaveLength(1);
+    expect(harness.lookupRequestIds[0]).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+  });
+
   it('parses successful XML, resolves supplier fail-soft and renders success', async () => {
     const harness = createHarness({
       resolveSupplier: async () => ({ supplierId: 'souza-cruz' }),
@@ -124,6 +141,17 @@ describe('single consultation controller', () => {
     expect(harness.successes).toHaveLength(1);
     expect(harness.successes[0]?.supplierRuleId).toBe('souza-cruz');
     expect(harness.busy).toEqual([true, false]);
+  });
+
+  it('applies supplier resolution to a validated manually imported XML', async () => {
+    const harness = createHarness({
+      resolveSupplier: async () => ({ supplierId: 'fernando-klein' }),
+    });
+
+    await harness.controller.completeManualImport(parsed('<manual/>'));
+
+    expect(harness.successes).toHaveLength(1);
+    expect(harness.successes[0]?.supplierRuleId).toBe('fernando-klein');
   });
 
   it('renders invalid XML without exposing success', async () => {
@@ -190,7 +218,11 @@ describe('single consultation controller', () => {
     });
     await failed.controller.submit();
     expect(failed.lookupCalls).toBe(1);
-    expect(failed.states.at(-1)?.title).toBe('Portal da NF-e indisponível');
+    expect(failed.portalRecoveries.at(-1)).toEqual({
+      title: 'Portal da NF-e indisponível',
+      message: 'indisponível',
+      accessKey: KEY,
+    });
   });
 
   it('resets the visible consultation and focuses the key input', () => {

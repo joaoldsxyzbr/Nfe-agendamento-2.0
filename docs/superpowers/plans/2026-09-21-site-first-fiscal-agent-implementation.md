@@ -1,6 +1,6 @@
 # Site-first Fiscal Agent Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Tornar o site a única UX do NFe Agendamento, reduzir o Windows a um agente fiscal local mínimo e manter o helper Portal apenas como componente técnico excepcional, sem regressão fiscal.
 
@@ -9,6 +9,13 @@
 **Tech Stack:** Vite 8 + TypeScript + Vitest, Cloudflare Workers, .NET 10/ASP.NET Core, xUnit, WinForms/WebView2, Named Pipes, Inno Setup, GitHub Actions.
 
 **Spec:** `docs/superpowers/specs/2026-09-21-site-first-fiscal-agent-design.md`
+
+## Status de execução — 21/09/2026
+
+- **Release A / v0.0.18:** Tasks 1–5 implementadas na branch `site-first-v0018`, com compatibilidade legada, diagnóstico/update no site, prewarm, contingência XML manual e idempotência fiscal.
+- **Release B:** Tasks 6–7 permanecem pendentes e só começam após a v0.0.18 estar publicada e estável.
+- **Release C:** Task 8 permanece condicionada ao gate de estabilidade da Release B.
+- **Task 9:** documentação e versionamento da Release A preparados; publicação depende do CI verde do commit final.
 
 ## Global Constraints
 
@@ -54,7 +61,7 @@
   `directLookup=true`, `portalFallback=true`, `portalPrewarm=false`, `manualXmlImport=false`.
 - `portalPrewarm` só muda para `true` na Task 3; `manualXmlImport` só muda para `true` na Task 4.
 
-- [ ] **Step 1: escrever teste web para aceitar health antigo e novo**
+- [x] **Step 1: escrever teste web para aceitar health antigo e novo**
 
 ```ts
 const legacy = {
@@ -77,7 +84,7 @@ const current = {
 
 O teste deve provar que ambos são aceitos e que capability malformada é rejeitada.
 
-- [ ] **Step 2: executar teste e confirmar RED**
+- [x] **Step 2: executar teste e confirmar RED**
 
 Run:
 ```bash
@@ -86,7 +93,7 @@ npm run test:web -- --run apps/web/tests/bridge-health.test.ts
 
 Expected: FAIL porque `BridgeCapabilities` ainda não existe.
 
-- [ ] **Step 3: adicionar tipos aditivos**
+- [x] **Step 3: adicionar tipos aditivos**
 
 ```ts
 export type BridgeCapabilities = {
@@ -110,7 +117,7 @@ export type BridgeHealth = {
 - aceitar ausência de `capabilities`;
 - quando presente, validar os quatro booleanos.
 
-- [ ] **Step 4: expor capabilities no health do Bridge**
+- [x] **Step 4: expor capabilities no health do Bridge**
 
 Adicionar ao payload atual:
 
@@ -124,7 +131,7 @@ capabilities = new
 },
 ```
 
-- [ ] **Step 5: fixar contrato em integração .NET**
+- [x] **Step 5: fixar contrato em integração .NET**
 
 No teste existente de health, validar:
 
@@ -136,7 +143,7 @@ Assert.False(capabilities.GetProperty("portalPrewarm").GetBoolean());
 Assert.False(capabilities.GetProperty("manualXmlImport").GetBoolean());
 ```
 
-- [ ] **Step 6: rodar testes**
+- [x] **Step 6: rodar testes**
 
 ```bash
 npm run test:web -- --run apps/web/tests/bridge-health.test.ts
@@ -145,11 +152,11 @@ dotnet run --project apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeAgendament
 
 Expected: PASS.
 
-- [ ] **Step 7: documentar compatibilidade**
+- [x] **Step 7: documentar compatibilidade**
 
 Registrar em `bridge-security.md` que capabilities são aditivas e clientes novos não podem exigir o campo para falar com v0.0.17.
 
-- [ ] **Step 8: commit**
+- [x] **Step 8: commit**
 
 ```bash
 git add apps/bridge/src/NfeAgendamento.Bridge/Program.cs apps/web/src/bridge/contracts.ts apps/web/src/bridge/client.ts apps/bridge/tests/NfeAgendamento.Bridge.Tests/CertificateEndpointsIntegrationTests.cs apps/web/tests/bridge-health.test.ts docs/architecture/bridge-security.md
@@ -177,7 +184,7 @@ git commit -m "feat: add bridge capability discovery"
   `ok | local_access_unavailable | incompatible | unknown`.
 - `local_access_unavailable` cobre Bridge parado, conexão recusada e bloqueio de Local Network Access quando o browser não fornecer sinal suficiente para separar as causas.
 
-- [ ] **Step 1: escrever parser/testes da metadata**
+- [x] **Step 1: escrever parser/testes da metadata**
 
 Criar contrato mínimo:
 
@@ -203,17 +210,17 @@ Testar:
 - URL fora de `/downloads/windows/` → erro;
 - digest sem `sha256:` → erro.
 
-- [ ] **Step 2: executar RED**
+- [x] **Step 2: executar RED**
 
 ```bash
 npm run test:web -- --run apps/web/tests/windows-update.test.ts
 ```
 
-- [ ] **Step 3: implementar parser sem dependência nova**
+- [x] **Step 3: implementar parser sem dependência nova**
 
 Comparar versão `major.minor.patch` numericamente e aceitar somente o shape já entregue por `worker/update-proxy.ts`.
 
-- [ ] **Step 4: mover o conceito de update para o painel do site**
+- [x] **Step 4: mover o conceito de update para o painel do site**
 
 No diagnóstico, depois de health saudável:
 
@@ -228,7 +235,7 @@ if (update) {
 
 Manter o link fixo atual de download como recuperação/instalação limpa até a retirada do App.
 
-- [ ] **Step 5: classificar erro de integração local**
+- [x] **Step 5: classificar erro de integração local**
 
 Adicionar função pura:
 
@@ -243,7 +250,7 @@ Regras:
 
 A UI deve explicar que `local_access_unavailable` pode significar componente parado **ou** permissão de rede local bloqueada. Não inferir uma causa mais específica sem evidência do navegador.
 
-- [ ] **Step 6: atualizar testes estáticos do painel**
+- [x] **Step 6: atualizar testes estáticos do painel**
 
 Fixar textos:
 - “Componente local conectado”;
@@ -251,7 +258,7 @@ Fixar textos:
 - “Permissão de rede local” somente no estado correspondente;
 - nenhuma chave fiscal exposta.
 
-- [ ] **Step 7: rodar testes web**
+- [x] **Step 7: rodar testes web**
 
 ```bash
 npm run lint:web
@@ -260,7 +267,7 @@ npm run test:web
 npm run build:web
 ```
 
-- [ ] **Step 8: commit**
+- [x] **Step 8: commit**
 
 ```bash
 git add apps/web/src/update apps/web/src/settings-panel.ts apps/web/src/settings-panel.css apps/web/tests docs/ui/consultation-screen.md docs/testing/bridge-updater.md
@@ -291,7 +298,7 @@ git commit -m "feat: move local diagnostics and update UX to site"
 - Produces: `BridgeClient.prewarmPortal()`.
 - Prewarm é best-effort.
 
-- [ ] **Step 1: escrever teste do cliente persistente**
+- [x] **Step 1: escrever teste do cliente persistente**
 
 Teste novo:
 
@@ -314,13 +321,13 @@ public async Task Warmup_creates_one_session_without_starting_an_operation()
 }
 ```
 
-- [ ] **Step 2: executar RED**
+- [x] **Step 2: executar RED**
 
 ```bash
 dotnet run --project apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeAgendamento.Bridge.Tests.csproj -c Release
 ```
 
-- [ ] **Step 3: implementar WarmUpAsync**
+- [x] **Step 3: implementar WarmUpAsync**
 
 Adicionar em `PersistentPortalClient` método que:
 - respeita cooldown;
@@ -329,7 +336,7 @@ Adicionar em `PersistentPortalClient` método que:
 - em falha entra em cooldown, reseta sessão e retorna `false`;
 - nunca envia `StartOperation`.
 
-- [ ] **Step 4: criar interface separada**
+- [x] **Step 4: criar interface separada**
 
 ```csharp
 public interface IPortalWarmup
@@ -350,7 +357,7 @@ builder.Services.AddSingleton<IPortalWarmup>(sp =>
     sp.GetRequiredService<ProcessPortalWindowLauncher>());
 ```
 
-- [ ] **Step 5: criar endpoint best-effort**
+- [x] **Step 5: criar endpoint best-effort**
 
 ```csharp
 api.MapPost("/portal/prewarm", async (
@@ -364,13 +371,13 @@ api.MapPost("/portal/prewarm", async (
 
 Prewarm não pode retornar 500 por runtime ausente.
 
-- [ ] **Step 6: implementar cliente web**
+- [x] **Step 6: implementar cliente web**
 
 ```ts
 async prewarmPortal(signal?: AbortSignal): Promise<'ready' | 'unavailable'>
 ```
 
-- [ ] **Step 7: disparar uma vez após health compatível**
+- [x] **Step 7: disparar uma vez após health compatível**
 
 O site chama prewarm somente se:
 - health OK;
@@ -379,22 +386,22 @@ O site chama prewarm somente se:
 
 Falha é ignorada para o fluxo principal.
 
-- [ ] **Step 8: testar que fallback continua cold-start**
+- [x] **Step 8: testar que fallback continua cold-start**
 
 Teste web deve simular `prewarmPortal` rejeitando e depois provar que `startPortal` ainda é chamado normalmente quando necessário.
 
-- [ ] **Step 9: ativar capability somente após implementação verde**
+- [x] **Step 9: ativar capability somente após implementação verde**
 
 Alterar `portalPrewarm` para `true` no health somente depois de endpoint + testes passarem.
 
-- [ ] **Step 10: rodar suites**
+- [x] **Step 10: rodar suites**
 
 ```bash
 npm run test:web
 dotnet run --project apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeAgendamento.Bridge.Tests.csproj -c Release
 ```
 
-- [ ] **Step 11: commit**
+- [x] **Step 11: commit**
 
 ```bash
 git add apps/bridge/src/NfeAgendamento.Bridge/Portal apps/bridge/src/NfeAgendamento.Bridge/Program.cs apps/bridge/tests/NfeAgendamento.Bridge.Tests apps/web/src apps/web/tests docs/testing/portal-post-hcaptcha.md
@@ -417,7 +424,7 @@ git commit -m "perf: prewarm portal helper from site"
 - Consumes o parser XML existente.
 - Não substitui helper como padrão.
 
-- [ ] **Step 1: testes RED**
+- [x] **Step 1: testes RED**
 
 Cobrir:
 - XML válido da chave esperada;
@@ -427,7 +434,7 @@ Cobrir:
 - extensão não XML;
 - cancelamento do seletor.
 
-- [ ] **Step 2: implementar validação no browser**
+- [x] **Step 2: implementar validação no browser**
 
 Limite:
 
@@ -437,17 +444,17 @@ const MAX_XML_BYTES = 10 * 1024 * 1024;
 
 Ler `file.text()`, usar `parseNfeXml` e exigir `parsed.accessKey === expectedAccessKey`.
 
-- [ ] **Step 3: expor ação somente após falha terminal do helper**
+- [x] **Step 3: expor ação somente após falha terminal do helper**
 
 Texto: “Importar XML baixado manualmente”.
 
 Não abrir automaticamente o Portal normal nesta task; a ação é recuperação.
 
-- [ ] **Step 4: ativar capability após entrega**
+- [x] **Step 4: ativar capability após entrega**
 
 Alterar `manualXmlImport` para `true` no health e fixar teste de integração.
 
-- [ ] **Step 5: rodar web**
+- [x] **Step 5: rodar web**
 
 ```bash
 npm run lint:web
@@ -455,7 +462,7 @@ npm run test:web
 npm run build:web
 ```
 
-- [ ] **Step 6: commit**
+- [x] **Step 6: commit**
 
 ```bash
 git add apps/web/src/nfe/manual-xml-import.ts apps/web/tests/manual-xml-import.test.ts apps/web/src/main.ts apps/web/src/styles.css docs/testing/portal-post-hcaptcha.md
@@ -484,7 +491,7 @@ git commit -m "feat: add manual xml recovery fallback"
 - Máximo: 256 entradas.
 - Clientes antigos sem `requestId` continuam aceitos.
 
-- [ ] **Step 1: testes RED do registry**
+- [x] **Step 1: testes RED do registry**
 
 Fixar:
 - mesmo requestId + mesma chave → factory executa uma vez;
@@ -493,11 +500,11 @@ Fixar:
 - depois do TTL uma ação nova pode executar;
 - registry nunca executa duas factories simultâneas para a mesma chave.
 
-- [ ] **Step 2: implementar registry sem tocar no transporte**
+- [x] **Step 2: implementar registry sem tocar no transporte**
 
 O registry envolve a chamada a `NfeLookupService.LookupAsync`; não modifica `NfeLookupService`, `FiscalUsageGuard` ou `SefazDistributionTransport`.
 
-- [ ] **Step 3: evoluir request record**
+- [x] **Step 3: evoluir request record**
 
 ```csharp
 public sealed record NfeLookupRequest(string AccessKey, string? RequestId);
@@ -508,7 +515,7 @@ Regras:
 - presente → UUID válido;
 - requestId conflitante → HTTP 409 `request_id_conflict`.
 
-- [ ] **Step 4: site gera requestId estável por operação**
+- [x] **Step 4: site gera requestId estável por operação**
 
 `BridgeClient.lookupNfe` recebe o id gerado pelo controller:
 
@@ -519,18 +526,18 @@ await bridge.lookupNfe(accessKey, signal, requestId);
 
 O mesmo id precisa ser reutilizado por qualquer repetição de transporte da mesma operação; esta migração não adiciona retry automático.
 
-- [ ] **Step 5: provar ausência de dupla tentativa**
+- [x] **Step 5: provar ausência de dupla tentativa**
 
 Usar fake transport contador no teste .NET e disparar duas requisições concorrentes equivalentes. Esperado: contador `1`.
 
-- [ ] **Step 6: rodar suites fiscal/web**
+- [x] **Step 6: rodar suites fiscal/web**
 
 ```bash
 dotnet run --project apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeAgendamento.Bridge.Tests.csproj -c Release
 npm run test:web
 ```
 
-- [ ] **Step 7: commit**
+- [x] **Step 7: commit**
 
 ```bash
 git add apps/bridge/src/NfeAgendamento.Bridge apps/bridge/tests/NfeAgendamento.Bridge.Tests apps/web/src apps/web/tests docs/architecture/fiscal-usage-guard.md
