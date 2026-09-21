@@ -111,6 +111,16 @@ export class BridgeClient {
     return payload;
   }
 
+  async prewarmPortal(signal?: AbortSignal): Promise<'ready' | 'unavailable'> {
+    const response = await this.request('/portal/prewarm', {
+      method: 'POST',
+      headers: { 'X-Nfe-Bridge': '1' },
+    }, this.timeouts.portalMs, signal);
+    const payload: unknown = await response.json();
+    if (!isPortalPrewarmResult(payload)) throw new Error('Resposta inválida ao preparar o Portal');
+    return payload.state;
+  }
+
   async startPortal(accessKey: string, signal?: AbortSignal): Promise<PortalStartResult> {
     const normalized = accessKey.trim();
     if (!normalized) throw new Error('Chave NF-e não informada');
@@ -228,6 +238,13 @@ function isNfeLookupResult(value: unknown): value is NfeLookupResult {
   if (result.cStat !== null && typeof result.cStat !== 'string') return false;
   if (result.message !== null && typeof result.message !== 'string') return false;
   return result.category === 'success' ? typeof result.xml === 'string' && result.xml.length > 0 : result.xml === null;
+}
+
+function isPortalPrewarmResult(value: unknown): value is { state: 'ready' | 'unavailable' } {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const result = value as Record<string, unknown>;
+  return hasExactKeys(result, ['state']) &&
+    (result.state === 'ready' || result.state === 'unavailable');
 }
 
 function isPortalStartResult(value: unknown): value is PortalStartResult {
