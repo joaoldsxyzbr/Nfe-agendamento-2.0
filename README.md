@@ -8,7 +8,8 @@ NFe Agendamento é um aplicativo interno para consultar NF-e, baixar XML e gerar
 - **Worker Cloudflare:** coordena o consumo fiscal entre PCs, aplica a barreira HTTP contra abuso e faz proxy estritamente limitado da metadata/Setup de atualização; os demais assets continuam servidos como site estático.
 - **Durable Object SQLite:** reserva atomicamente tentativas diretas antes da SEFAZ para computadores que usam o mesmo A1 RSA.
 - **Bridge:** ASP.NET Core .NET 10 em `http://127.0.0.1:17345`, somente loopback.
-- **Helper Portal:** WinForms/WebView2 persistente para o fallback pelo Portal Nacional; hCaptcha continua sempre manual.
+- **Extensão Portal (piloto):** Chromium Manifest V3 abre o Portal Nacional em popup do navegador e devolve o XML ao site; hCaptcha continua sempre manual.
+- **Helper Portal:** WinForms/WebView2 persistente preservado como rollback enquanto a extensão não for validada fisicamente.
 - **Certificado A1:** descoberto em `CurrentUser/My`; PFX, senha e chave privada nunca são enviados ao site ou ao Cloudflare.
 - **Persistência local:** thumbprint selecionado em `%LOCALAPPDATA%/NfeAgendamentoBridge/settings.json`, regras locais de fornecedor em `supplier-rules.json` e metadados da proteção fiscal em `fiscal-usage.json`.
 - **Release pública atual:** `0.0.20`; publicada somente a partir do mesmo SHA validado pelo CI completo.
@@ -27,7 +28,7 @@ Implementado e coberto pelos gates automatizados aplicáveis:
 - transporte autenticado `NFeDistribuicaoDFe`;
 - categorias normalizadas `success`, `fiscal_status`, `consumption_limit`, `certificate_error`, `transport_unavailable` e `technical_error`;
 - tratamento de `137`, `138`, `656`, HTTP 429, timeout e falhas ambíguas sem retry fiscal automático;
-- fallback automático para o Portal após `consumption_limit` ou `cStat 217`;
+- fallback automático para o Portal após `consumption_limit` ou `cStat 217`, preferindo a extensão Chromium quando disponível e mantendo o helper WebView2 como rollback;
 - prewarm best-effort do Portal/WebView2 após health compatível, sem bloquear consulta direta nem fallback cold-start;
 - importação manual de XML validado, disponível somente como contingência após falha terminal do helper Portal;
 - hCaptcha manual e download oficial do XML pelo helper Portal;
@@ -77,9 +78,11 @@ Site
         → limite/217: Portal Nacional
 ```
 
-No Portal, o helper preenche a chave, aguarda o usuário resolver o hCaptcha, continua observando a página oficial, aciona o download permitido, usa o A1 selecionado e valida o XML antes de devolvê-lo ao site. O helper não resolve nem contorna captcha.
+No piloto atual, o site tenta primeiro a extensão Chromium MV3. Ela abre o Portal em popup do navegador, preenche a chave, aguarda o usuário resolver o hCaptcha e tenta devolver o XML oficial ao site pela própria sessão do Portal. Se a extensão não estiver disponível antes do início da operação, o fluxo volta ao helper WebView2 existente.
 
-Detalhes: `docs/testing/portal-post-hcaptcha.md`.
+O helper permanece empacotado e funcional até a validação física provar popup, certificado e retorno do XML em Chrome/Edge reais. Nenhum dos dois caminhos resolve ou contorna captcha.
+
+Detalhes: `docs/testing/browser-extension-portal.md` e `docs/testing/portal-post-hcaptcha.md`.
 
 ## Regras locais de fornecedor
 
@@ -227,7 +230,8 @@ Não provoque bloqueio `656` repetindo consultas artificialmente apenas para tes
 - logging local: `docs/operations/local-logging.md`;
 - aceitação geral: `docs/testing/acceptance.md`;
 - lote: `docs/testing/batch-query.md`;
-- Portal pós-hCaptcha: `docs/testing/portal-post-hcaptcha.md`;
+- Portal via extensão Chromium: `docs/testing/browser-extension-portal.md`;
+- Portal WebView2 pós-hCaptcha/rollback: `docs/testing/portal-post-hcaptcha.md`;
 - atualizador: `docs/testing/bridge-updater.md`;
 - DANFE: `docs/testing/danfe-layout.md`;
 - tela de consulta: `docs/ui/consultation-screen.md`;
