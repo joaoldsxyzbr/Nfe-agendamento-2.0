@@ -85,10 +85,8 @@ A extensão será criada em `apps/extension` e usará Manifest V3.
 Permissões mínimas planejadas:
 
 - `scripting`;
-- `tabs`;
-- `windows`;
 - `webRequest` apenas para observar a requisição oficial de download do XML;
-- `storage` somente se necessário para estado efêmero/recovery;
+- `storage` para persistir o estado efêmero da operação em `chrome.storage.session` enquanto o service worker pode ser suspenso;
 - host permissions estritas para `https://www.nfe.fazenda.gov.br/*` e para o domínio oficial do NFe Agendamento;
 - content script no site oficial para fazer a ponte com o service worker sem depender de um ID de extensão hardcoded.
 
