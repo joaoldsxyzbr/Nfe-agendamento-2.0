@@ -117,6 +117,23 @@ public sealed class ProcessPortalWindowLauncherTests
     }
 
     [Fact]
+    public async Task DisposeAsync_is_idempotent_for_shared_di_registration()
+    {
+        var helper = Path.GetTempFileName();
+        try
+        {
+            var launcher = CreateLauncher(helper, _ => false, () => true);
+
+            await launcher.DisposeAsync();
+            await launcher.DisposeAsync();
+        }
+        finally
+        {
+            File.Delete(helper);
+        }
+    }
+
+    [Fact]
     public void Launcher_disposes_the_persistent_client_before_the_owned_helper_factory()
     {
         var source = File.ReadAllText(Path.Combine(
