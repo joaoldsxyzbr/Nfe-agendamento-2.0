@@ -9,7 +9,8 @@ describe('portal fallback integration', () => {
   it('uses Portal after a consumption limit or SEFAZ 217 and reuses the validated XML pipeline', () => {
     expect(main).toContain("import { PortalFallbackController } from './portal/fallback';");
     expect(main).toContain('new PortalFallbackController(bridgeClient)');
-    expect(main).toContain('.then((health) => portalFallback.prewarm(health))');
+    expect(main).toContain('manualXmlImportSupported = health.capabilities?.manualXmlImport === true;');
+    expect(main).toContain('return portalFallback.prewarm(health);');
 
     const limitIndex = consultationController.indexOf("lookup.category === 'consumption_limit'");
     const status217Index = consultationController.indexOf("lookup.category === 'fiscal_status' && lookup.cStat === '217'");
