@@ -1,6 +1,6 @@
 # Site-first + agente fiscal local mínimo — Design
 
-**Status:** implementação incremental em andamento — Releases A (`v0.0.18`) e B (`v0.0.19`) publicadas; aposentadoria do App ainda bloqueada pelo gate de estabilidade.  
+**Status:** implementação concluída até a Release C (`v0.0.20`): Releases A (`v0.0.18`) e B (`v0.0.19`) publicadas e App supervisor retirado na fase final. As seções de transição abaixo permanecem como registro histórico.  
 **Baseline original:** `main` em 21/09/2026, release pública v0.0.17. Estado atual documentado no plano de implementação.  
 **Objetivo:** fazer o NFe Agendamento ser percebido como um único produto web, mantendo no Windows somente as responsabilidades que exigem A1, confiança local ou integração controlada com o Portal Nacional.
 
@@ -132,7 +132,7 @@ Ele só pode ser retirado depois que existirem e estiverem validados:
 - upgrade de instalação antiga;
 - rollback para a arquitetura anterior.
 
-Se esses critérios não forem atingidos, o App deve permanecer como supervisor **headless**, sem ser apresentado como produto.
+Durante a transição, se esses critérios não fossem atingidos, o App deveria permanecer como supervisor **headless**. Na v0.0.20, o gate técnico foi aceito e o App foi retirado; a validação física segue separada.
 
 ## Contrato de health e capabilities
 
@@ -294,7 +294,7 @@ HKCU Run
       → Portal helper sob demanda/prewarm
 ```
 
-O Bridge standalone atual já não depende de lease para continuar vivo. A migração deve aproveitar esse comportamento, não criar um segundo runtime.
+O Bridge standalone não depende de lease para continuar vivo. A v0.0.20 consolidou esse comportamento como lifecycle final, sem segundo runtime.
 
 ### Crash recovery
 
