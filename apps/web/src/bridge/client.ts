@@ -97,14 +97,23 @@ export class BridgeClient {
     return payload;
   }
 
-  async lookupNfe(accessKey: string, signal?: AbortSignal): Promise<NfeLookupResult> {
+  async lookupNfe(
+    accessKey: string,
+    signal?: AbortSignal,
+    requestId?: string,
+  ): Promise<NfeLookupResult> {
     const normalized = accessKey.trim();
     if (!normalized) throw new Error('Chave NF-e não informada');
+
+    const normalizedRequestId = requestId?.trim();
+    const body = normalizedRequestId
+      ? { accessKey: normalized, requestId: normalizedRequestId }
+      : { accessKey: normalized };
 
     const response = await this.request('/nfe/lookup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accessKey: normalized }),
+      body: JSON.stringify(body),
     }, this.timeouts.lookupMs, signal);
     const payload: unknown = await response.json();
     if (!isNfeLookupResult(payload)) throw new Error('Resposta inválida da consulta NF-e');
