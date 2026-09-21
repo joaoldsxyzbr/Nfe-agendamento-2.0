@@ -186,7 +186,7 @@ api.MapGet("/health", (
         directLookup = true,
         portalFallback = true,
         portalPrewarm = true,
-        manualXmlImport = false,
+        manualXmlImport = true,
     },
 }));
 
