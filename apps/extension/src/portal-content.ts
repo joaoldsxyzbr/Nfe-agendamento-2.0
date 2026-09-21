@@ -3,6 +3,7 @@ import {
   consultButtonSelector,
   isCaptchaResponseReady,
   isDownloadLabel,
+  isOfficialConsultUrl,
   isOfficialDownloadUrl,
 } from './portal-dom';
 import { PORTAL_ORIGIN } from './protocol';
@@ -37,7 +38,19 @@ async function tick(): Promise<void> {
 
   fillAccessKey();
 
-  if (!consultTriggered) {
+  if (!downloadTriggered) {
+    const control = findDownloadControl();
+    if (control) {
+      const armed = await chrome.runtime.sendMessage({ source: 'portal', type: 'download_ready' });
+      if (!armed?.armed) return;
+
+      downloadTriggered = true;
+      control.click();
+      return;
+    }
+  }
+
+  if (!consultTriggered && isOfficialConsultUrl(location.href)) {
     const captchaResponse = document.querySelector<HTMLTextAreaElement>('[name="h-captcha-response"]');
     const consultButton = document.querySelector<HTMLElement>(consultButtonSelector);
     if (
@@ -49,19 +62,7 @@ async function tick(): Promise<void> {
       consultTriggered = true;
       await chrome.runtime.sendMessage({ source: 'portal', type: 'submitting' });
       consultButton.click();
-      return;
     }
-  }
-
-  if (!downloadTriggered) {
-    const control = findDownloadControl();
-    if (!control) return;
-
-    const armed = await chrome.runtime.sendMessage({ source: 'portal', type: 'download_ready' });
-    if (!armed?.armed) return;
-
-    downloadTriggered = true;
-    control.click();
   }
 }
 
