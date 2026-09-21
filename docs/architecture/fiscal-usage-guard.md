@@ -13,6 +13,25 @@ A coordenação compartilhada não cria PC central, não move o certificado para
 
 O gate envolve a pré-checagem local, a reserva compartilhada, o registro local da tentativa e a chamada ao transporte fiscal. O `CancellationToken` continua sendo respeitado.
 
+## Idempotência local da operação
+
+A partir da v0.0.18, o endpoint local `POST /api/v1/nfe/lookup` aceita opcionalmente um `requestId` UUID gerado pelo site para cada ação explícita de consulta.
+
+O `NfeLookupOperationRegistry` envolve a chamada existente a `NfeLookupService.LookupAsync`; ele não altera o transporte SEFAZ, o `FiscalUsageGuard` nem a coordenação multi-PC.
+
+Regras:
+
+- cliente antigo sem `requestId` continua no comportamento legado;
+- mesmo `requestId` + mesma chave reutiliza a mesma operação/resultado por até 2 minutos;
+- mesmo `requestId` + chave diferente retorna conflito e não consulta a SEFAZ;
+- requestIds diferentes para a mesma chave **enquanto ela está em voo** compartilham uma única execução fiscal;
+- depois que a operação termina, um novo requestId representa nova ação explícita e pode iniciar nova consulta, sujeita normalmente aos guards fiscais;
+- o registry mantém no máximo 256 entradas e remove terminais expirados antes de admitir novas;
+- falha/cancelamento excepcional da factory remove a entrada em vez de fabricar resultado;
+- não existe retry fiscal automático.
+
+Essa camada evita dupla tentativa causada por repetição/concorrência da mesma operação, mas não substitui a contabilidade conservadora do `FiscalUsageGuard` e do `FiscalCoordinator`.
+
 ## Estado persistido local
 
 Arquivo:
@@ -144,6 +163,8 @@ Cobertura relevante:
 
 - `apps/bridge/tests/NfeAgendamento.Bridge.Tests/FiscalUsageGuardTests.cs`;
 - `apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeLookupUsageGuardTests.cs`;
+- `apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeLookupOperationRegistryTests.cs`;
+- `apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeLookupEndpointIntegrationTests.cs`;
 - `apps/bridge/tests/NfeAgendamento.Bridge.Tests/NfeLookupSharedCoordinatorTests.cs`;
 - `apps/bridge/tests/NfeAgendamento.Bridge.Tests/FiscalCoordinationCredentialTests.cs`;
 - `apps/bridge/tests/NfeAgendamento.Bridge.Tests/CloudFiscalUsageCoordinatorTests.cs`;
