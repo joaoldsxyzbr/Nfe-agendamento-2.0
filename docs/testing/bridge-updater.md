@@ -79,4 +79,4 @@ Falhas de metadata/download no site devem resultar em mensagem de atualização 
 - concluir o Setup e confirmar preservação de `%LOCALAPPDATA%\\NfeAgendamentoBridge`;
 - confirmar versão nova no diagnóstico do site;
 - confirmar ausência de `NfeAgendamento.App.exe` e início do Bridge sem console;
-- para o piloto standalone, executar adicionalmente `docs/testing/standalone-bridge.md`.
+- executar adicionalmente `docs/testing/standalone-bridge.md` para validar o lifecycle final.
