@@ -47,7 +47,7 @@ Implementado e coberto pelos gates automatizados aplicáveis:
 - parser estrutural complementar de IBS/CBS/IS, sem alterar prematuramente o DANFE;
 - Bridge e Portal publicados como self-contained `win-x64`;
 - instalador Inno Setup por usuário, sem administrador;
-- atualização apresentada pelo site via domínio oficial, com metadata cacheada por curto período, rate limit próprio e rota fechada para o Setup versionado; o updater legado permanece empacotado apenas como rollback técnico durante a transição;
+- atualização apresentada pelo site via domínio oficial, com metadata cacheada por curto período, rate limit próprio e rota fechada para o Setup versionado; não existe updater paralelo no componente Windows;
 - logs locais estruturados com rotação e sem persistir chave NF-e, XML, PFX, senha ou chave privada.
 
 ## Proteção fiscal local e multi-PC
