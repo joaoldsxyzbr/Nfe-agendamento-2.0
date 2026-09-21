@@ -30,6 +30,7 @@ function createHarness(options: {
   let input = KEY;
   const states: Array<{ title: string; message: string }> = [];
   const failures: NfeLookupResult[] = [];
+  const portalRecoveries: Array<{ title: string; message: string; accessKey: string }> = [];
   const successes: ParsedNfe[] = [];
   const invalidXml: unknown[] = [];
   const busy: boolean[] = [];
@@ -73,6 +74,7 @@ function createHarness(options: {
     },
     renderState: (title, message) => states.push({ title, message }),
     renderFailure: (lookup) => failures.push(lookup),
+    renderPortalFailure: (title, message, accessKey) => portalRecoveries.push({ title, message, accessKey }),
     renderSuccess: (value) => successes.push(value),
     renderInvalidXml: (error) => invalidXml.push(error),
     setBusy: (value) => busy.push(value),
@@ -86,6 +88,7 @@ function createHarness(options: {
     controller,
     states,
     failures,
+    portalRecoveries,
     successes,
     invalidXml,
     busy,
@@ -190,7 +193,11 @@ describe('single consultation controller', () => {
     });
     await failed.controller.submit();
     expect(failed.lookupCalls).toBe(1);
-    expect(failed.states.at(-1)?.title).toBe('Portal da NF-e indisponível');
+    expect(failed.portalRecoveries.at(-1)).toEqual({
+      title: 'Portal da NF-e indisponível',
+      message: 'indisponível',
+      accessKey: KEY,
+    });
   });
 
   it('resets the visible consultation and focuses the key input', () => {
