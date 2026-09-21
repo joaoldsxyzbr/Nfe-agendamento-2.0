@@ -138,6 +138,23 @@ A API é versionada em `/api/v1` e expõe somente:
 
 Entradas são revalidadas no Bridge mesmo quando o site já validou a chave.
 
+### Descoberta aditiva de capabilities
+
+`GET /health` preserva os campos existentes e pode incluir `capabilities`. O campo é aditivo para manter compatibilidade com Bridges anteriores à migração site-first.
+
+Na primeira etapa da migração:
+
+```json
+{
+  "directLookup": true,
+  "portalFallback": true,
+  "portalPrewarm": false,
+  "manualXmlImport": false
+}
+```
+
+O site novo aceita um Bridge legado sem `capabilities`. Quando o campo existir, todos os valores precisam ser booleanos e o cliente não deve inferir uma funcionalidade como disponível antes de ela ser efetivamente entregue. `portalPrewarm` e `manualXmlImport` só passam a `true` nas etapas que implementarem e testarem essas funções.
+
 ## Certificado A1
 
 - origem: `StoreName.My` / `StoreLocation.CurrentUser`;
