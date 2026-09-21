@@ -40,7 +40,7 @@ type MutableBatchItem = {
 
 type BridgeBatchClient = Readonly<{
   health(signal?: AbortSignal): Promise<BridgeHealth>;
-  lookupNfe(accessKey: string, signal?: AbortSignal): Promise<NfeLookupResult>;
+  lookupNfe(accessKey: string, signal?: AbortSignal, requestId?: string): Promise<NfeLookupResult>;
   resolveSupplier(taxId: string, signal?: AbortSignal): Promise<SupplierResolution>;
 }>;
 
@@ -194,7 +194,8 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
     renderState('Consultando SEFAZ');
 
     try {
-      const lookup = await deps.bridge.lookupNfe(item.accessKey, signal);
+      const requestId = globalThis.crypto.randomUUID();
+      const lookup = await deps.bridge.lookupNfe(item.accessKey, signal, requestId);
       if (lookup.category === 'success' && lookup.xml) {
         await completeItem(item, lookup.xml, 'SEFAZ', signal);
         return;
