@@ -23,6 +23,22 @@ public sealed class ProcessPortalWindowLauncherTests
     }
 
     [Fact]
+    public async Task Warmup_returns_false_without_starting_session_when_runtime_is_unavailable()
+    {
+        var helper = Path.GetTempFileName();
+        try
+        {
+            await using var launcher = CreateLauncher(helper, _ => false, () => true);
+
+            Assert.False(await launcher.WarmUpAsync(TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            File.Delete(helper);
+        }
+    }
+
+    [Fact]
     public void IsAvailable_is_false_when_helper_exists_but_runtime_probe_fails()
     {
         var helper = Path.GetTempFileName();
