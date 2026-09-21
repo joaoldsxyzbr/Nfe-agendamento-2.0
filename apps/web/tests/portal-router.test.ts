@@ -104,4 +104,39 @@ describe('PortalRouter', () => {
     await router.cancel(id);
     expect(cancelled).toEqual(['extension:ext-3']);
   });
+  it('keeps ownership after an aborted wait so cancellation reaches the active extension popup', async () => {
+    const { PortalRouter } = await import('../src/portal/router');
+    const cancelled: string[] = [];
+    const router = new PortalRouter(
+      {
+        isAvailable: async () => true,
+        start: async () => 'ext-abort',
+        waitForResult: async (_id: string, signal?: AbortSignal) => new Promise((_resolve, reject) => {
+          signal?.addEventListener(
+            'abort',
+            () => reject(new DOMException('Aborted', 'AbortError')),
+            { once: true },
+          );
+        }),
+        cancel: async (id: string) => { cancelled.push('extension:' + id); },
+      },
+      {
+        prewarm: async () => {},
+        start: async () => 'bridge-abort',
+        waitForResult: async (id: string) => completed(id),
+        cancel: async (id: string) => { cancelled.push('bridge:' + id); },
+      },
+    );
+
+    const id = await router.start(KEY);
+    const controller = new AbortController();
+    const waiting = router.waitForResult(id, controller.signal);
+    controller.abort();
+
+    await expect(waiting).rejects.toMatchObject({ name: 'AbortError' });
+    await router.cancel(id);
+
+    expect(cancelled).toEqual(['extension:ext-abort']);
+  });
+
 });
