@@ -88,7 +88,9 @@ Se a identidade não puder ser validada, o App falha fechado e não mata o proce
 
 O instalador suporta o define de build `BridgeAutostartMode=app|standalone`. O valor padrão continua sendo `app`, portanto instalações normais permanecem iniciando `NfeAgendamento.App.exe` e o comportamento da v0.0.18 não muda silenciosamente.
 
-Quando um Setup de piloto é compilado com `BridgeAutostartMode=standalone`, somente o auto-start em `HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run` e o start pós-instalação apontam diretamente para `NfeAgendamento.Bridge.exe`, sem `--managed`. O App continua empacotado e o atalho existente permanece disponível como caminho de rollback da release de transição.
+Quando um Setup de piloto é compilado com `BridgeAutostartMode=standalone`, somente o auto-start em `HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run` e o start pós-instalação apontam diretamente para `NfeAgendamento.Bridge.exe`, sem `--managed`. O App continua empacotado para permitir rollback pela reinstalação do Setup padrão `app`.
+
+O App não deve ser iniciado como “rollback” enquanto uma instância standalone já está ativa: o supervisor valida e controla apenas Bridges iniciados com `--managed`. Para voltar ao modo supervisionado, reinstale o Setup padrão, que restaura o auto-start do App e reinicia o lifecycle gerenciado.
 
 O piloto não cria serviço, Scheduled Task, elevação administrativa, listener LAN ou segundo mecanismo de supervisão. O mutex do próprio Bridge continua impedindo duas instâncias concorrentes.
 
@@ -103,7 +105,7 @@ Valores centralizados atuais:
 - prazo inicial para o Bridge receber um lease: **10 s**;
 - verificação do watchdog: **500 ms**.
 
-Se o App desaparecer sem executar shutdown, o lease expira e o próprio Bridge inicia encerramento gracioso. A execução standalone de desenvolvimento não depende desse lease.
+Se o App desaparecer sem executar shutdown, o lease expira e o próprio Bridge inicia encerramento gracioso. A execução standalone do piloto não depende desse lease.
 
 ### Adoção e reinício
 
