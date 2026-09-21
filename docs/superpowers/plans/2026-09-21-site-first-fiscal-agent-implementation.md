@@ -14,8 +14,8 @@
 
 - **Release A / v0.0.18:** Tasks 1–5 implementadas, integradas à `main` e publicadas com CI/Release/CodeQL verdes.
 - **Release B / v0.0.19:** Tasks 6–7 implementadas e integradas à `main`: instalador com piloto `BridgeAutostartMode=standalone`, compilação standalone no CI e App convertido em supervisor headless. O App permanece empacotado para rollback.
-- **Release C:** Task 8 continua condicionada ao gate de estabilidade da Release B; não remover o App sem evidência dos gates físicos/operacionais.
-- **Task 9:** Release B publicada como `v0.0.19` a partir do commit canônico `release: v0.0.19`, com CI, CodeQL e workflow de Release concluídos com sucesso. A Release C permanece bloqueada pelo gate da Task 8.
+- **Release C / v0.0.20:** Task 8 executada em 21/09/2026 após a release de transição v0.0.19. O proprietário autorizou avançar sem usar os testes físicos como gate de implementação; eles continuam documentados separadamente e não são apresentados como validados.
+- **Task 9:** Releases A/B publicadas; documentação e pipeline preparados para a Release C `v0.0.20`, com Bridge standalone final e App removido.
 
 ## Global Constraints
 
@@ -677,7 +677,7 @@ git commit -m "refactor: make windows supervisor headless"
 - Portal helper continua filho do Bridge.
 - Setup continua por usuário.
 
-- [ ] **Step 1: verificar gate antes de editar**
+- [x] **Step 1: verificar gate antes de editar**
 
 Todos precisam ser verdadeiros:
 - site cobre diagnóstico/update;
@@ -690,9 +690,9 @@ Todos precisam ser verdadeiros:
 - uma release de transição preservou rollback;
 - não há evidência de crash que torne supervisor necessário.
 
-Se qualquer item falhar: **parar aqui e manter App headless**.
+Decisão registrada em 21/09/2026: os gates automatizados e a release de transição foram aceitos para avançar. A validação física permanece separada para declaração do ambiente real, por autorização explícita do proprietário.
 
-- [ ] **Step 2: mudar testes do instalador para standalone**
+- [x] **Step 2: mudar testes do instalador para standalone**
 
 Esperar:
 ```text
@@ -707,21 +707,21 @@ NfeAgendamento.App.exe
 ```
 no instalador final.
 
-- [ ] **Step 3: alterar installer**
+- [x] **Step 3: alterar installer**
 
 Remover autostart e shortcut do App. Preservar diretório e dados.
 
-- [ ] **Step 4: retirar App do empacotamento CI**
+- [x] **Step 4: retirar App do empacotamento CI**
 
 Remover apenas o publish do projeto App; manter Bridge + Portal self-contained.
 
-- [ ] **Step 5: remover código morto**
+- [x] **Step 5: remover código morto**
 
 Somente agora remover App/updater e o protocolo de lease se nenhuma outra parte depender dele.
 
 O mutex de instância única do Bridge permanece.
 
-- [ ] **Step 6: rodar CI local aplicável**
+- [x] **Step 6: rodar CI local aplicável**
 
 ```bash
 npm ci
@@ -736,7 +736,7 @@ npm ci --prefix tests/playwright
 npm test --prefix tests/playwright
 ```
 
-- [ ] **Step 7: commit**
+- [x] **Step 7: commit**
 
 ```bash
 git add -A
