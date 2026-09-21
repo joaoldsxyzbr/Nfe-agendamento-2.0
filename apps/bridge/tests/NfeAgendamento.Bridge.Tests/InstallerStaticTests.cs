@@ -35,6 +35,7 @@ public sealed class InstallerStaticTests
 
         Assert.DoesNotContain("<Version>", project);
         Assert.Contains("<ApplicationIcon>..\\..\\assets\\nfe-agendamento-bridge.ico</ApplicationIcon>", project);
+        Assert.Contains("<OutputType>WinExe</OutputType>", project);
         Assert.True(File.Exists(iconPath));
         var header = File.ReadAllBytes(iconPath).Take(4).ToArray();
         Assert.Equal(new byte[] { 0x00, 0x00, 0x01, 0x00 }, header);
@@ -64,11 +65,14 @@ public sealed class InstallerStaticTests
         Assert.Contains("Root: HKCU", iss);
         Assert.Contains("Software\\Microsoft\\Windows\\CurrentVersion\\Run", iss);
         Assert.Contains("uninsdeletevalue", iss);
-        Assert.Contains("{app}\\NfeAgendamento.App.exe", iss);
-        Assert.Contains("IconFilename: \"{app}\\NfeAgendamento.App.exe\"", iss);
+        Assert.Contains("{app}\\NfeAgendamento.Bridge.exe", iss);
+        Assert.Contains("IconFilename: \"{app}\\NfeAgendamento.Bridge.exe\"", iss);
         Assert.Contains("SetupIconFile=..\\assets\\nfe-agendamento-bridge.ico", iss);
-        Assert.Contains("UninstallDisplayIcon={app}\\NfeAgendamento.App.exe", iss);
-        Assert.Contains("Filename: \"{app}\\NfeAgendamento.App.exe\"", iss);
+        Assert.Contains("UninstallDisplayIcon={app}\\NfeAgendamento.Bridge.exe", iss);
+        Assert.Contains("ValueData: \"\"\"{app}\\NfeAgendamento.Bridge.exe\"\"\"", iss);
+        Assert.Contains("Filename: \"{app}\\NfeAgendamento.Bridge.exe\"", iss);
+        Assert.DoesNotContain("NfeAgendamento.App.exe", iss, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("--managed", iss, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Description: \"Iniciar NFe Agendamento\"", iss);
         Assert.Contains("WorkingDir: \"{app}\"", iss);
         Assert.DoesNotContain("PrivilegesRequired=admin", iss, StringComparison.OrdinalIgnoreCase);
@@ -79,20 +83,18 @@ public sealed class InstallerStaticTests
     }
 
     [Fact]
-    public void Installer_supports_standalone_pilot_without_changing_default_autostart()
+    public void Installer_is_final_standalone_without_transition_mode()
     {
         var root = RepositoryRoot();
         var iss = File.ReadAllText(Path.Combine(
             root, "apps", "bridge", "installer", "NfeAgendamentoBridge.iss"));
 
-        Assert.Contains("#ifndef BridgeAutostartMode", iss);
-        Assert.Contains("#define BridgeAutostartMode \"app\"", iss);
-        Assert.Contains("#if BridgeAutostartMode == \"standalone\"", iss);
-        Assert.Contains("#define MyAppExeName \"NfeAgendamento.Bridge.exe\"", iss);
-        Assert.Contains("#define MyAppExeName \"NfeAgendamento.App.exe\"", iss);
-        Assert.Contains("ValueData: \"\"\"{app}\\{#MyAppExeName}\"\"\"", iss);
-        Assert.Contains("Filename: \"{app}\\{#MyAppExeName}\"", iss);
-        Assert.DoesNotContain("Parameters: \"--managed\"", iss, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("BridgeAutostartMode", iss, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("MyAppExeName", iss, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("NfeAgendamento.App.exe", iss, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("--managed", iss, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ValueData: \"\"\"{app}\\NfeAgendamento.Bridge.exe\"\"\"", iss);
+        Assert.Contains("Filename: \"{app}\\NfeAgendamento.Bridge.exe\"", iss);
     }
 
     [Fact]
@@ -119,7 +121,7 @@ public sealed class InstallerStaticTests
 
         Assert.Contains("dotnet publish apps/bridge/src/NfeAgendamento.Bridge/NfeAgendamento.Bridge.csproj -c Release -r win-x64 --self-contained true", ci);
         Assert.Contains("dotnet publish apps/bridge/windows/NfeAgendamento.Portal/NfeAgendamento.Portal.csproj -c Release -r win-x64 --self-contained true", ci);
-        Assert.Contains("dotnet publish apps/bridge/windows/NfeAgendamento.App/NfeAgendamento.App.csproj -c Release -r win-x64 --self-contained true", ci);
+        Assert.DoesNotContain("NfeAgendamento.App", ci, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("--self-contained false", ci);
     }
 
@@ -138,14 +140,14 @@ public sealed class InstallerStaticTests
     }
 
     [Fact]
-    public void Ci_compiles_standalone_installer_mode_as_a_non_published_pilot()
+    public void Ci_builds_only_the_final_standalone_installer()
     {
         var root = RepositoryRoot();
         var ci = File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"));
 
-        Assert.Contains("Verify standalone installer mode compiles", ci);
-        Assert.Contains("/DBridgeAutostartMode=standalone", ci);
-        Assert.Contains("artifacts\\standalone-installer", ci);
+        Assert.DoesNotContain("Verify standalone installer mode compiles", ci);
+        Assert.DoesNotContain("BridgeAutostartMode", ci, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("artifacts\\standalone-installer", ci);
         Assert.Contains("NFeAgendamentoBridge-Setup-v$version.exe", ci);
     }
 
@@ -180,6 +182,9 @@ public sealed class InstallerStaticTests
         Assert.Contains("Directory.Build.props", workflow);
         Assert.Contains("run-id: ${{ github.event.workflow_run.id }}", workflow);
         Assert.Contains("NFeAgendamentoBridge-Setup-v${version}.exe", workflow);
+        Assert.Contains("release/package/NfeAgendamento.Bridge.exe", workflow);
+        Assert.Contains("release/package/NfeAgendamento.Portal.exe", workflow);
+        Assert.DoesNotContain("NfeAgendamento.App.exe", workflow, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("validated_sha=\"${{ github.event.workflow_run.head_sha }}\"", workflow);
         Assert.Contains("gh api \"repos/${GITHUB_REPOSITORY}/commits/$tag\"", workflow);
         Assert.Contains("existing_sha", workflow);
