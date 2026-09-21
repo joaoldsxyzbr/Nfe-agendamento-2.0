@@ -207,6 +207,10 @@ describe('DANFE approved behavior', () => {
     expect(css).toContain('padding: 3.5mm');
     expect(css).toContain('font-size: 8.9px');
     expect(css).toContain('.fiscal-label { font-size: 6.35px; font-weight: 700; }');
+    expect(css).toContain('.fiscal-value { display: block; min-width: 0; max-width: 100%;');
+    expect(css).toContain('.recipient-email .fiscal-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }');
+    expect(css).toContain('.recipient-grid-refined > div { min-width: 0; min-height: 22px; overflow: hidden;');
+    expect(css).toContain('.refined-transport-grid > div { min-width: 0; min-height: 22px; overflow: hidden;');
     expect(css).toContain('.products-table td { font-size: 8.15px; line-height: 1.18; }');
     expect(css).toContain('.products-table col.description { width: 62mm; }');
     for (const rule of ['.recipient-grid-refined', '.financial-strip', '.refined-total-grid', '.total-row-primary', '.total-row-secondary', '.refined-transport-grid']) {
