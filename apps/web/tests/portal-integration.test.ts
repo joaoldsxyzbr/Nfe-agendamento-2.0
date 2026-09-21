@@ -40,6 +40,14 @@ describe('portal fallback integration', () => {
     expect(batchController).toContain("await completeItem(item, portalStatus.xml, 'Portal', signal)");
   });
 
+  it('offers manual XML recovery only through the explicit Portal failure path', () => {
+    expect(main).toContain("import { validateManualNfeXml } from './nfe/manual-xml-import';");
+    expect(main).toContain("health.capabilities?.manualXmlImport === true");
+    expect(main).toContain("'Importar XML baixado manualmente'");
+    expect(main).toContain('validateManualNfeXml(file, accessKey)');
+    expect(consultationController).toContain('deps.renderPortalFailure(');
+  });
+
   it('keeps captcha manual and reports cancelled/failed Portal operations', () => {
     expect(consultationController).toContain('Resolva o hCaptcha manualmente');
     expect(consultationController).toContain("portalStatus.state === 'cancelled'");
