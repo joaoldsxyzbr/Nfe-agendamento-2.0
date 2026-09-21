@@ -13,9 +13,9 @@
 ## Status de execução — 21/09/2026
 
 - **Release A / v0.0.18:** Tasks 1–5 implementadas, integradas à `main` e publicadas com CI/Release/CodeQL verdes.
-- **Release B / v0.0.19:** Tasks 6–7 implementadas na branch `site-first-release-b`: instalador com piloto `BridgeAutostartMode=standalone`, compilação standalone no CI e App convertido em supervisor headless. O App permanece empacotado para rollback.
+- **Release B / v0.0.19:** Tasks 6–7 implementadas e integradas à `main`: instalador com piloto `BridgeAutostartMode=standalone`, compilação standalone no CI e App convertido em supervisor headless. O App permanece empacotado para rollback.
 - **Release C:** Task 8 continua condicionada ao gate de estabilidade da Release B; não remover o App sem evidência dos gates físicos/operacionais.
-- **Task 9:** documentação da Release B preparada; falta integrar a branch, versionar `0.0.19`, validar o commit final na `main` e publicar a release.
+- **Task 9:** documentação e versionamento da Release B concluídos. A publicação de `v0.0.19` é acionada pelo commit canônico `release: v0.0.19` após CI verde na `main`.
 
 ## Global Constraints
 
