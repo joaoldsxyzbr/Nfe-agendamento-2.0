@@ -162,7 +162,7 @@ app.innerHTML = `
 `;
 
 const bridgeClient = new BridgeClient();
-const portalFallback = new PortalFallbackController();
+const portalFallback = new PortalFallbackController(bridgeClient);
 const bridgeStatus = requireElement<HTMLElement>('#bridge-status');
 const bridgeStatusText = requireElement<HTMLElement>('#bridge-status-text');
 const certificateSelect = requireElement<HTMLSelectElement>('#certificate-select');
@@ -301,6 +301,11 @@ window.addEventListener('pagehide', () => {
 });
 
 void certificateController.refresh();
+void bridgeClient.health()
+  .then((health) => portalFallback.prewarm(health))
+  .catch(() => {
+    // O diagnóstico principal já cobre Bridge ausente; prewarm não bloqueia o site.
+  });
 batchController.syncDraft();
 
 function setConsultationMode(mode: ConsultationMode): void {
