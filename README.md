@@ -182,12 +182,12 @@ O site é o caminho normal para descobrir e baixar atualização do componente W
 
 ## Distribuição Windows
 
-Versão canônica da release: **v0.0.18**.
+Versão canônica da release: **v0.0.19**.
 
 Asset principal:
 
 ```text
-NFeAgendamentoBridge-Setup-v0.0.18.exe
+NFeAgendamentoBridge-Setup-v0.0.19.exe
 ```
 
 O instalador é por usuário, não pede administrador, mantém App + Bridge + helper Portal lado a lado e preserva `%LOCALAPPDATA%\NfeAgendamentoBridge` — incluindo `settings.json`, `fiscal-usage.json` e `supplier-rules.json`. O modo padrão continua iniciando o supervisor headless; um build de piloto pode usar `BridgeAutostartMode=standalone` para iniciar diretamente o Bridge sem remover o App do pacote.
@@ -205,7 +205,7 @@ O Microsoft Edge WebView2 Runtime é necessário para o fallback pelo Portal Nac
 
 ## Validação física
 
-O CI não consegue provar interação real com certificado A1, SEFAZ, Portal/hCaptcha ou uma impressora específica. Para declarar a v0.0.18 fisicamente validada, executar:
+O CI não consegue provar interação real com certificado A1, SEFAZ, Portal/hCaptcha ou uma impressora específica. Para declarar a v0.0.19 fisicamente validada, executar:
 
 - `docs/testing/acceptance.md`;
 - `docs/testing/batch-query.md`;
@@ -235,4 +235,4 @@ Não provoque bloqueio `656` repetindo consultas artificialmente apenas para tes
 - atualizador: `docs/testing/bridge-updater.md`;
 - DANFE: `docs/testing/danfe-layout.md`;
 - tela de consulta: `docs/ui/consultation-screen.md`;
-- release atual: `docs/releases/v0.0.18.md`.
+- release atual: `docs/releases/v0.0.19.md`;\n- release anterior: `docs/releases/v0.0.18.md`.
