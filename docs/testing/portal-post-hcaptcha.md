@@ -64,6 +64,7 @@ Regras da recuperação:
 - seletor aceita somente arquivo com extensão `.xml`;
 - arquivo vazio é rejeitado;
 - limite máximo de 10 MiB;
+- declaração `DOCTYPE`/DTD é rejeitada antes do parsing;
 - o XML passa pelo mesmo `parseNfeXml` usado pelo site;
 - a chave em `infNFe/@Id` deve corresponder exatamente à chave consultada;
 - resolução local de fornecedor continua fail-soft antes de renderizar o resultado;
@@ -80,9 +81,10 @@ A capability é aditiva: Bridge antigo, sem `manualXmlImport=true`, não exibe a
 2. confirmar que o botão de importação só aparece após a falha terminal;
 3. cancelar o seletor e confirmar que nada muda;
 4. selecionar arquivo não XML, vazio e acima de 10 MiB e confirmar rejeição;
-5. selecionar XML de outra chave e confirmar rejeição;
-6. selecionar XML válido da chave consultada e confirmar renderização normal do DANFE/ações;
-7. confirmar que não houve nova chamada SEFAZ causada pela importação.
+5. selecionar XML com `DOCTYPE`/DTD e confirmar rejeição antes do parsing;
+6. selecionar XML de outra chave e confirmar rejeição;
+7. selecionar XML válido da chave consultada e confirmar renderização normal do DANFE/ações;
+8. confirmar que não houve nova chamada SEFAZ causada pela importação.
 
 ## Causa da falha corrigida
 

@@ -25,9 +25,10 @@ Regras:
 - mesmo `requestId` + mesma chave reutiliza a mesma operação/resultado por até 2 minutos;
 - mesmo `requestId` + chave diferente retorna conflito e não consulta a SEFAZ;
 - requestIds diferentes para a mesma chave **enquanto ela está em voo** compartilham uma única execução fiscal;
+- desconexão ou cancelamento HTTP de um consumidor não cancela a operação fiscal compartilhada; o lifecycle moderno fica vinculado ao encerramento do Bridge;
 - depois que a operação termina, um novo requestId representa nova ação explícita e pode iniciar nova consulta, sujeita normalmente aos guards fiscais;
 - o registry mantém no máximo 256 entradas e remove terminais expirados antes de admitir novas;
-- falha/cancelamento excepcional da factory remove a entrada em vez de fabricar resultado;
+- encerramento do Bridge ou falha excepcional da factory remove a entrada em vez de fabricar resultado;
 - não existe retry fiscal automático.
 
 Essa camada evita dupla tentativa causada por repetição/concorrência da mesma operação, mas não substitui a contabilidade conservadora do `FiscalUsageGuard` e do `FiscalCoordinator`.
