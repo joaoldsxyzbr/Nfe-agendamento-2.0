@@ -89,7 +89,7 @@ public sealed class CertificateEndpointsIntegrationTests : IAsyncDisposable
         Assert.True(capabilities.GetProperty("directLookup").GetBoolean());
         Assert.True(capabilities.GetProperty("portalFallback").GetBoolean());
         Assert.True(capabilities.GetProperty("portalPrewarm").GetBoolean());
-        Assert.False(capabilities.GetProperty("manualXmlImport").GetBoolean());
+        Assert.True(capabilities.GetProperty("manualXmlImport").GetBoolean());
     }
 
     public async ValueTask DisposeAsync()
