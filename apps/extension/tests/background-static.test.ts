@@ -26,5 +26,11 @@ describe('extension background contract', () => {
     expect(source).not.toContain('hcaptcha.execute');
     expect(source).not.toContain('grecaptcha.execute');
     expect(source).toContain('h-captcha-response');
+    expect(source).toContain('isOfficialConsultUrl(location.href)');
+
+    const downloadProbe = source.indexOf('const control = findDownloadControl()');
+    const captchaGate = source.indexOf('isOfficialConsultUrl(location.href)');
+    expect(downloadProbe).toBeGreaterThanOrEqual(0);
+    expect(captchaGate).toBeGreaterThan(downloadProbe);
   });
 });
