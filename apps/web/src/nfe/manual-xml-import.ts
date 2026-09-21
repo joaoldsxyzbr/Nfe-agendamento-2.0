@@ -25,7 +25,7 @@ export async function validateManualNfeXml(
     throw new Error('O arquivo XML está vazio.');
   }
 
-  if (/<\\s*!DOCTYPE\\b/i.test(xml)) {
+  if (/<\s*!DOCTYPE\b/i.test(xml)) {
     throw new Error('XML com DTD não é permitido.');
   }
 
