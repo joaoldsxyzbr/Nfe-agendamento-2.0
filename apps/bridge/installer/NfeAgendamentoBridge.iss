@@ -3,7 +3,18 @@
 #endif
 
 #define MyAppName "NFe Agendamento Bridge"
-#define MyAppExeName "NfeAgendamento.App.exe"
+
+#ifndef BridgeAutostartMode
+  #define BridgeAutostartMode "app"
+#endif
+
+#if BridgeAutostartMode == "standalone"
+  #define MyAppExeName "NfeAgendamento.Bridge.exe"
+#elif BridgeAutostartMode == "app"
+  #define MyAppExeName "NfeAgendamento.App.exe"
+#else
+  #error BridgeAutostartMode must be "app" or "standalone"
+#endif
 
 [Setup]
 AppId={{8C8FBD7D-26DB-46C0-A8AB-7F118F42A1B8}
@@ -30,7 +41,7 @@ Source: "..\..\..\artifacts\NfeAgendamentoBridge\*"; DestDir: "{app}"; Flags: ig
 Name: "{group}\NFe Agendamento"; Filename: "{app}\NfeAgendamento.App.exe"; WorkingDir: "{app}"; IconFilename: "{app}\NfeAgendamento.App.exe"
 
 [Registry]
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "NFe Agendamento Bridge"; ValueData: """{app}\NfeAgendamento.App.exe"""; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "NFe Agendamento Bridge"; ValueData: """{app}\{#MyAppExeName}"""; Flags: uninsdeletevalue
 
 [Run]
-Filename: "{app}\NfeAgendamento.App.exe"; Description: "Iniciar NFe Agendamento"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "Iniciar NFe Agendamento"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent

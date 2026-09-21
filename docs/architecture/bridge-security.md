@@ -84,6 +84,14 @@ Antes de assumir uma instância existente, o App exige:
 
 Se a identidade não puder ser validada, o App falha fechado e não mata o processo.
 
+### Piloto standalone de transição
+
+O instalador suporta o define de build `BridgeAutostartMode=app|standalone`. O valor padrão continua sendo `app`, portanto instalações normais permanecem iniciando `NfeAgendamento.App.exe` e o comportamento da v0.0.18 não muda silenciosamente.
+
+Quando um Setup de piloto é compilado com `BridgeAutostartMode=standalone`, somente o auto-start em `HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run` e o start pós-instalação apontam diretamente para `NfeAgendamento.Bridge.exe`, sem `--managed`. O App continua empacotado e o atalho existente permanece disponível como caminho de rollback da release de transição.
+
+O piloto não cria serviço, Scheduled Task, elevação administrativa, listener LAN ou segundo mecanismo de supervisão. O mutex do próprio Bridge continua impedindo duas instâncias concorrentes.
+
 ### Lease e watchdog
 
 Uma instância gerenciada aceita somente um controlador válido por vez.
