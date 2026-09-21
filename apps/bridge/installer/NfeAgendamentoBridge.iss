@@ -28,6 +28,13 @@ Source: "..\..\..\artifacts\NfeAgendamentoBridge\*"; DestDir: "{app}"; Flags: ig
 [Icons]
 Name: "{group}\NFe Agendamento"; Filename: "{app}\NfeAgendamento.Bridge.exe"; WorkingDir: "{app}"; IconFilename: "{app}\NfeAgendamento.Bridge.exe"
 
+[InstallDelete]
+Type: files; Name: "{app}\NfeAgendamento.App.exe"
+Type: files; Name: "{app}\NfeAgendamento.App.dll"
+Type: files; Name: "{app}\NfeAgendamento.App.deps.json"
+Type: files; Name: "{app}\NfeAgendamento.App.runtimeconfig.json"
+Type: files; Name: "{app}\NfeAgendamento.App.pdb"
+
 [Registry]
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "NFe Agendamento Bridge"; ValueData: """{app}\NfeAgendamento.Bridge.exe"""; Flags: uninsdeletevalue
 
