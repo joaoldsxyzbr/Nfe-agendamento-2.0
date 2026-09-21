@@ -88,7 +88,7 @@ public sealed class CertificateEndpointsIntegrationTests : IAsyncDisposable
         var capabilities = health.GetProperty("capabilities");
         Assert.True(capabilities.GetProperty("directLookup").GetBoolean());
         Assert.True(capabilities.GetProperty("portalFallback").GetBoolean());
-        Assert.False(capabilities.GetProperty("portalPrewarm").GetBoolean());
+        Assert.True(capabilities.GetProperty("portalPrewarm").GetBoolean());
         Assert.False(capabilities.GetProperty("manualXmlImport").GetBoolean());
     }
 
