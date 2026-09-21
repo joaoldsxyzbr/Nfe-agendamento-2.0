@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "NFe Agendamento - Portal",
+  "version": "0.1.0",
+  "description": "Integra o NFe Agendamento ao Portal Nacional da NF-e no navegador.",
+  "minimum_chrome_version": "120",
+  "permissions": [
+    "scripting",
+    "storage",
+    "webRequest"
+  ],
+  "host_permissions": [
+    "https://nfeagendamento.joaolds.xyz.br/*",
+    "https://www.nfe.fazenda.gov.br/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://nfeagendamento.joaolds.xyz.br/*"
+      ],
+      "js": [
+        "site-bridge.js"
+      ],
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://www.nfe.fazenda.gov.br/portal/*"
+      ],
+      "js": [
+        "portal-content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
