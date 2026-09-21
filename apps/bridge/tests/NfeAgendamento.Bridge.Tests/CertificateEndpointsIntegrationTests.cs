@@ -85,6 +85,11 @@ public sealed class CertificateEndpointsIntegrationTests : IAsyncDisposable
         using var healthResponse = await client.SendAsync(healthRequest, TestContext.Current.CancellationToken);
         var health = await healthResponse.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
         Assert.True(health.GetProperty("certificateSelected").GetBoolean());
+        var capabilities = health.GetProperty("capabilities");
+        Assert.True(capabilities.GetProperty("directLookup").GetBoolean());
+        Assert.True(capabilities.GetProperty("portalFallback").GetBoolean());
+        Assert.False(capabilities.GetProperty("portalPrewarm").GetBoolean());
+        Assert.False(capabilities.GetProperty("manualXmlImport").GetBoolean());
     }
 
     public async ValueTask DisposeAsync()
