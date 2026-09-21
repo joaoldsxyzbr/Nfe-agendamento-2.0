@@ -155,6 +155,21 @@ jobs:
           if (!(Test-Path $setup)) {
             throw "Setup não gerado em $setup"
           }
+      - name: Verify standalone installer mode compiles
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          $version = "${{ steps.version.outputs.version }}"
+          $pilotDir = "artifacts\standalone-installer"
+          New-Item -ItemType Directory -Force -Path $pilotDir | Out-Null
+          & $iscc "/DMyAppVersion=$version" "/DBridgeAutostartMode=standalone" "/O$pilotDir" "apps\bridge\installer\NfeAgendamentoBridge.iss"
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+          $pilotSetup = "$pilotDir\NFeAgendamentoBridge-Setup-v$version.exe"
+          if (!(Test-Path $pilotSetup)) {
+            throw "Setup standalone de piloto não gerado em $pilotSetup"
+          }
       - name: Sign installer when Authenticode is configured
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: pwsh
