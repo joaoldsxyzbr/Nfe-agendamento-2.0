@@ -82,6 +82,12 @@ O código de barras segue o modelo híbrido previsto na NT Conjunta DFe 2025.001
 
 Chaves exclusivamente numéricas continuam produzindo o mesmo fluxo CODE-128C de antes.
 
+## Contenção de campos longos
+
+Campos textuais das células fiscais usam contenção explícita para não atravessar as bordas do DANFE. Valores comuns podem quebrar dentro da célula quando necessário; o campo **E-mail** permanece em uma única linha com `ellipsis` quando for maior que a largura disponível.
+
+O teste Playwright inclui um destinatário com e-mail e demais campos longos para verificar que nenhuma célula do bloco **Destinatário / Remetente** ultrapassa seus próprios limites visuais.
+
 ## Paginação física
 
 A paginação de impressão continua determinística. Ela não usa `getBoundingClientRect()` nem `getComputedStyle()` durante `beforeprint`, pois o Chromium pode disparar o evento antes de aplicar completamente `@media print`.
