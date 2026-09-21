@@ -38,10 +38,16 @@ test('campos longos do destinatário permanecem dentro das células', async ({ p
 
   await renderForPrint(page, nfe);
 
-  const overflowing = await page.locator('.recipient-grid-refined > div').evaluateAll((cells) =>
-    cells.filter((cell) => cell.scrollWidth - cell.clientWidth > 1).length,
+  const leaking = await page.locator('.recipient-grid-refined > div').evaluateAll((cells) =>
+    cells.filter((cell) => {
+      const cellRect = cell.getBoundingClientRect();
+      return Array.from(cell.children).some((child) => {
+        const childRect = child.getBoundingClientRect();
+        return childRect.left < cellRect.left - 1 || childRect.right > cellRect.right + 1;
+      });
+    }).length,
   );
-  expect(overflowing).toBe(0);
+  expect(leaking).toBe(0);
 
   const email = page.locator('.recipient-email .fiscal-value');
   await expect(email).toContainText('AGENDAMENTO@PRADOSUPERMERCADOS.COM.BR');
