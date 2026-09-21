@@ -37,10 +37,10 @@
 - Consumes: versão canônica `0.0.17` de `Directory.Build.props` e `docs/releases/v0.0.17.md`.
 - Produces: README sem referência canônica obsoleta à v0.0.16.
 
-- [ ] Atualizar a seção de distribuição Windows para v0.0.17.
-- [ ] Atualizar o asset principal para `NFeAgendamentoBridge-Setup-v0.0.17.exe`.
-- [ ] Atualizar a referência de release atual para `docs/releases/v0.0.17.md`.
-- [ ] Fazer busca final por referências canônicas obsoletas à v0.0.16; preservar apenas histórico/migração.
+- [x] Atualizar a seção de distribuição Windows para v0.0.17.
+- [x] Atualizar o asset principal para `NFeAgendamentoBridge-Setup-v0.0.17.exe`.
+- [x] Atualizar a referência de release atual para `docs/releases/v0.0.17.md`.
+- [x] Fazer busca final por referências canônicas obsoletas à v0.0.16; preservar apenas histórico/migração.
 
 ### Task 2: Integrar atualizações de dependência compatíveis
 
@@ -53,11 +53,11 @@
 - Consumes: propostas dos PRs #3, #4, #5 e #6.
 - Produces: dependências atualizadas sobre a `main` atual com lockfile válido.
 
-- [ ] Integrar `@types/node 26.6.0` se os gates atuais permanecerem verdes.
-- [ ] Integrar `vite 8.3.0` se os gates atuais permanecerem verdes.
-- [ ] Recriar corretamente `wrangler 4.131.2` com lockfile sincronizado; o PR #4 antigo não pode ser aceito com `npm ci` quebrado.
-- [ ] Integrar `Unimake.DFe 20260915.1624.35` se o POC fiscal permanecer verde.
-- [ ] Rodar/observar CI completo do SHA final.
+- [x] Integrar `@types/node 26.6.1` com CI e CodeQL verdes.
+- [x] Integrar `vite 8.3.0` com CI e CodeQL verdes.
+- [x] Aplicar `wrangler 4.134.0` sobre a `main` atual com lockfile sincronizado; `npm ci` e CI completo ficaram verdes.
+- [x] Encerrar o PR #6 após o Dependabot classificá-lo como não mais necessário; preservar o pin atual em vez de forçar uma atualização sem proposta vigente.
+- [x] Rodar/observar CI completo do SHA final de código (`43adad1`): todos os jobs verdes; CodeQL JavaScript/TypeScript e C# verdes.
 
 ### Task 3: Encerrar backlog automático
 
@@ -67,7 +67,19 @@
 - Consumes: estado final da `main` e CI.
 - Produces: PRs #3-#6 fechados/mesclados com decisão explícita.
 
-- [ ] Mesclar PRs que ainda representem exatamente a mudança integrada e estejam seguros.
-- [ ] Fechar como superseded qualquer PR cuja mudança tenha sido aplicada diretamente na `main`.
-- [ ] Confirmar ausência de issues funcionais abertas.
-- [ ] Confirmar que CI e CodeQL do HEAD final estão verdes.
+- [x] Mesclar PRs que ainda representem exatamente a mudança integrada e estejam seguros (#3 e #5).
+- [x] Fechar como superseded qualquer PR cuja mudança tenha sido aplicada diretamente na `main` (#4).
+- [x] Confirmar ausência de issues funcionais abertas.
+- [x] Confirmar que CI e CodeQL do HEAD final de código estão verdes.
+
+
+## Resultado da execução — 21/09/2026
+
+- README alinhado integralmente à release pública v0.0.17; referências a v0.0.16 permanecem apenas quando históricas/de migração.
+- PR #3 integrado: `@types/node 26.6.1`.
+- PR #5 integrado: `vite 8.3.0`.
+- PR #4 aplicado diretamente na `main` como `wrangler 4.134.0` com o delta de lockfile validado, depois fechado como superseded.
+- PR #6 encerrado pelo próprio Dependabot como não mais necessário; nenhum upgrade NuGet foi forçado sem proposta vigente.
+- SHA de código consolidado: `43adad1c25f422e06842c3d9734da79fb9a539e4`.
+- CI desse SHA: `web`, `bridge`, `danfe-print`, `fiscal-compatibility` e `windows-package` concluídos com sucesso.
+- CodeQL desse SHA: JavaScript/TypeScript e C# concluídos com sucesso.
