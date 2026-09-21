@@ -138,6 +138,18 @@ public sealed class InstallerStaticTests
     }
 
     [Fact]
+    public void Ci_compiles_standalone_installer_mode_as_a_non_published_pilot()
+    {
+        var root = RepositoryRoot();
+        var ci = File.ReadAllText(Path.Combine(root, ".github", "workflows", "ci.yml"));
+
+        Assert.Contains("Verify standalone installer mode compiles", ci);
+        Assert.Contains("/DBridgeAutostartMode=standalone", ci);
+        Assert.Contains("artifacts\\standalone-installer", ci);
+        Assert.Contains("NFeAgendamentoBridge-Setup-v$version.exe", ci);
+    }
+
+    [Fact]
     public void Ci_uses_repository_global_json_for_dotnet_sdk()
     {
         var root = RepositoryRoot();
