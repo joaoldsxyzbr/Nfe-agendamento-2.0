@@ -12,7 +12,8 @@ describe('BrowserPortalExtensionClient', () => {
           type: 'ready',
           requestId: 'ping',
           version: '0.1.0',
-          capabilities: { portalLookup: true, supplierResolution: true },
+          capabilities: { directLookup: true, portalLookup: true, supplierResolution: true },
+          fiscalIdentityConfigured: true,
         };
         if (message.type === 'start') return { type: 'started', requestId: 'start', operationId: 'ext-op-1' };
         if (message.type === 'status') return {
@@ -34,7 +35,8 @@ describe('BrowserPortalExtensionClient', () => {
     const client = new BrowserPortalExtensionClient(transport as never);
     expect(await client.getInfo()).toEqual({
       version: '0.1.0',
-      capabilities: { portalLookup: true, supplierResolution: true },
+      capabilities: { directLookup: true, portalLookup: true, supplierResolution: true },
+          fiscalIdentityConfigured: true,
     });
     expect(await client.isAvailable()).toBe(true);
     expect(await client.start(KEY)).toBe('ext-op-1');
@@ -53,6 +55,30 @@ describe('BrowserPortalExtensionClient', () => {
     expect(result.xml).toContain('nfeProc');
   });
 
+
+  it('performs a direct SEFAZ lookup through the extension', async () => {
+    const { BrowserPortalExtensionClient } = await import('../src/portal/extension-client');
+    const client = new BrowserPortalExtensionClient({
+      request: async (message: { type: string }) => {
+        if (message.type === 'direct_lookup') {
+          return {
+            type: 'direct_lookup_result',
+            category: 'success',
+            xml: '<nfeProc/>',
+            cStat: '138',
+            message: 'Documento localizado',
+          };
+        }
+        throw new Error('unexpected');
+      },
+      subscribe: () => () => {},
+    } as never);
+
+    await expect(client.directLookup(KEY)).resolves.toMatchObject({
+      category: 'success',
+      cStat: '138',
+    });
+  });
 
   it('resolves supplier identity through the extension without exposing configuration', async () => {
     const { BrowserPortalExtensionClient } = await import('../src/portal/extension-client');
@@ -94,7 +120,8 @@ describe('BrowserPortalExtensionClient', () => {
           type: 'ready',
           requestId: 'ping',
           version: '0.2.1',
-          capabilities: { portalLookup: true, supplierResolution: true },
+          capabilities: { directLookup: true, portalLookup: true, supplierResolution: true },
+          fiscalIdentityConfigured: true,
         };
       },
       subscribe: () => () => {},
@@ -102,7 +129,8 @@ describe('BrowserPortalExtensionClient', () => {
 
     await expect(client.getInfo()).resolves.toEqual({
       version: '0.2.1',
-      capabilities: { portalLookup: true, supplierResolution: true },
+      capabilities: { directLookup: true, portalLookup: true, supplierResolution: true },
+          fiscalIdentityConfigured: true,
     });
     expect(attempts).toBe(3);
   });
