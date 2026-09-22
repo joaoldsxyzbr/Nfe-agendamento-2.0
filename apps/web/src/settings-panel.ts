@@ -9,6 +9,8 @@ function initializeSettingsPanel(): void {
   const integrationStatus = document.querySelector<HTMLElement>('#integration-status');
   const integrationStatusText = document.querySelector<HTMLElement>('#integration-status-text');
   if (!topbar || !integrationStatus || !integrationStatusText) return;
+  const statusElement = integrationStatus;
+  const statusTextElement = integrationStatusText;
 
   const actions = document.createElement('div');
   actions.className = 'topbar-actions';
@@ -79,14 +81,14 @@ function initializeSettingsPanel(): void {
     refresh.disabled = true;
     const info = await client.getInfo();
     if (info) {
-      integrationStatus.dataset.state = 'connected';
-      integrationStatusText.textContent = `Extensão conectada · v${info.version}`;
+      statusElement.dataset.state = 'connected';
+      statusTextElement.textContent = `Extensão conectada · v${info.version}`;
       extensionState.value.textContent = 'Conectada';
       versionState.value.textContent = info.version;
       portalState.value.textContent = info.capabilities.portalLookup ? 'Disponível' : 'Indisponível';
     } else {
-      integrationStatus.dataset.state = 'disconnected';
-      integrationStatusText.textContent = 'Extensão não conectada';
+      statusElement.dataset.state = 'disconnected';
+      statusTextElement.textContent = 'Extensão não conectada';
       extensionState.value.textContent = 'Não conectada';
       versionState.value.textContent = '—';
       portalState.value.textContent = 'Indisponível';

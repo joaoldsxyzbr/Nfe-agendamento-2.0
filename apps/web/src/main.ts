@@ -350,9 +350,7 @@ async function importManualXml(file: File | null, accessKey: string): Promise<vo
       'XML não importado',
       error instanceof Error ? error.message : 'Não foi possível validar o XML selecionado.',
     );
-    if (manualXmlImportSupported) {
-      appendManualXmlRecovery(accessKey);
-    }
+    appendManualXmlRecovery(accessKey);
   } finally {
     setLookupBusy(false);
   }

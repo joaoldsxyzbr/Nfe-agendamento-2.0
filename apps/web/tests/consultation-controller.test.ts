@@ -17,7 +17,7 @@ function createHarness(overrides: Record<string, unknown> = {}) {
   const controller = createConsultationController({
     getAccessKey: () => KEY,
     clearAccessKey: () => {},
-    validateAccessKey: () => ({ valid: true as const, value: KEY }),
+    validateAccessKey: () => ({ valid: true as const, value: KEY, ufAutor: '42' }),
     portal: portal as never,
     parseXml: (xml, accessKey) => ({ accessKey, originalXml: xml, issuer: { taxId: '12345678000195' } } as never),
     renderState: (title, message) => states.push([title, message]),
