@@ -21,12 +21,13 @@ describe('extension manifest', () => {
     };
 
     expect(manifest.manifest_version).toBe(3);
-    expect((manifest as { version?: string }).version).toBe('0.2.5');
+    expect((manifest as { version?: string }).version).toBe('0.2.6');
     expect(Number(manifest.minimum_chrome_version)).toBeGreaterThanOrEqual(120);
     expect([...(manifest.permissions ?? [])].sort()).toEqual(['scripting', 'storage', 'webRequest']);
     expect([...(manifest.host_permissions ?? [])].sort()).toEqual([
       'https://nfeagendamento.joaolds.xyz.br/*',
       'https://www.nfe.fazenda.gov.br/*',
+      'https://www1.nfe.fazenda.gov.br/*',
     ]);
     expect(JSON.stringify(manifest)).not.toContain('<all_urls>');
     expect(manifest.background).toEqual({ service_worker: 'background.js', type: 'module' });
