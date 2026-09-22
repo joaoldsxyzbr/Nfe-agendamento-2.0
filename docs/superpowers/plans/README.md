@@ -26,7 +26,7 @@ Quando houver conflito entre um plano histórico e o código/documentação atua
 
 ## Estado atual
 
-A v0.0.24 mantém o fluxo híbrido vigente e o gate isolado extension-only, agora com extensão Chromium MV3 v0.2.2, compatibilidade com configuração local legada e sinal reativo de prontidão da ponte. Bridge standalone e WebView2 continuam preservados até a validação física sem Bridge.
+A v0.0.24 mantém o fluxo híbrido vigente e publica a extensão Chromium MV3 v0.2.2. O HEAD seguinte prepara a v0.2.3 com reconciliação de operação após cold start, start idempotente e limpeza de estado obsoleto. Bridge standalone e WebView2 continuam preservados até a validação física sem Bridge.
 
 Authenticode e branch protection/required status checks são opcionais por decisão do projeto em 18/09/2026 e não representam backlog.
 
