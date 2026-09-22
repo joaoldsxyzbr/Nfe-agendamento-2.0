@@ -7,7 +7,16 @@ const DEFAULT_HANDSHAKE_TIMEOUT_MS = 1_200;
 type ExtensionCommand =
   | { type: 'ping'; requestId: string }
   | { type: 'start'; requestId: string; accessKey: string }
-  | { type: 'cancel'; requestId: string; operationId: string };
+  | { type: 'cancel'; requestId: string; operationId: string }
+  | { type: 'resolve_supplier'; requestId: string; taxId: string };
+
+export type PortalExtensionInfo = Readonly<{
+  version: string;
+  capabilities: Readonly<{
+    portalLookup: true;
+    supplierResolution: true;
+  }>;
+}>;
 
 type ExtensionEvent =
   | { type: 'state'; operationId: string; state: string; message?: string }
@@ -84,14 +93,18 @@ export class WindowPortalExtensionTransport implements PortalExtensionTransport 
 export class BrowserPortalExtensionClient {
   constructor(private readonly transport: PortalExtensionTransport = new WindowPortalExtensionTransport()) {}
 
-  async isAvailable(signal?: AbortSignal): Promise<boolean> {
+  async getInfo(signal?: AbortSignal): Promise<PortalExtensionInfo | null> {
     const requestId = globalThis.crypto.randomUUID();
     try {
       const response = await this.transport.request({ type: 'ping', requestId }, signal);
-      return isReadyResponse(response);
+      return parseReadyResponse(response);
     } catch {
-      return false;
+      return null;
     }
+  }
+
+  async isAvailable(signal?: AbortSignal): Promise<boolean> {
+    return (await this.getInfo(signal)) !== null;
   }
 
   async start(accessKey: string, signal?: AbortSignal): Promise<string> {
@@ -133,10 +146,33 @@ export class BrowserPortalExtensionClient {
     const requestId = globalThis.crypto.randomUUID();
     await this.transport.request({ type: 'cancel', requestId, operationId });
   }
+
+  async resolveSupplier(taxId: string): Promise<{ supplierId: string | null }> {
+    const requestId = globalThis.crypto.randomUUID();
+    const response = await this.transport.request({ type: 'resolve_supplier', requestId, taxId });
+    if (!isRecord(response) ||
+        response.type !== 'supplier_resolved' ||
+        (response.supplierId !== null && typeof response.supplierId !== 'string')) {
+      throw new Error(messageFromFailure(response) ?? 'A extensão não resolveu o fornecedor.');
+    }
+    return { supplierId: response.supplierId };
+  }
 }
 
-function isReadyResponse(value: unknown): value is { type: 'ready'; version: string } {
-  return isRecord(value) && value.type === 'ready' && typeof value.version === 'string';
+function parseReadyResponse(value: unknown): PortalExtensionInfo | null {
+  if (!isRecord(value) || value.type !== 'ready' || typeof value.version !== 'string') return null;
+  if (!isRecord(value.capabilities) ||
+      value.capabilities.portalLookup !== true ||
+      value.capabilities.supplierResolution !== true) {
+    return null;
+  }
+  return {
+    version: value.version,
+    capabilities: {
+      portalLookup: true,
+      supplierResolution: true,
+    },
+  };
 }
 
 function isStartedResponse(value: unknown): value is { type: 'started'; operationId: string } {

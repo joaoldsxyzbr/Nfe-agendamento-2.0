@@ -15,9 +15,29 @@ describe('portal extension protocol', () => {
       requestId: 'req-2',
       accessKey: KEY,
     });
+    expect(parseSiteCommand({
+      type: 'resolve_supplier',
+      requestId: 'req-3',
+      taxId: '12.345.678/0001-95',
+    })).toEqual({
+      type: 'resolve_supplier',
+      requestId: 'req-3',
+      taxId: '12345678000195',
+    });
+    expect(parseSiteCommand({
+      type: 'resolve_supplier',
+      requestId: 'req-4',
+      taxId: '12.abc.345/01de-35',
+    })).toEqual({
+      type: 'resolve_supplier',
+      requestId: 'req-4',
+      taxId: '12ABC34501DE35',
+    });
 
     expect(() => parseSiteCommand({ type: 'start', requestId: '', accessKey: KEY })).toThrow();
     expect(() => parseSiteCommand({ type: 'start', requestId: 'req', accessKey: '123' })).toThrow();
+    expect(() => parseSiteCommand({ type: 'resolve_supplier', requestId: 'req', taxId: 'ABC45678901' })).toThrow();
+    expect(() => parseSiteCommand({ type: 'resolve_supplier', requestId: 'req', taxId: '12.ABC.345/01DE#35' })).toThrow();
     expect(() => parseSiteCommand({ type: 'fetch-any-url', requestId: 'req', url: 'https://example.com' })).toThrow();
   });
 

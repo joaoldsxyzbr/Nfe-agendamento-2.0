@@ -6,6 +6,12 @@ As regras de apresentação específicas por fornecedor ficam centralizadas no f
 
 Evitar espalhar identificação de fornecedor, catálogos e fatores de conversão por diferentes partes do DANFE. O XML fiscal continua intacto e o renderizador recebe apenas uma identidade lógica opcional (`supplierRuleId`) para decidir quais melhorias operacionais de apresentação aplicar.
 
+## Migração extension-only — piloto
+
+Na branch de migração sem Bridge, a identificação privada está sendo movida para `chrome.storage.local` da extensão. O schema permanece v1 e a normalização é mantida equivalente ao resolver do Bridge. A extensão devolve ao site somente o `supplierId` lógico.
+
+A configuração é importada explicitamente pelo usuário na página de opções da extensão. O arquivo é lido localmente pelo navegador e não é enviado por rede. Enquanto o gate físico sem Bridge não for aprovado, a release estável v0.0.21 continua usando o Bridge como fonte vigente.
+
 ## Identificação primária no Bridge local
 
 O site já extrai `issuer.taxId` do XML da NF-e. Depois de validar o XML, ele envia esse identificador somente ao Bridge local em:

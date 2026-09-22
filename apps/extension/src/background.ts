@@ -7,6 +7,7 @@ import {
   validateXmlPayload,
 } from './protocol';
 import { buildReplayRequest, shouldCapturePortalRequest } from './portal-request';
+import { loadSupplierConfig, resolveSupplierFromConfig } from './supplier-store';
 
 declare const chrome: any;
 
@@ -80,6 +81,18 @@ async function handleSiteCommand(commandValue: unknown, sender: any): Promise<un
       type: 'ready',
       requestId: command.requestId,
       version: String(chrome.runtime.getManifest().version ?? '0.0.0'),
+      capabilities: {
+        portalLookup: true,
+        supplierResolution: true,
+      },
+    };
+  }
+
+  if (command.type === 'resolve_supplier') {
+    return {
+      type: 'supplier_resolved',
+      requestId: command.requestId,
+      supplierId: resolveSupplierFromConfig(await loadSupplierConfig(), command.taxId),
     };
   }
 
