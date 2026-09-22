@@ -2,6 +2,18 @@
 
 O lote reutiliza a lógica fiscal do antigo Bridge, executada pela extensão.
 
+## Preflight
+
+Antes de iniciar o lote, o site verifica a configuração fiscal da extensão.
+
+Se o CNPJ do A1 não estiver configurado:
+
+- a tela de opções da extensão é aberta automaticamente;
+- nenhuma consulta é enviada à SEFAZ;
+- nenhuma NF-e é marcada como erro;
+- nenhuma NF-e é cancelada;
+- o lote permanece aguardando nova tentativa após salvar o CNPJ.
+
 ## Roteamento
 
 Cada item começa pela consulta direta enquanto a rota estiver em SEFAZ:
