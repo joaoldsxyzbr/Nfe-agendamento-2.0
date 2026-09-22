@@ -25,6 +25,11 @@ describe('extension background contract', () => {
     expect(source).toContain('chrome.tabs.get');
     expect(source).toContain('chrome.tabs.onRemoved');
     expect(source).toContain('chrome.storage.local.setAccessLevel');
+    expect(source).toContain('lookupNfeDirect');
+    expect(source).toContain('checkFiscalUsage');
+    expect(source).toContain('recordFiscalAttempt');
+    expect(source).toContain('blockFiscalUsage');
+    expect(source).toContain('chrome.runtime.openOptionsPage');
     expect(source).toContain("'TRUSTED_CONTEXTS'");
     expect(source).toContain('chrome.webRequest.onBeforeRequest');
     expect(source).toContain('fetchPortalXmlInPage');

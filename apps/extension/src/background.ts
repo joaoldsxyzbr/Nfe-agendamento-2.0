@@ -12,6 +12,13 @@ import {
   shouldCapturePortalRequest,
   type PageReplayRequest,
 } from './portal-request';
+import {
+  blockFiscalUsage,
+  checkFiscalUsage,
+  loadFiscalIdentity,
+  recordFiscalAttempt,
+} from './fiscal-store';
+import { lookupNfeDirect, type DirectLookupResult } from './sefaz-direct';
 import { loadSupplierConfig, resolveSupplierFromConfig } from './supplier-store';
 
 declare const chrome: any;
@@ -48,6 +55,10 @@ chrome.runtime.onStartup.addListener(() => {
   void hardenLocalStorage();
   void reconcileActiveOperation();
   void injectSiteBridgeIntoOpenTabs();
+});
+
+chrome.action.onClicked.addListener(() => {
+  void chrome.runtime.openOptionsPage();
 });
 
 chrome.runtime.onMessage.addListener(
@@ -135,14 +146,27 @@ async function handleSiteCommand(commandValue: unknown, sender: any): Promise<un
 
   const command = parseSiteCommand(commandValue);
   if (command.type === 'ping') {
+    const fiscalIdentity = await loadFiscalIdentity();
     return {
       type: 'ready',
       requestId: command.requestId,
       version: String(chrome.runtime.getManifest().version ?? '0.0.0'),
       capabilities: {
+        directLookup: true,
         portalLookup: true,
         supplierResolution: true,
       },
+      configuration: {
+        fiscalIdentityConfigured: fiscalIdentity !== null,
+      },
+    };
+  }
+
+  if (command.type === 'direct_lookup') {
+    return {
+      type: 'direct_lookup_result',
+      requestId: command.requestId,
+      result: await handleDirectLookup(command.accessKey),
     };
   }
 
@@ -280,6 +304,62 @@ async function handleSiteCommand(commandValue: unknown, sender: any): Promise<un
     requestId: command.requestId,
     operationId: command.operationId,
   };
+}
+
+async function handleDirectLookup(accessKey: string): Promise<DirectLookupResult> {
+  const identity = await loadFiscalIdentity();
+  if (!identity) {
+    return {
+      category: 'configuration_error',
+      xml: null,
+      cStat: null,
+      message: 'Configure uma vez o CNPJ do certificado A1 nas opções da extensão.',
+    };
+  }
+
+  let decision;
+  try {
+    decision = await checkFiscalUsage(identity.cnpj);
+  } catch {
+    return {
+      category: 'consumption_limit',
+      xml: null,
+      cStat: null,
+      message: 'A proteção fiscal local não pôde ser validada. A consulta direta foi bloqueada por segurança.',
+    };
+  }
+
+  if (!decision.allowDirectLookup) {
+    const localTime = decision.blockedUntilUtc
+      ? new Date(decision.blockedUntilUtc).toLocaleTimeString('pt-BR', {
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : 'mais tarde';
+    return {
+      category: 'consumption_limit',
+      xml: null,
+      cStat: null,
+      message: `Proteção fiscal local ativa até ${localTime}. A SEFAZ não foi consultada novamente.`,
+    };
+  }
+
+  try {
+    await recordFiscalAttempt(identity.cnpj);
+  } catch {
+    return {
+      category: 'consumption_limit',
+      xml: null,
+      cStat: null,
+      message: 'Não foi possível registrar a proteção fiscal local. A SEFAZ não foi consultada.',
+    };
+  }
+
+  const result = await lookupNfeDirect(accessKey, identity.cnpj);
+  if (result.category === 'consumption_limit') {
+    await blockFiscalUsage(identity.cnpj).catch(() => {});
+  }
+  return result;
 }
 
 async function handlePortalMessage(
