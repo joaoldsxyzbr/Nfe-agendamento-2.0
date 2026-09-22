@@ -25,7 +25,10 @@ describe('extension background contract', () => {
     expect(source).toContain('chrome.tabs.get');
     expect(source).toContain('chrome.tabs.onRemoved');
     expect(source).toContain('chrome.storage.local.setAccessLevel');
-    expect(source).toContain('lookupNfeDirect');
+    expect(source).toContain('runDirectLookupInPage');
+    expect(source).toContain("source === 'direct_lookup_page'");
+    expect(source).toContain("DIRECT_LOOKUP_PAGE = 'direct-lookup.html'");
+    expect(source).not.toContain("import { lookupNfeDirect");
     expect(source).toContain('checkFiscalUsage');
     expect(source).toContain('recordFiscalAttempt');
     expect(source).toContain('blockFiscalUsage');

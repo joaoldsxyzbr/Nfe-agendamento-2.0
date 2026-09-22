@@ -10,10 +10,12 @@ O produto continua sem Bridge/EXE. O componente local único é a extensão Chro
 Site NFe Agendamento
         ↓
 Extensão Chromium MV3
-        ├── 1. NFeDistribuicaoDFe / SEFAZ
+        ├── 1. janela interna de autenticação TLS
+        │      ↓ Chrome/Edge usa o A1 do Windows
+        ├── 2. NFeDistribuicaoDFe / SEFAZ
         │      ↓ sucesso: XML
         │
-        └── 2. Portal Nacional somente como fallback
+        └── 3. Portal Nacional somente como fallback
                ↓
              hCaptcha manual
                ↓
@@ -52,9 +54,11 @@ A antiga coordenação multi-PC por Cloudflare não foi reativada nesta etapa. P
 
 A extensão não lê, importa, exporta nem armazena PFX/P12, senha ou chave privada.
 
-Como o Chromium no Windows não expõe à extensão a identidade do certificado cliente, o **CNPJ do A1 é informado uma única vez nas opções da extensão** e permanece local. A autenticação TLS e eventual seleção do certificado continuam sob responsabilidade do Chrome/Edge e do Windows.
+Como o Chromium no Windows não expõe à extensão a identidade do certificado cliente, o **CNPJ da empresa vinculada ao A1 é informado uma única vez nas opções da extensão** e permanece local. Esse CNPJ é usado apenas como identidade do interessado no SOAP; ele não substitui o certificado.
 
-Clicar no ícone da extensão abre essa configuração. O site também faz um **preflight** antes de consultar: se o CNPJ ainda não estiver configurado, a tela de opções é aberta automaticamente e nenhuma consulta é enviada à SEFAZ. Em lote, nenhuma NF-e é marcada como erro ou cancelada por essa ausência. O preflight fica bloqueado durante a verificação para impedir início duplicado por duplo clique. Extensões anteriores à 0.2.8 recebem orientação de atualização/configuração manual em vez de uma confirmação falsa de abertura.
+A partir da extensão **0.2.10**, a chamada direta não é mais iniciada pelo service worker MV3. A extensão abre uma janela interna curta e faz a conexão com a SEFAZ a partir desse contexto visível. Assim o Chrome/Edge pode apresentar o seletor de certificado cliente e usar o A1 instalado no Windows. A janela fecha ao concluir. Se houver política de seleção automática de certificado configurada no navegador, a escolha pode ocorrer sem intervenção; a extensão não altera políticas do Windows/Chrome/Edge.
+
+Clicar no ícone da extensão abre a configuração do CNPJ. O site também faz um **preflight** antes de consultar: se o CNPJ ainda não estiver configurado, a tela de opções é aberta automaticamente e nenhuma consulta é enviada à SEFAZ. Em lote, nenhuma NF-e é marcada como erro ou cancelada por essa ausência. O preflight fica bloqueado durante a verificação para impedir início duplicado por duplo clique. Extensões anteriores à 0.2.8 recebem orientação de atualização/configuração manual em vez de uma confirmação falsa de abertura.
 
 ## Portal Nacional
 
@@ -75,7 +79,7 @@ CNPJ/CPF real de fornecedor não faz parte do bundle público. A configuração 
 
 ## Extensão
 
-Versão atual: **0.2.9**.
+Versão na `main`: **0.2.10**.
 
 Permissões:
 
@@ -115,7 +119,9 @@ CI: `web`, `extension` e `danfe-print`. CodeQL analisa JavaScript/TypeScript.
 
 ## Releases
 
-A **v0.0.32** é um patch somente do site e mantém a extensão **0.2.9**. Ele restaura corretamente ações de resultados anteriores após o preflight e bloqueia reconsulta pelo Portal enquanto a configuração fiscal está sendo verificada.
+A `main` contém a extensão **0.2.10**, que move a autenticação TLS da consulta direta para uma janela interna da extensão para permitir que Chrome/Edge selecionem o A1 instalado no Windows. Essa alteração ainda precisa do gate físico antes de uma nova release.
+
+A última release publicada é a **v0.0.32**, ainda com extensão **0.2.9**. Ela restaura corretamente ações de resultados anteriores após o preflight e bloqueia reconsulta pelo Portal enquanto a configuração fiscal está sendo verificada.
 
 A v0.0.31/extensão 0.2.9 endureceu o preflight contra duplo clique e compatibilidade com versões antigas. A v0.0.30/extensão 0.2.8 introduziu o preflight automático. A v0.0.29/extensão 0.2.7 corrigiu o layout da configuração local. A v0.0.28/extensão 0.2.6 foi a primeira release direct-first.
 

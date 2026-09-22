@@ -28,15 +28,15 @@ async function refreshFiscalIdentity(): Promise<void> {
   const identity = await loadFiscalIdentity();
   fiscalCnpjInput.value = identity?.cnpj ?? '';
   fiscalStatus.textContent = identity
-    ? 'CNPJ configurado localmente. A consulta direta será tentada antes do Portal.'
-    : 'CNPJ ainda não configurado. Sem ele, a consulta direta não pode ser iniciada.';
+    ? 'CNPJ configurado localmente. Na consulta direta, o Chrome/Edge usará ou solicitará o certificado A1 instalado no Windows.'
+    : 'CNPJ ainda não configurado. Informe o CNPJ da empresa vinculada ao A1; o certificado continuará sendo usado pelo Chrome/Edge a partir do Windows.';
 }
 
 async function saveFiscalCnpj(): Promise<void> {
   try {
     const identity = await saveFiscalIdentity(fiscalCnpjInput.value);
     fiscalCnpjInput.value = identity.cnpj;
-    fiscalStatus.textContent = 'CNPJ salvo localmente. A consulta direta SEFAZ está habilitada.';
+    fiscalStatus.textContent = 'CNPJ salvo localmente. Na próxima consulta, o Chrome/Edge poderá solicitar o certificado A1 instalado no Windows.';
   } catch (error) {
     fiscalStatus.textContent = error instanceof Error ? error.message : 'Não foi possível salvar o CNPJ.';
   }

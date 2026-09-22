@@ -5,7 +5,7 @@
 ```text
 Site
  ↓
-Extensão 0.2.9
+Extensão 0.2.10
  ├─ NFeDistribuicaoDFe
  └─ Portal Nacional (fallback)
 ```
@@ -16,12 +16,20 @@ Não existe Bridge, WebView2 helper ou Native Messaging.
 
 1. instalar/carregar a extensão;
 2. clicar no ícone **NFe Agendamento**;
-3. informar uma vez o CNPJ correspondente ao certificado A1 usado naquele computador;
+3. informar uma vez o CNPJ da empresa vinculada ao certificado A1 usado naquele computador;
 4. confirmar no site que a consulta direta aparece como configurada.
 
-Se o usuário tentar consultar antes disso, o site solicita a abertura das opções da extensão automaticamente e não envia a consulta à SEFAZ. A extensão 0.2.9 anuncia explicitamente essa capacidade; a 0.2.8 é reconhecida por compatibilidade. Versões anteriores orientam atualização ou abertura manual das opções.
+Se o usuário tentar consultar antes disso, o site solicita a abertura das opções da extensão automaticamente e não envia a consulta à SEFAZ. A extensão 0.2.10 preserva esse preflight; a 0.2.8+ continua reconhecida por compatibilidade. Versões anteriores orientam atualização ou abertura manual das opções.
 
 O CNPJ fica em `chrome.storage.local`. O certificado e sua chave privada não são copiados para a extensão.
+
+## Autenticação do A1
+
+Na 0.2.9 a chamada direta era iniciada pelo service worker MV3. Esse contexto não possui uma aba associada para exibir o seletor de certificado cliente quando a escolha manual é necessária.
+
+Na 0.2.10 o background cria uma janela interna da própria extensão e navega para `direct-lookup.html`. Somente um UUID de operação vai na URL; chave NF-e e CNPJ são entregues por mensagem interna depois que a página comprova o vínculo com a aba criada. O `fetch` da SEFAZ roda nessa página visível, permitindo ao Chrome/Edge usar o repositório de certificados do Windows e apresentar o seletor do A1 quando necessário.
+
+A janela é fechada após o resultado. Fechar a janela manualmente encerra a tentativa sem retry automático. Nenhuma permissão nova foi adicionada.
 
 ## Consulta direta
 
@@ -75,4 +83,4 @@ Hosts: site oficial, Portal Nacional e endpoint `www1.nfe.fazenda.gov.br`.
 
 ## Gate físico
 
-É obrigatório validar em Windows real que Chrome/Edge negocia o A1 corretamente quando o `fetch` da extensão chama o endpoint direto. Esse comportamento não é comprovável pelo CI.
+É obrigatório validar em Windows real que a janela interna da extensão permite ao Chrome/Edge negociar o A1 corretamente com o endpoint direto. O CI valida o roteamento para esse contexto visível, mas não consegue provar a negociação TLS real com o certificado do Windows.

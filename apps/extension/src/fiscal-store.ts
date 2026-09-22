@@ -47,7 +47,7 @@ export async function loadFiscalIdentity(): Promise<FiscalIdentity | null> {
 
 export async function saveFiscalIdentity(value: string): Promise<FiscalIdentity> {
   const cnpj = normalizeFiscalCnpj(value);
-  if (!cnpj) throw new Error('CNPJ do certificado A1 inválido.');
+  if (!cnpj) throw new Error('CNPJ da empresa vinculada ao A1 inválido.');
   const identity = { cnpj } as const;
   await chrome.storage.local.set({ [FISCAL_IDENTITY_KEY]: identity });
   return identity;

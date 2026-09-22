@@ -4,9 +4,9 @@
 
 - Windows 10/11;
 - Chrome ou Edge;
-- extensão 0.2.9 ou superior;
+- extensão 0.2.10 ou superior;
 - certificado A1 válido instalado;
-- CNPJ do A1 configurado nas opções da extensão;
+- CNPJ da empresa vinculada ao A1 configurado nas opções da extensão;
 - site oficial do NFe Agendamento.
 
 ## 1. Diagnóstico e preflight
@@ -30,9 +30,13 @@ Usar uma NF-e que possa retornar XML pelo `NFeDistribuicaoDFe`:
 1. informar a chave;
 2. iniciar consulta;
 3. confirmar indicação de rota **SEFAZ**;
-4. selecionar/autorizar o A1 no Chrome/Edge caso solicitado;
-5. confirmar que **nenhum popup do Portal abre**;
-6. confirmar XML, DANFE e download.
+4. confirmar que abre uma janela pequena **Autenticando certificado A1**;
+5. se o Chrome/Edge exibir o seletor, escolher o A1 instalado no Windows;
+6. confirmar que a janela interna fecha após a tentativa;
+7. confirmar que **nenhum popup do Portal abre** quando a SEFAZ devolve o XML;
+8. confirmar XML, DANFE e download.
+
+Se o navegador estiver administrado com seleção automática de certificado cliente, o passo 5 pode ocorrer sem diálogo.
 
 Este continua sendo o gate físico mais importante.
 

@@ -30,6 +30,7 @@ O site não acessa localhost, certificado ou endpoint fiscal diretamente.
 Responsável por:
 
 - handshake com o site;
+- abrir um contexto visível curto para a autenticação TLS da consulta direta;
 - consulta `NFeDistribuicaoDFe`;
 - montar SOAP `consChNFe`;
 - proteção local de consumo;
@@ -41,7 +42,7 @@ Responsável por:
 
 ## Navegador/Windows
 
-Responsável pela autenticação TLS com certificado A1. O projeto não recebe PFX/P12, senha ou chave privada.
+Responsável pela autenticação TLS com certificado A1 instalado no Windows. Quando a seleção manual é necessária, o Chrome/Edge pode exibir o seletor na janela interna criada pela extensão. O projeto não recebe PFX/P12, senha ou chave privada.
 
 ## Cloudflare
 

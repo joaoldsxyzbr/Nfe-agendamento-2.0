@@ -20,6 +20,7 @@ for (const [entry, output] of [
   ['site-bridge.ts', 'site-bridge.js'],
   ['portal-content.ts', 'portal-content.js'],
   ['options.ts', 'options.js'],
+  ['direct-lookup-page.ts', 'direct-lookup-page.js'],
 ]) {
   await build({
     entryPoints: [new URL(`../src/${entry}`, import.meta.url).pathname],
@@ -36,4 +37,5 @@ for (const [entry, output] of [
 await cp(new URL('../manifest.json', import.meta.url), new URL('manifest.json', outdir));
 
 await cp(new URL('../options.html', import.meta.url), new URL('options.html', outdir));
+await cp(new URL('../direct-lookup.html', import.meta.url), new URL('direct-lookup.html', outdir));
 await cp(new URL('../icon.png', import.meta.url), new URL('icon.png', outdir));

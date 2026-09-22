@@ -29,14 +29,14 @@
         <img src="icon.png" alt="" aria-hidden="true" />
         <h1>NFe Agendamento</h1>
       </div>
-      <p>A consulta direta usa o certificado A1 pelo Chrome/Edge. Configurações fiscais e regras de fornecedor ficam somente neste navegador.</p>
+      <p>A consulta direta usa o certificado A1 instalado no Windows por meio do Chrome/Edge. Configurações fiscais e regras de fornecedor ficam somente neste navegador.</p>
     </div>
 
     <section class="card" aria-labelledby="fiscal-identity-title">
       <h2 id="fiscal-identity-title">Consulta direta SEFAZ</h2>
-      <p>Informe uma única vez o CNPJ correspondente ao certificado A1 usado neste computador. A extensão não lê nem armazena a chave privada do certificado.</p>
+      <p>Informe uma única vez o CNPJ da empresa vinculada ao A1. Esse CNPJ identifica o interessado no pedido à SEFAZ; o certificado em si será solicitado ao Chrome/Edge durante a conexão segura. A extensão não lê nem armazena a chave privada.</p>
       <div class="field">
-        <label for="fiscal-cnpj">CNPJ do certificado A1</label>
+        <label for="fiscal-cnpj">CNPJ da empresa vinculada ao A1</label>
         <input id="fiscal-cnpj" type="text" inputmode="text" autocomplete="off" maxlength="18" placeholder="00.000.000/0000-00" />
       </div>
       <div class="actions">
