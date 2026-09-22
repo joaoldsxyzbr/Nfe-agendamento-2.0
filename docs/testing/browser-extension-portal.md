@@ -21,6 +21,22 @@ Extraia o ZIP para uma pasta local antes de carregar a extensão. O pacote é um
 
 A v0.0.24 mantém retries limitados de handshake e reinjeção idempotente, adiciona o anúncio reativo `bridge_ready`, revalidação em `focus`, `pageshow` e retorno de visibilidade, compatibilidade com o casing legado do `supplier-rules.json` e restrição do armazenamento local a contextos confiáveis. Isso reduz falsos **Extensão não conectada** e elimina a necessidade de editar manualmente arquivos válidos do Bridge.
 
+
+## HEAD após v0.0.24
+
+O código atual da `main` prepara a extensão **0.2.3**, ainda não publicada em release neste momento. Além da 0.2.2 pública, o HEAD adiciona:
+
+- reconciliação da operação ativa após cold start do service worker;
+- validação de popup, aba do Portal e aba do site antes de reaproveitar estado salvo;
+- remoção automática de estado obsoleto;
+- `start` idempotente para a mesma aba e chave, permitindo recuperar uma resposta perdida sem abrir um segundo popup;
+- comando interno de status para impedir espera indefinida quando a operação deixou de existir;
+- detecção de fechamento da aba do Portal, além do fechamento da janela;
+- retry limitado do handshake inicial do content script do Portal;
+- códigos de erro distintos para popup, aba, navegação e operação perdida.
+
+A versão pública para teste continua sendo a **0.2.2 da v0.0.24** até uma nova release ser publicada.
+
 ## Instalar no Chrome
 
 1. abra `chrome://extensions`;
