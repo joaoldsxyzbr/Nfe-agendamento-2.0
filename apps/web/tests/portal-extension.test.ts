@@ -8,7 +8,12 @@ describe('BrowserPortalExtensionClient', () => {
     const listeners = new Set<(message: unknown) => void>();
     const transport = {
       request: async (message: { type: string }) => {
-        if (message.type === 'ping') return { type: 'ready', requestId: 'ping', version: '0.1.0' };
+        if (message.type === 'ping') return {
+          type: 'ready',
+          requestId: 'ping',
+          version: '0.1.0',
+          capabilities: { portalLookup: true, supplierResolution: true },
+        };
         if (message.type === 'start') return { type: 'started', requestId: 'start', operationId: 'ext-op-1' };
         if (message.type === 'cancel') return { type: 'cancelled', requestId: 'cancel', operationId: 'ext-op-1' };
         throw new Error('unexpected');
@@ -20,6 +25,10 @@ describe('BrowserPortalExtensionClient', () => {
     };
 
     const client = new BrowserPortalExtensionClient(transport as never);
+    expect(await client.getInfo()).toEqual({
+      version: '0.1.0',
+      capabilities: { portalLookup: true, supplierResolution: true },
+    });
     expect(await client.isAvailable()).toBe(true);
     expect(await client.start(KEY)).toBe('ext-op-1');
 
@@ -35,6 +44,35 @@ describe('BrowserPortalExtensionClient', () => {
     const result = await waiting;
     expect(result.state).toBe('completed');
     expect(result.xml).toContain('nfeProc');
+  });
+
+
+  it('resolves supplier identity through the extension without exposing configuration', async () => {
+    const { BrowserPortalExtensionClient } = await import('../src/portal/extension-client');
+    const commands: unknown[] = [];
+    const client = new BrowserPortalExtensionClient({
+      request: async (message: { type: string; taxId?: string }) => {
+        commands.push(message);
+        if (message.type === 'resolve_supplier') {
+          return {
+            type: 'supplier_resolved',
+            requestId: 'supplier',
+            supplierId: 'fernando-klein',
+          };
+        }
+        throw new Error('unexpected');
+      },
+      subscribe: () => () => {},
+    } as never);
+
+    await expect(client.resolveSupplier('12.345.678/0001-95')).resolves.toEqual({
+      supplierId: 'fernando-klein',
+    });
+    expect(commands).toHaveLength(1);
+    expect(commands[0]).toMatchObject({
+      type: 'resolve_supplier',
+      taxId: '12.345.678/0001-95',
+    });
   });
 
   it('treats a missing extension as unavailable instead of throwing', async () => {
