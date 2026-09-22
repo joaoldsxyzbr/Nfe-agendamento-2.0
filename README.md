@@ -12,7 +12,7 @@ NFe Agendamento é um aplicativo interno para consultar NF-e, baixar XML e gerar
 - **Helper Portal:** WinForms/WebView2 persistente preservado como rollback enquanto a extensão não for validada fisicamente.
 - **Certificado A1:** descoberto em `CurrentUser/My`; PFX, senha e chave privada nunca são enviados ao site ou ao Cloudflare.
 - **Persistência local:** thumbprint selecionado em `%LOCALAPPDATA%/NfeAgendamentoBridge/settings.json`, regras locais de fornecedor em `supplier-rules.json` e metadados da proteção fiscal em `fiscal-usage.json`.
-- **Release pública atual:** `0.0.22`; publicada somente a partir do mesmo SHA validado pelo CI completo.
+- **Release pública atual:** `0.0.23`; publicada somente a partir do mesmo SHA validado pelo CI completo.
 
 Não existem Central, pareamento, servidor LAN, mDNS ou pasta compartilhada na arquitetura atual. Cada PC usa seu próprio Bridge.
 
@@ -28,7 +28,7 @@ Implementado e coberto pelos gates automatizados aplicáveis:
 - transporte autenticado `NFeDistribuicaoDFe`;
 - categorias normalizadas `success`, `fiscal_status`, `consumption_limit`, `certificate_error`, `transport_unavailable` e `technical_error`;
 - tratamento de `137`, `138`, `656`, HTTP 429, timeout e falhas ambíguas sem retry fiscal automático;
-- fallback automático para o Portal após `consumption_limit` ou `cStat 217`, preferindo a extensão Chromium quando disponível e mantendo o helper WebView2 como rollback;
+- fallback automático para o Portal após `consumption_limit` ou `cStat 217`, preferindo a extensão Chromium quando disponível e mantendo o helper WebView2 como rollback;\n- handshake da extensão resiliente a corrida de carregamento/cold start, com novas tentativas de detecção e reinjeção segura da ponte em abas oficiais já abertas após instalação/inicialização;
 - prewarm best-effort do Portal/WebView2 após health compatível, sem bloquear consulta direta nem fallback cold-start;
 - importação manual de XML validado, disponível somente como contingência após falha terminal do helper Portal;
 - hCaptcha manual e download oficial do XML pelo helper Portal;
@@ -80,7 +80,7 @@ Site
 
 No piloto atual, o site tenta primeiro a extensão Chromium MV3. Ela abre o Portal em popup do navegador, preenche a chave, aguarda o usuário resolver o hCaptcha e tenta devolver o XML oficial ao site pela própria sessão do Portal. Se a extensão não estiver disponível antes do início da operação, o fluxo volta ao helper WebView2 existente.
 
-A v0.0.22 adiciona também `/extension-test.html`, um gate isolado que não usa `BridgeClient` nem `127.0.0.1:17345`. Ele existe somente para validar fisicamente site + extensão 0.2.0 + Portal + A1 antes da remoção do Bridge do fluxo principal.
+A v0.0.22 adicionou `/extension-test.html`, um gate isolado que não usa `BridgeClient` nem `127.0.0.1:17345`. A v0.0.23 atualiza o piloto para a extensão 0.2.1 e endurece a detecção em PCs mais lentos ou com a aba do site já aberta. O gate existe somente para validar fisicamente site + extensão + Portal + A1 antes da remoção do Bridge do fluxo principal.
 
 O helper permanece empacotado e funcional até a validação física provar popup, certificado e retorno do XML em Chrome/Edge reais. Nenhum dos dois caminhos resolve ou contorna captcha.
 
@@ -184,17 +184,17 @@ O site é o caminho normal para diagnosticar e atualizar o componente Windows. O
 
 ## Distribuição Windows
 
-Versão canônica da release: **v0.0.22**.
+Versão canônica da release: **v0.0.23**.
 
 Asset principal:
 
 ```text
-NFeAgendamentoBridge-Setup-v0.0.22.exe
+NFeAgendamentoBridge-Setup-v0.0.23.exe
 ```
 
 O instalador é por usuário, não pede administrador e instala somente o Bridge + helper Portal. O auto-start HKCU e o start pós-instalação apontam diretamente para `NfeAgendamento.Bridge.exe`, sem `--managed`. O Bridge é `WinExe`, portanto inicia sem janela de console, e preserva `%LOCALAPPDATA%\NfeAgendamentoBridge` — incluindo `settings.json`, `fiscal-usage.json` e `supplier-rules.json`.
 
-A release também publica `NFeAgendamento-Extension-v0.2.0.zip` para o piloto Chromium e o gate isolado sem Bridge. O Microsoft Edge WebView2 Runtime continua necessário apenas para o fallback pelo helper Portal/WebView2.
+A release também publica `NFeAgendamento-Extension-v0.2.1.zip` para o piloto Chromium e o gate isolado sem Bridge. O Microsoft Edge WebView2 Runtime continua necessário apenas para o fallback pelo helper Portal/WebView2.
 
 ## Fluxo de release
 
@@ -207,7 +207,7 @@ A release também publica `NFeAgendamento-Extension-v0.2.0.zip` para o piloto Ch
 
 ## Validação física
 
-O CI não consegue provar interação real com certificado A1, SEFAZ, Portal/hCaptcha ou uma impressora específica. Para declarar a v0.0.22 fisicamente validada, executar:
+O CI não consegue provar interação real com certificado A1, SEFAZ, Portal/hCaptcha ou uma impressora específica. Para declarar a v0.0.23 fisicamente validada, executar:
 
 - `docs/testing/acceptance.md`;
 - `docs/testing/batch-query.md`;
@@ -239,5 +239,5 @@ Não provoque bloqueio `656` repetindo consultas artificialmente apenas para tes
 - atualizador: `docs/testing/bridge-updater.md`;
 - DANFE: `docs/testing/danfe-layout.md`;
 - tela de consulta: `docs/ui/consultation-screen.md`;
-- release atual: `docs/releases/v0.0.22.md`;
-- release anterior: `docs/releases/v0.0.21.md`.
+- release atual: `docs/releases/v0.0.23.md`;\n- release anterior: `docs/releases/v0.0.22.md`;
+- histórico adicional: `docs/releases/v0.0.21.md`.
