@@ -39,6 +39,7 @@ type MutableBatchItem = {
 
 type ExtensionBatchClient = Readonly<{
   getInfo(signal?: AbortSignal): Promise<PortalExtensionInfo | null>;
+  openOptions(signal?: AbortSignal): Promise<void>;
   directLookup(accessKey: string, signal?: AbortSignal): Promise<DirectLookupResult>;
   start(accessKey: string, signal?: AbortSignal): Promise<string>;
   waitForResult(operationId: string, signal?: AbortSignal): Promise<PortalOperationStatus>;
@@ -120,6 +121,24 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
       return;
     }
 
+    const info = await deps.portal.getInfo();
+    if (!info) {
+      renderState('Extensão não conectada');
+      elements.routeText.textContent = 'Extensão não conectada. Instale ou ative a extensão antes de iniciar o lote.';
+      return;
+    }
+    if (!info.capabilities.directLookup) {
+      renderState('Atualize a extensão');
+      elements.routeText.textContent = 'Atualize a extensão para usar a consulta direta à SEFAZ.';
+      return;
+    }
+    if (!info.configuration.fiscalIdentityConfigured) {
+      await deps.portal.openOptions().catch(() => {});
+      renderState('Configure o CNPJ do A1');
+      elements.routeText.textContent = 'Configure o CNPJ do certificado A1 na extensão, salve e inicie o lote novamente.';
+      return;
+    }
+
     items = summary.validKeys.map(createBatchItem);
     running = true;
     cancelled = false;
@@ -130,10 +149,6 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
     let finalFailureMessage: string | null = null;
 
     try {
-      const info = await deps.portal.getInfo(abortController.signal);
-      if (!info) throw new Error('Extensão não conectada. Instale ou ative a extensão antes de iniciar o lote.');
-      if (!info.capabilities.directLookup) throw new Error('Atualize a extensão para usar a consulta direta à SEFAZ.');
-
       for (const item of items) {
         if (cancelled) break;
         if (isPortalRoute()) {
