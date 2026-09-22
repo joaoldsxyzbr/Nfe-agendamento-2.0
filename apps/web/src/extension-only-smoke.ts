@@ -75,7 +75,10 @@ function mountExtensionOnlySmokePage(): void {
 
   refreshState();
 
+  const stopReadyHint = client.onReadyHint(refreshState);
+  window.addEventListener('pagehide', () => stopReadyHint(), { once: true });
   window.addEventListener('focus', refreshState);
+  window.addEventListener('pageshow', refreshState);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') refreshState();
   });
