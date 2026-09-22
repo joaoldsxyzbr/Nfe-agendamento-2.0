@@ -88,6 +88,9 @@ Para testar o rollback:
 
 ## Gate isolado sem Bridge
 
+Para este gate use a extensão **0.2.0** gerada pelo CI desta implementação. A extensão **0.1.0** publicada na release v0.0.21 não possui o handshake/capabilities necessários e será tratada como incompatível pela página de teste.
+
+
 Antes de migrar o aplicativo principal, use a página `/extension-test.html` no domínio oficial.
 
 Para este teste:
