@@ -1,8 +1,4 @@
-import type {
-  DirectLookupResult,
-  PortalOperationStatus,
-  SupplierResolution,
-} from '../portal/contracts';
+import type { PortalOperationStatus, SupplierResolution } from '../portal/contracts';
 import type { PortalExtensionInfo } from '../portal/extension-client';
 import type { AccessKeyValidation } from './access-key';
 import type { ParsedNfe } from './xml';
@@ -17,8 +13,6 @@ export type ConsultationController = Readonly<{
 
 type ConsultationExtensionClient = Readonly<{
   getInfo(signal?: AbortSignal): Promise<PortalExtensionInfo | null>;
-  openOptions(signal?: AbortSignal): Promise<void>;
-  directLookup(accessKey: string, signal?: AbortSignal): Promise<DirectLookupResult>;
   start(accessKey: string, signal?: AbortSignal): Promise<string>;
   waitForResult(operationId: string, signal?: AbortSignal): Promise<PortalOperationStatus>;
   cancel(operationId: string): Promise<void>;
@@ -63,55 +57,15 @@ export function createConsultationController(
         );
         return;
       }
-      if (!info.capabilities.directLookup) {
+      if (!info.capabilities.portalLookup) {
         deps.renderState(
           'Atualize a extensão',
-          'Esta versão da extensão ainda não possui consulta direta à SEFAZ.',
+          'Esta versão da extensão ainda não possui a consulta pelo Portal Nacional.',
         );
         return;
       }
 
-      if (!info.configuration.fiscalIdentityConfigured) {
-        if (!info.capabilities.openOptions) {
-          deps.renderState(
-            'Atualize a extensão',
-            'Sua extensão é anterior ao preflight automático. Atualize pela seta de download ou clique no ícone NFe Agendamento e configure o CNPJ do A1 manualmente.',
-          );
-          return;
-        }
-
-        let opened = false;
-        try {
-          await deps.portal.openOptions();
-          opened = true;
-        } catch {}
-
-        deps.renderState(
-          'Configure o CNPJ do A1',
-          opened
-            ? 'A configuração da extensão foi aberta. Informe o CNPJ do certificado A1, salve e consulte novamente. Nenhuma consulta foi enviada à SEFAZ.'
-            : 'Não foi possível abrir a configuração automaticamente. Clique no ícone NFe Agendamento, informe o CNPJ do A1 e tente novamente. Nenhuma consulta foi enviada à SEFAZ.',
-        );
-        return;
-      }
-
-      deps.renderState('Consultando NF-e', 'Consultando diretamente a SEFAZ com o certificado A1 do navegador…');
-      const lookup = await deps.portal.directLookup(validation.value);
-
-      if (lookup.category === 'success' && lookup.xml) {
-        await renderParsedXml(lookup.xml, validation.value);
-        return;
-      }
-
-      if (
-        lookup.category === 'consumption_limit' ||
-        (lookup.category === 'fiscal_status' && lookup.cStat === '217')
-      ) {
-        await runPortalFallback(validation.value, lookup);
-        return;
-      }
-
-      renderDirectFailure(lookup);
+      await runPortal(validation.value);
     } catch (error) {
       deps.renderState(
         'Consulta não concluída',
@@ -122,32 +76,10 @@ export function createConsultationController(
     }
   }
 
-  function renderDirectFailure(lookup: DirectLookupResult): void {
-    if (lookup.category === 'configuration_error') {
-      deps.renderState('Configuração necessária', lookup.message);
-      return;
-    }
-    if (lookup.category === 'fiscal_status') {
-      deps.renderState(
-        lookup.cStat ? `Resultado SEFAZ ${lookup.cStat}` : 'Resultado fiscal',
-        lookup.message,
-      );
-      return;
-    }
+  async function runPortal(accessKey: string): Promise<void> {
     deps.renderState(
-      lookup.category === 'transport_unavailable' ? 'Consulta direta indisponível' : 'Consulta não concluída',
-      lookup.message,
-    );
-  }
-
-  async function runPortalFallback(accessKey: string, lookup: DirectLookupResult): Promise<void> {
-    const sefazStatus = lookup.cStat
-      ? `Status SEFAZ ${lookup.cStat}. ${lookup.message}`
-      : lookup.message;
-
-    deps.renderState(
-      'Abrindo consulta alternativa',
-      `${sefazStatus} Abrindo o Portal Nacional da NF-e. Resolva o hCaptcha manualmente.`,
+      'Abrindo Portal Nacional',
+      'Abrindo o Portal Nacional da NF-e. Resolva o hCaptcha manualmente.',
     );
 
     let operationId: string;

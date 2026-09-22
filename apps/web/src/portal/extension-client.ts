@@ -1,8 +1,7 @@
-import type { DirectLookupResult, PortalOperationStatus } from './contracts';
+import type { PortalOperationStatus } from './contracts';
 
 const PAGE_CHANNEL = 'nfe-agendamento:portal-extension';
 const DEFAULT_HANDSHAKE_TIMEOUT_MS = 1_200;
-const DIRECT_LOOKUP_TIMEOUT_MS = 50_000;
 const HANDSHAKE_ATTEMPTS = 3;
 const HANDSHAKE_RETRY_DELAY_MS = 200;
 const START_ATTEMPTS = 2;
@@ -12,7 +11,6 @@ const COMMAND_RETRY_DELAY_MS = 150;
 type ExtensionCommand =
   | { type: 'ping'; requestId: string }
   | { type: 'open_options'; requestId: string }
-  | { type: 'direct_lookup'; requestId: string; accessKey: string }
   | { type: 'start'; requestId: string; accessKey: string }
   | { type: 'status'; requestId: string; operationId: string }
   | { type: 'cancel'; requestId: string; operationId: string }
@@ -21,22 +19,11 @@ type ExtensionCommand =
 export type PortalExtensionInfo = Readonly<{
   version: string;
   capabilities: Readonly<{
-    directLookup: boolean;
     openOptions: boolean;
     portalLookup: boolean;
     supplierResolution: boolean;
   }>;
-  configuration: Readonly<{
-    fiscalIdentityConfigured: boolean;
-  }>;
 }>;
-
-type ExtensionEvent =
-  | { type: 'bridge_ready'; version: string }
-  | { type: 'state'; operationId: string; state: string; message?: string }
-  | { type: 'completed'; operationId: string; xml: string }
-  | { type: 'failed'; operationId: string; code?: string; message: string }
-  | { type: 'cancelled'; operationId: string; message?: string };
 
 export interface PortalExtensionTransport {
   request(command: ExtensionCommand, signal?: AbortSignal, timeoutMs?: number): Promise<unknown>;
@@ -148,19 +135,6 @@ export class BrowserPortalExtensionClient {
     if (!isRecord(response) || response.type !== 'options_opened') {
       throw new Error(messageFromFailure(response) ?? 'A extensão não abriu a tela de configuração.');
     }
-  }
-
-  async directLookup(accessKey: string, signal?: AbortSignal): Promise<DirectLookupResult> {
-    const requestId = globalThis.crypto.randomUUID();
-    const response = await this.transport.request(
-      { type: 'direct_lookup', requestId, accessKey: accessKey.trim().toUpperCase() },
-      signal,
-      DIRECT_LOOKUP_TIMEOUT_MS,
-    );
-    if (!isRecord(response) || response.type !== 'direct_lookup_result' || !isDirectLookupResult(response.result)) {
-      throw new Error(messageFromFailure(response) ?? 'A extensão não retornou um resultado válido da consulta direta.');
-    }
-    return response.result;
   }
 
   async start(accessKey: string, signal?: AbortSignal): Promise<string> {
@@ -304,17 +278,12 @@ async function waitForRetry(delayMs: number, signal?: AbortSignal): Promise<void
 function parseReadyResponse(value: unknown): PortalExtensionInfo | null {
   if (!isRecord(value) || value.type !== 'ready' || typeof value.version !== 'string') return null;
   if (!isRecord(value.capabilities)) return null;
-  const configuration = isRecord(value.configuration) ? value.configuration : {};
   return {
     version: value.version,
     capabilities: {
-      directLookup: value.capabilities.directLookup === true,
       openOptions: value.capabilities.openOptions === true || versionAtLeast(value.version, 0, 2, 8),
       portalLookup: value.capabilities.portalLookup === true,
       supplierResolution: value.capabilities.supplierResolution === true,
-    },
-    configuration: {
-      fiscalIdentityConfigured: configuration.fiscalIdentityConfigured === true,
     },
   };
 }
@@ -329,21 +298,6 @@ function versionAtLeast(version: string, major: number, minor: number, patch: nu
     if (current[index] < expected[index]) return false;
   }
   return true;
-}
-
-function isDirectLookupResult(value: unknown): value is DirectLookupResult {
-  if (!isRecord(value)) return false;
-  return [
-    'success',
-    'fiscal_status',
-    'consumption_limit',
-    'configuration_error',
-    'transport_unavailable',
-    'technical_error',
-  ].includes(String(value.category)) &&
-    (value.xml === null || typeof value.xml === 'string') &&
-    (value.cStat === null || typeof value.cStat === 'string') &&
-    typeof value.message === 'string';
 }
 
 function parseOperationStatus(value: unknown, operationId: string): boolean | null {

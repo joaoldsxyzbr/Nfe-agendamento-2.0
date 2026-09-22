@@ -8,24 +8,16 @@ const el = <T extends object>(value: T): T => value;
 
 function harness(overrides: Record<string, unknown> = {}) {
   const snapshots: BatchItemView[][] = [];
-  const directKeys: string[] = [];
   const portalStarts: string[] = [];
-  const optionsOpens: string[] = [];
   const input = el({ value: '', disabled: false } as HTMLTextAreaElement);
   const route = el({ textContent: '' } as HTMLElement);
   const zipButton = el({ disabled: true } as HTMLButtonElement);
   const printButton = el({ disabled: true } as HTMLButtonElement);
   const portal = {
     getInfo: async () => ({
-      version: '0.2.6',
-      capabilities: { directLookup: true, openOptions: true, portalLookup: true, supplierResolution: true },
-      configuration: { fiscalIdentityConfigured: true },
+      version: '0.2.11',
+      capabilities: { openOptions: true, portalLookup: true, supplierResolution: true },
     }),
-    openOptions: async () => { optionsOpens.push('opened'); },
-    directLookup: async (key: string) => {
-      directKeys.push(key);
-      return { category: 'success' as const, xml: '<xml />', cStat: '138', message: 'ok' };
-    },
     start: async (key: string) => { portalStarts.push(key); return `op-${portalStarts.length}`; },
     waitForResult: async (operationId: string) => ({
       operationId,
@@ -68,63 +60,16 @@ function harness(overrides: Record<string, unknown> = {}) {
     renderRows: (items) => snapshots.push(items.map((item) => ({ ...item }))),
   });
 
-  return {
-    controller,
-    input,
-    route,
-    zipButton,
-    printButton,
-    directKeys,
-    portalStarts,
-    optionsOpens,
-    snapshots,
-  };
+  return { controller, input, route, zipButton, printButton, portalStarts, snapshots };
 }
 
-describe('batch controller direct-first', () => {
-  it('uses direct SEFAZ for each item when XML is available', async () => {
+describe('batch controller Portal-only', () => {
+  it('processes every item sequentially through the Portal', async () => {
     const h = harness();
     h.input.value = `${A}\n${B}`;
     h.controller.syncDraft();
     await h.controller.start();
 
-    expect(h.directKeys).toEqual([A, B]);
-    expect(h.portalStarts).toHaveLength(0);
-    expect(h.snapshots.at(-1)?.every((item) => item.source === 'SEFAZ')).toBe(true);
-  });
-
-  it('sends only the 217 item to the Portal and returns to direct lookup', async () => {
-    let calls = 0;
-    const h = harness({
-      directLookup: async (key: string) => {
-        h.directKeys.push(key);
-        calls += 1;
-        return calls === 1
-          ? { category: 'fiscal_status', xml: null, cStat: '217', message: 'não consta' }
-          : { category: 'success', xml: '<xml />', cStat: '138', message: 'ok' };
-      },
-    });
-    h.input.value = `${A}\n${B}`;
-    h.controller.syncDraft();
-    await h.controller.start();
-
-    expect(h.portalStarts).toEqual([A]);
-    expect(h.directKeys).toEqual([A, B]);
-    expect(h.snapshots.at(-1)?.map((item) => item.source)).toEqual(['Portal', 'SEFAZ']);
-  });
-
-  it('switches remaining items to Portal after consumption limit', async () => {
-    const h = harness({
-      directLookup: async (key: string) => {
-        h.directKeys.push(key);
-        return { category: 'consumption_limit', xml: null, cStat: '656', message: 'limite' };
-      },
-    });
-    h.input.value = `${A}\n${B}`;
-    h.controller.syncDraft();
-    await h.controller.start();
-
-    expect(h.directKeys).toEqual([A]);
     expect(h.portalStarts).toEqual([A, B]);
     expect(h.snapshots.at(-1)?.every((item) => item.source === 'Portal')).toBe(true);
   });
@@ -147,33 +92,23 @@ describe('batch controller direct-first', () => {
     expect(infoCalls).toBe(1);
     expect(h.controller.isBusy()).toBe(true);
     resolveInfo({
-      version: '0.2.9',
-      capabilities: { directLookup: true, openOptions: true, portalLookup: true, supplierResolution: true },
-      configuration: { fiscalIdentityConfigured: true },
+      version: '0.2.11',
+      capabilities: { openOptions: true, portalLookup: true, supplierResolution: true },
     });
     await Promise.all([first, second]);
 
-    expect(h.directKeys).toEqual([A, B]);
-    expect(h.portalStarts).toHaveLength(0);
+    expect(h.portalStarts).toEqual([A, B]);
   });
 
-  it('does not start or cancel the batch when fiscal configuration is missing', async () => {
-    const h = harness({
-      getInfo: async () => ({
-        version: '0.2.8',
-        capabilities: { directLookup: true, openOptions: true, portalLookup: true, supplierResolution: true },
-        configuration: { fiscalIdentityConfigured: false },
-      }),
-    });
+  it('does not start when the extension is missing', async () => {
+    const h = harness({ getInfo: async () => null });
     h.input.value = `${A}\n${B}`;
     h.controller.syncDraft();
     await h.controller.start();
 
-    expect(h.directKeys).toHaveLength(0);
     expect(h.portalStarts).toHaveLength(0);
-    expect(h.optionsOpens).toEqual(['opened']);
+    expect(h.route.textContent).toContain('Extensão não conectada');
     expect(h.snapshots.at(-1)?.map((item) => item.status)).toEqual(['queued', 'queued']);
-    expect(h.route.textContent).toContain('configuração da extensão foi aberta');
   });
 
   it('restores completed-result actions when a later preflight exits early', async () => {
@@ -183,14 +118,8 @@ describe('batch controller direct-first', () => {
         infoCalls += 1;
         if (infoCalls === 1) {
           return {
-            version: '0.2.9',
-            capabilities: {
-              directLookup: true,
-              openOptions: true,
-              portalLookup: true,
-              supplierResolution: true,
-            },
-            configuration: { fiscalIdentityConfigured: true },
+            version: '0.2.11',
+            capabilities: { openOptions: true, portalLookup: true, supplierResolution: true },
           };
         }
         return null;
@@ -208,24 +137,6 @@ describe('batch controller direct-first', () => {
     expect(h.zipButton.disabled).toBe(false);
     expect(h.printButton.disabled).toBe(false);
     expect(h.route.textContent).toContain('Extensão não conectada');
-  });
-
-  it('does not claim configuration opened with an old extension', async () => {
-    const h = harness({
-      getInfo: async () => ({
-        version: '0.2.7',
-        capabilities: { directLookup: true, openOptions: false, portalLookup: true, supplierResolution: true },
-        configuration: { fiscalIdentityConfigured: false },
-      }),
-    });
-    h.input.value = `${A}\n${B}`;
-    h.controller.syncDraft();
-    await h.controller.start();
-
-    expect(h.optionsOpens).toHaveLength(0);
-    expect(h.directKeys).toHaveLength(0);
-    expect(h.route.textContent).toContain('extensão é antiga');
-    expect(h.snapshots.at(-1)?.map((item) => item.status)).toEqual(['queued', 'queued']);
   });
 });
 

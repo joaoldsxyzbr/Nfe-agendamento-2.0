@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 const KEY = '42260912345678000195550010000000011123456786';
 
 describe('portal extension protocol', () => {
-  it('accepts only known site commands with validated fields', async () => {
+  it('accepts only Portal/site commands with validated fields', async () => {
     const { parseSiteCommand } = await import('../src/protocol');
 
     expect(parseSiteCommand({ type: 'ping', requestId: 'req-1' })).toEqual({
@@ -13,11 +13,6 @@ describe('portal extension protocol', () => {
     expect(parseSiteCommand({ type: 'open_options', requestId: 'req-options' })).toEqual({
       type: 'open_options',
       requestId: 'req-options',
-    });
-    expect(parseSiteCommand({ type: 'direct_lookup', requestId: 'req-direct', accessKey: KEY })).toEqual({
-      type: 'direct_lookup',
-      requestId: 'req-direct',
-      accessKey: KEY,
     });
     expect(parseSiteCommand({ type: 'start', requestId: 'req-2', accessKey: KEY })).toEqual({
       type: 'start',
@@ -38,20 +33,10 @@ describe('portal extension protocol', () => {
       requestId: 'req-3',
       taxId: '12345678000195',
     });
-    expect(parseSiteCommand({
-      type: 'resolve_supplier',
-      requestId: 'req-4',
-      taxId: '12.abc.345/01de-35',
-    })).toEqual({
-      type: 'resolve_supplier',
-      requestId: 'req-4',
-      taxId: '12ABC34501DE35',
-    });
 
+    expect(() => parseSiteCommand({ type: 'direct_lookup', requestId: 'req-direct', accessKey: KEY })).toThrow();
     expect(() => parseSiteCommand({ type: 'start', requestId: '', accessKey: KEY })).toThrow();
     expect(() => parseSiteCommand({ type: 'start', requestId: 'req', accessKey: '123' })).toThrow();
-    expect(() => parseSiteCommand({ type: 'resolve_supplier', requestId: 'req', taxId: 'ABC45678901' })).toThrow();
-    expect(() => parseSiteCommand({ type: 'resolve_supplier', requestId: 'req', taxId: '12.ABC.345/01DE#35' })).toThrow();
     expect(() => parseSiteCommand({ type: 'fetch-any-url', requestId: 'req', url: 'https://example.com' })).toThrow();
   });
 

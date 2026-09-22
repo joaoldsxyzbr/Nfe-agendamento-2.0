@@ -1,56 +1,15 @@
 import {
-  clearFiscalIdentity,
-  loadFiscalIdentity,
-  saveFiscalIdentity,
-} from './fiscal-store';
-import {
   analyzeSupplierConfig,
   clearSupplierConfig,
   saveSupplierConfig,
 } from './supplier-store';
 
-const fiscalCnpjInput = requireElement<HTMLInputElement>('#fiscal-cnpj');
-const fiscalSaveButton = requireElement<HTMLButtonElement>('#fiscal-cnpj-save');
-const fiscalClearButton = requireElement<HTMLButtonElement>('#fiscal-cnpj-clear');
-const fiscalStatus = requireElement<HTMLElement>('#fiscal-cnpj-status');
 const fileInput = requireElement<HTMLInputElement>('#supplier-config-file');
 const clearButton = requireElement<HTMLButtonElement>('#supplier-config-clear');
 const status = requireElement<HTMLElement>('#supplier-config-status');
 
-void refreshFiscalIdentity();
-
-fiscalSaveButton.addEventListener('click', () => void saveFiscalCnpj());
-fiscalClearButton.addEventListener('click', () => void clearFiscalCnpj());
 fileInput.addEventListener('change', () => void importSelectedFile());
 clearButton.addEventListener('click', () => void clearLocalConfig());
-
-async function refreshFiscalIdentity(): Promise<void> {
-  const identity = await loadFiscalIdentity();
-  fiscalCnpjInput.value = identity?.cnpj ?? '';
-  fiscalStatus.textContent = identity
-    ? 'CNPJ configurado localmente. Na consulta direta, o Chrome/Edge usará ou solicitará o certificado A1 instalado no Windows.'
-    : 'CNPJ ainda não configurado. Informe o CNPJ da empresa vinculada ao A1; o certificado continuará sendo usado pelo Chrome/Edge a partir do Windows.';
-}
-
-async function saveFiscalCnpj(): Promise<void> {
-  try {
-    const identity = await saveFiscalIdentity(fiscalCnpjInput.value);
-    fiscalCnpjInput.value = identity.cnpj;
-    fiscalStatus.textContent = 'CNPJ salvo localmente. Na próxima consulta, o Chrome/Edge poderá solicitar o certificado A1 instalado no Windows.';
-  } catch (error) {
-    fiscalStatus.textContent = error instanceof Error ? error.message : 'Não foi possível salvar o CNPJ.';
-  }
-}
-
-async function clearFiscalCnpj(): Promise<void> {
-  try {
-    await clearFiscalIdentity();
-    fiscalCnpjInput.value = '';
-    fiscalStatus.textContent = 'CNPJ removido. A consulta direta ficará desabilitada até nova configuração.';
-  } catch {
-    fiscalStatus.textContent = 'Não foi possível limpar o CNPJ local.';
-  }
-}
 
 async function importSelectedFile(): Promise<void> {
   const file = fileInput.files?.item(0) ?? null;

@@ -27,7 +27,7 @@ app.innerHTML = `
           <img class="brand-mark" src="/brand-mark.png" alt="" aria-hidden="true" />
           <h1 class="brand-title"><span>NF-e</span><span>Agendamento</span></h1>
         </div>
-        <p class="subtitle">Consulta direta na SEFAZ com Portal Nacional como fallback.</p>
+        <p class="subtitle">Consulta de NF-e pelo Portal Nacional.</p>
       </div>
       <div class="topbar-controls" id="topbar-controls">
         <div class="integration-pill" id="integration-status" data-state="checking" role="status" aria-live="polite">
@@ -67,7 +67,7 @@ app.innerHTML = `
             />
             <button id="lookup-submit" type="submit">Consultar</button>
           </div>
-          <p id="lookup-help" class="help-text">A extensão consulta primeiro a SEFAZ. O Portal Nacional só abre como fallback quando necessário.</p>
+          <p id="lookup-help" class="help-text">A extensão abre o Portal Nacional. Resolva o hCaptcha manualmente; o XML retorna automaticamente ao site.</p>
         </form>
 
         <div class="lookup-result-section">
@@ -97,7 +97,7 @@ app.innerHTML = `
           <div class="batch-form-footer">
             <div>
               <p id="batch-input-summary" class="batch-summary" aria-live="polite">Nenhuma chave informada.</p>
-              <p id="batch-help" class="help-text">As chaves válidas aparecem abaixo antes de iniciar. O lote processa uma NF-e por vez.</p>
+              <p id="batch-help" class="help-text">As chaves válidas aparecem abaixo antes de iniciar. O lote abre o Portal para uma NF-e por vez.</p>
             </div>
             <button id="batch-start" type="submit" disabled>Iniciar lote</button>
           </div>

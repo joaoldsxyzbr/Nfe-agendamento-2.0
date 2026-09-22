@@ -12,13 +12,6 @@ import {
   shouldCapturePortalRequest,
   type PageReplayRequest,
 } from './portal-request';
-import {
-  blockFiscalUsage,
-  checkFiscalUsage,
-  loadFiscalIdentity,
-  recordFiscalAttempt,
-} from './fiscal-store';
-import type { DirectLookupResult } from './sefaz-direct';
 import { loadSupplierConfig, resolveSupplierFromConfig } from './supplier-store';
 
 declare const chrome: any;
@@ -29,20 +22,6 @@ const PORTAL_URL =
 const PORTAL_DOWNLOAD_FILTER = {
   urls: ['https://www.nfe.fazenda.gov.br/portal/downloadNFe.aspx*'],
 };
-const DIRECT_LOOKUP_PAGE = 'direct-lookup.html';
-const DIRECT_LOOKUP_TIMEOUT_MS = 60_000;
-
-type PendingDirectLookup = {
-  operationId: string;
-  accessKey: string;
-  cnpj: string;
-  tabId: number;
-  windowId: number;
-  timeoutId: ReturnType<typeof globalThis.setTimeout>;
-  resolve(result: DirectLookupResult): void;
-};
-
-const pendingDirectLookups = new Map<string, PendingDirectLookup>();
 let operationMutationQueue: Promise<void> = Promise.resolve();
 
 type ActiveOperation = {
@@ -90,12 +69,10 @@ chrome.runtime.onMessage.addListener(
 );
 
 chrome.windows.onRemoved.addListener((windowId: number) => {
-  handleDirectLookupWindowRemoved(windowId);
   void handleWindowRemoved(windowId);
 });
 
 chrome.tabs.onRemoved.addListener((tabId: number) => {
-  handleDirectLookupTabRemoved(tabId);
   void handleTabRemoved(tabId);
 });
 
@@ -150,9 +127,6 @@ async function handleMessage(message: unknown, sender: any): Promise<unknown> {
   if (envelope.source === 'portal') {
     return handlePortalMessage(envelope, sender);
   }
-  if (envelope.source === 'direct_lookup_page') {
-    return handleDirectLookupPageMessage(envelope, sender);
-  }
 
   throw new Error('Origem da mensagem não reconhecida.');
 }
@@ -164,19 +138,14 @@ async function handleSiteCommand(commandValue: unknown, sender: any): Promise<un
 
   const command = parseSiteCommand(commandValue);
   if (command.type === 'ping') {
-    const fiscalIdentity = await loadFiscalIdentity();
     return {
       type: 'ready',
       requestId: command.requestId,
       version: String(chrome.runtime.getManifest().version ?? '0.0.0'),
       capabilities: {
-        directLookup: true,
         openOptions: true,
         portalLookup: true,
         supplierResolution: true,
-      },
-      configuration: {
-        fiscalIdentityConfigured: fiscalIdentity !== null,
       },
     };
   }
@@ -186,14 +155,6 @@ async function handleSiteCommand(commandValue: unknown, sender: any): Promise<un
     return {
       type: 'options_opened',
       requestId: command.requestId,
-    };
-  }
-
-  if (command.type === 'direct_lookup') {
-    return {
-      type: 'direct_lookup_result',
-      requestId: command.requestId,
-      result: await handleDirectLookup(command.accessKey),
     };
   }
 
@@ -330,254 +291,6 @@ async function handleSiteCommand(commandValue: unknown, sender: any): Promise<un
     type: 'cancelled',
     requestId: command.requestId,
     operationId: command.operationId,
-  };
-}
-
-async function handleDirectLookup(accessKey: string): Promise<DirectLookupResult> {
-  const identity = await loadFiscalIdentity();
-  if (!identity) {
-    return {
-      category: 'configuration_error',
-      xml: null,
-      cStat: null,
-      message: 'Configure uma vez o CNPJ do certificado A1 nas opções da extensão.',
-    };
-  }
-
-  let decision;
-  try {
-    decision = await checkFiscalUsage(identity.cnpj);
-  } catch {
-    return {
-      category: 'consumption_limit',
-      xml: null,
-      cStat: null,
-      message: 'A proteção fiscal local não pôde ser validada. A consulta direta foi bloqueada por segurança.',
-    };
-  }
-
-  if (!decision.allowDirectLookup) {
-    const localTime = decision.blockedUntilUtc
-      ? new Date(decision.blockedUntilUtc).toLocaleTimeString('pt-BR', {
-          hour: '2-digit',
-          minute: '2-digit',
-        })
-      : 'mais tarde';
-    return {
-      category: 'consumption_limit',
-      xml: null,
-      cStat: null,
-      message: `Proteção fiscal local ativa até ${localTime}. A SEFAZ não foi consultada novamente.`,
-    };
-  }
-
-  try {
-    await recordFiscalAttempt(identity.cnpj);
-  } catch {
-    return {
-      category: 'consumption_limit',
-      xml: null,
-      cStat: null,
-      message: 'Não foi possível registrar a proteção fiscal local. A SEFAZ não foi consultada.',
-    };
-  }
-
-  const result = await runDirectLookupInPage(accessKey, identity.cnpj);
-  if (result.category === 'consumption_limit') {
-    await blockFiscalUsage(identity.cnpj).catch(() => {});
-  }
-  return result;
-}
-
-
-async function runDirectLookupInPage(accessKey: string, cnpj: string): Promise<DirectLookupResult> {
-  let popup: any;
-  try {
-    popup = await chrome.windows.create({
-      url: 'about:blank',
-      type: 'popup',
-      focused: true,
-      width: 520,
-      height: 300,
-    });
-  } catch {
-    return directLookupFailure('Não foi possível abrir a janela de autenticação do certificado A1.');
-  }
-
-  const windowId = popup?.id;
-  if (!Number.isInteger(windowId)) {
-    return directLookupFailure('Não foi possível identificar a janela de autenticação do certificado A1.');
-  }
-
-  const tabs = await chrome.tabs.query({ windowId }).catch(() => []);
-  const tabId = tabs?.[0]?.id;
-  if (!Number.isInteger(tabId)) {
-    await chrome.windows.remove(windowId).catch(() => {});
-    return directLookupFailure('Não foi possível identificar a aba usada para autenticar o certificado A1.');
-  }
-
-  const operationId = globalThis.crypto.randomUUID();
-  let resolveResult!: (result: DirectLookupResult) => void;
-  const resultPromise = new Promise<DirectLookupResult>((resolve) => {
-    resolveResult = resolve;
-  });
-  const timeoutId = globalThis.setTimeout(() => {
-    completeDirectLookup(
-      operationId,
-      directLookupFailure(
-        'A autenticação do certificado A1 excedeu 60 segundos. A tentativa não será repetida automaticamente.',
-      ),
-    );
-  }, DIRECT_LOOKUP_TIMEOUT_MS);
-
-  pendingDirectLookups.set(operationId, {
-    operationId,
-    accessKey,
-    cnpj,
-    tabId,
-    windowId,
-    timeoutId,
-    resolve: resolveResult,
-  });
-
-  try {
-    await chrome.tabs.update(tabId, {
-      url: chrome.runtime.getURL(
-        `${DIRECT_LOOKUP_PAGE}?operation=${encodeURIComponent(operationId)}`,
-      ),
-    });
-  } catch {
-    completeDirectLookup(
-      operationId,
-      directLookupFailure('Não foi possível carregar a janela de autenticação do certificado A1.'),
-    );
-  }
-
-  try {
-    return await resultPromise;
-  } finally {
-    const pending = pendingDirectLookups.get(operationId);
-    if (pending) {
-      globalThis.clearTimeout(pending.timeoutId);
-      pendingDirectLookups.delete(operationId);
-    }
-    await chrome.windows.remove(windowId).catch(() => {});
-  }
-}
-
-async function handleDirectLookupPageMessage(
-  envelope: Record<string, unknown>,
-  sender: any,
-): Promise<unknown> {
-  const operationId = typeof envelope.operationId === 'string' ? envelope.operationId : '';
-  const pending = pendingDirectLookups.get(operationId);
-  if (!pending) {
-    throw new ExtensionFailure(
-      'direct_lookup_operation_lost',
-      'A autenticação direta não está mais disponível.',
-    );
-  }
-
-  assertDirectLookupPageSender(sender, pending);
-
-  if (envelope.type === 'claim') {
-    return {
-      type: 'direct_lookup_request',
-      operationId,
-      accessKey: pending.accessKey,
-      cnpj: pending.cnpj,
-    };
-  }
-
-  if (envelope.type === 'result') {
-    if (!isDirectLookupResult(envelope.result)) {
-      throw new ExtensionFailure(
-        'direct_lookup_result_invalid',
-        'A janela de autenticação devolveu um resultado inválido.',
-      );
-    }
-    completeDirectLookup(operationId, envelope.result);
-    return { type: 'direct_lookup_received', operationId };
-  }
-
-  throw new ExtensionFailure(
-    'direct_lookup_message_unknown',
-    'Mensagem da autenticação direta não reconhecida.',
-  );
-}
-
-function assertDirectLookupPageSender(sender: any, pending: PendingDirectLookup): void {
-  const expectedUrl = chrome.runtime.getURL(DIRECT_LOOKUP_PAGE);
-  const senderUrl = typeof sender?.url === 'string' ? sender.url : '';
-  if (
-    sender?.id !== chrome.runtime.id ||
-    sender?.tab?.id !== pending.tabId ||
-    !senderUrl.startsWith(expectedUrl)
-  ) {
-    throw new ExtensionFailure(
-      'direct_lookup_sender_invalid',
-      'Origem da autenticação direta não autorizada.',
-    );
-  }
-}
-
-function isDirectLookupResult(value: unknown): value is DirectLookupResult {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
-  const input = value as Record<string, unknown>;
-  return [
-    'success',
-    'fiscal_status',
-    'consumption_limit',
-    'configuration_error',
-    'transport_unavailable',
-    'technical_error',
-  ].includes(String(input.category)) &&
-    (typeof input.xml === 'string' || input.xml === null) &&
-    (typeof input.cStat === 'string' || input.cStat === null) &&
-    typeof input.message === 'string';
-}
-
-function completeDirectLookup(operationId: string, result: DirectLookupResult): boolean {
-  const pending = pendingDirectLookups.get(operationId);
-  if (!pending) return false;
-  pendingDirectLookups.delete(operationId);
-  globalThis.clearTimeout(pending.timeoutId);
-  pending.resolve(result);
-  return true;
-}
-
-function handleDirectLookupWindowRemoved(windowId: number): void {
-  for (const [operationId, pending] of pendingDirectLookups) {
-    if (pending.windowId !== windowId) continue;
-    completeDirectLookup(
-      operationId,
-      directLookupFailure(
-        'A janela de autenticação do certificado A1 foi fechada. A tentativa não será repetida automaticamente.',
-      ),
-    );
-    return;
-  }
-}
-
-function handleDirectLookupTabRemoved(tabId: number): void {
-  for (const [operationId, pending] of pendingDirectLookups) {
-    if (pending.tabId !== tabId) continue;
-    completeDirectLookup(
-      operationId,
-      directLookupFailure(
-        'A aba de autenticação do certificado A1 foi fechada. A tentativa não será repetida automaticamente.',
-      ),
-    );
-    return;
-  }
-}
-
-function directLookupFailure(message: string): DirectLookupResult {
-  return {
-    category: 'transport_unavailable',
-    xml: null,
-    cStat: null,
-    message,
   };
 }
 

@@ -14,8 +14,6 @@
     p { line-height: 1.5; }
     .card { border: 1px solid currentColor; border-radius: 12px; padding: 20px; }
     .actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
-    .field { display: grid; gap: 8px; margin-top: 14px; }
-    .field input[type="text"] { min-width: 280px; padding: 8px 10px; }
     button, input { font: inherit; }
     button { padding: 8px 14px; cursor: pointer; }
     #supplier-config-status { min-height: 1.5em; }
@@ -29,22 +27,8 @@
         <img src="icon.png" alt="" aria-hidden="true" />
         <h1>NFe Agendamento</h1>
       </div>
-      <p>A consulta direta usa o certificado A1 instalado no Windows por meio do Chrome/Edge. Configurações fiscais e regras de fornecedor ficam somente neste navegador.</p>
+      <p>A extensão usa o Portal Nacional para consultar NF-e. Esta página mantém somente regras locais de fornecedor.</p>
     </div>
-
-    <section class="card" aria-labelledby="fiscal-identity-title">
-      <h2 id="fiscal-identity-title">Consulta direta SEFAZ</h2>
-      <p>Informe uma única vez o CNPJ da empresa vinculada ao A1. Esse CNPJ identifica o interessado no pedido à SEFAZ; o certificado em si será solicitado ao Chrome/Edge durante a conexão segura. A extensão não lê nem armazena a chave privada.</p>
-      <div class="field">
-        <label for="fiscal-cnpj">CNPJ da empresa vinculada ao A1</label>
-        <input id="fiscal-cnpj" type="text" inputmode="text" autocomplete="off" maxlength="18" placeholder="00.000.000/0000-00" />
-      </div>
-      <div class="actions">
-        <button id="fiscal-cnpj-save" type="button">Salvar CNPJ</button>
-        <button id="fiscal-cnpj-clear" type="button">Limpar CNPJ</button>
-      </div>
-      <p id="fiscal-cnpj-status" role="status" aria-live="polite">Verificando configuração local…</p>
-    </section>
 
     <section class="card" aria-labelledby="supplier-config-title">
       <h2 id="supplier-config-title">Regras de fornecedor</h2>

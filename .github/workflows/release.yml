@@ -78,8 +78,6 @@ jobs:
                   'portal-content.js',
                   'options.js',
                   'options.html',
-                  'direct-lookup-page.js',
-                  'direct-lookup.html',
                   'manifest.json',
               }
               missing = required.difference(archive.namelist())

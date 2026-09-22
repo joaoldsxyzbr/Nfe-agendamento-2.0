@@ -2,13 +2,11 @@ import {
   BrowserPortalExtensionClient,
   type PortalExtensionInfo,
 } from './portal/extension-client';
-import type { DirectLookupResult } from './portal/contracts';
 import { validateAccessKey } from './nfe/access-key';
 import { parseNfeXml, type ParsedNfe } from './nfe/xml';
 
 type ExtensionOnlyClient = Readonly<{
   getInfo(signal?: AbortSignal): Promise<PortalExtensionInfo | null>;
-  directLookup(accessKey: string, signal?: AbortSignal): Promise<DirectLookupResult>;
   start(accessKey: string, signal?: AbortSignal): Promise<string>;
   waitForResult(
     operationId: string,
@@ -34,34 +32,22 @@ export async function runExtensionOnlySmoke(
   if (!info) {
     throw new Error('Extensão não conectada. Instale ou habilite a extensão e recarregue esta página.');
   }
-  if (!info.capabilities.directLookup) {
-    throw new Error('Atualize a extensão para uma versão com consulta direta à SEFAZ.');
+  if (!info.capabilities.portalLookup) {
+    throw new Error('Atualize a extensão para uma versão com consulta pelo Portal Nacional.');
   }
 
-  const direct = await extension.directLookup(validation.value);
-  let xml: string | null = direct.category === 'success' ? direct.xml : null;
-
-  if (
-    !xml &&
-    (direct.category === 'consumption_limit' ||
-      (direct.category === 'fiscal_status' && direct.cStat === '217'))
-  ) {
-    const operationId = await extension.start(validation.value);
-    const result = await extension.waitForResult(operationId);
-    if (result.state !== 'completed' || !result.xml) {
-      throw new Error(
-        result.message
-        ?? (result.state === 'cancelled'
-          ? 'Consulta pelo Portal cancelada.'
-          : 'O Portal não retornou um XML válido.'),
-      );
-    }
-    xml = result.xml;
+  const operationId = await extension.start(validation.value);
+  const result = await extension.waitForResult(operationId);
+  if (result.state !== 'completed' || !result.xml) {
+    throw new Error(
+      result.message
+      ?? (result.state === 'cancelled'
+        ? 'Consulta pelo Portal cancelada.'
+        : 'O Portal não retornou um XML válido.'),
+    );
   }
 
-  if (!xml) throw new Error(direct.message);
-
-  const parsed = parseNfeXml(xml, validation.value);
+  const parsed = parseNfeXml(result.xml, validation.value);
   let supplierRuleId: string | null = null;
   try {
     supplierRuleId = (await extension.resolveSupplier(parsed.issuer.taxId)).supplierId;
@@ -97,7 +83,7 @@ function mountExtensionOnlySmokePage(): void {
 
   async function runFromPage(): Promise<void> {
     runButton.disabled = true;
-    status.textContent = 'Consultando diretamente a SEFAZ…';
+    status.textContent = 'Abrindo Portal Nacional…';
     try {
       const parsed = await runExtensionOnlySmoke(keyInput.value, client);
       status.textContent = [
@@ -129,13 +115,8 @@ async function refreshExtensionState(
     return;
   }
 
-  const direct = info.capabilities.directLookup
-    ? info.configuration.fiscalIdentityConfigured
-      ? 'consulta direta configurada'
-      : 'configure o CNPJ do A1'
-    : 'atualização necessária';
-  element.textContent = `Extensão conectada · versão ${info.version} · ${direct}`;
-  runButton.disabled = !info.capabilities.directLookup || !info.configuration.fiscalIdentityConfigured;
+  element.textContent = `Extensão conectada · versão ${info.version} · Portal ${info.capabilities.portalLookup ? 'disponível' : 'indisponível'}`;
+  runButton.disabled = !info.capabilities.portalLookup;
 }
 
 function requireElement<T extends Element>(selector: string): T {

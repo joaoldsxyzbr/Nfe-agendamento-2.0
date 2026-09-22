@@ -51,13 +51,14 @@ function initializeSettingsPanel(): void {
   diagnostics.className = 'diagnostics-card';
   const extensionState = diagnosticRow('Extensão', 'Verificando…');
   const versionState = diagnosticRow('Versão', '—');
-  const directState = diagnosticRow('Consulta direta', 'Verificando…');
-  const portalState = diagnosticRow('Portal fallback', 'Verificando…');
-  diagnostics.append(extensionState.row, versionState.row, directState.row, portalState.row);
+  const portalState = diagnosticRow('Portal Nacional', 'Verificando…');
+  const supplierState = diagnosticRow('Regras de fornecedor', 'Verificando…');
+  diagnostics.append(extensionState.row, versionState.row, portalState.row, supplierState.row);
 
   const note = document.createElement('p');
   note.className = 'settings-help';
-  note.textContent = 'A consulta direta usa o A1 pelo Chrome/Edge. Clique no ícone da extensão para configurar uma única vez o CNPJ do certificado. O Portal só é usado como fallback.';
+  note.textContent =
+    'Toda consulta usa o Portal Nacional. O hCaptcha continua manual. Clique no ícone da extensão para importar ou limpar regras locais de fornecedor.';
   const refresh = document.createElement('button');
   refresh.type = 'button';
   refresh.className = 'settings-refresh';
@@ -68,8 +69,16 @@ function initializeSettingsPanel(): void {
   topbarControls.append(actions);
   document.body.append(panel);
 
-  const open = () => { panel.hidden = false; trigger.setAttribute('aria-expanded', 'true'); void refreshDiagnostics(); };
-  const closePanel = () => { panel.hidden = true; trigger.setAttribute('aria-expanded', 'false'); trigger.focus(); };
+  const open = () => {
+    panel.hidden = false;
+    trigger.setAttribute('aria-expanded', 'true');
+    void refreshDiagnostics();
+  };
+  const closePanel = () => {
+    panel.hidden = true;
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.focus();
+  };
   trigger.addEventListener('click', () => panel.hidden ? open() : closePanel());
   close.addEventListener('click', closePanel);
   refresh.addEventListener('click', () => void refreshDiagnostics());
@@ -94,19 +103,15 @@ function initializeSettingsPanel(): void {
       statusTextElement.textContent = `Extensão conectada · v${info.version}`;
       extensionState.value.textContent = 'Conectada';
       versionState.value.textContent = info.version;
-      directState.value.textContent = !info.capabilities.directLookup
-        ? 'Atualize a extensão'
-        : info.configuration.fiscalIdentityConfigured
-          ? 'Configurada'
-          : 'Configurar CNPJ';
       portalState.value.textContent = info.capabilities.portalLookup ? 'Disponível' : 'Indisponível';
+      supplierState.value.textContent = info.capabilities.supplierResolution ? 'Disponíveis' : 'Indisponíveis';
     } else {
       statusElement.dataset.state = 'disconnected';
       statusTextElement.textContent = 'Extensão não conectada';
       extensionState.value.textContent = 'Não conectada';
       versionState.value.textContent = '—';
-      directState.value.textContent = 'Indisponível';
       portalState.value.textContent = 'Indisponível';
+      supplierState.value.textContent = 'Indisponíveis';
     }
     refresh.disabled = false;
   }
