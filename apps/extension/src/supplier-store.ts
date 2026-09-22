@@ -2,6 +2,8 @@ declare const chrome: any;
 
 const SUPPLIER_CONFIG_KEY = 'supplierRulesV1';
 
+type JsonObject = Record<string, unknown>;
+
 export type LocalSupplierEntry = Readonly<{
   id: string;
   taxIds: readonly string[];
@@ -10,6 +12,13 @@ export type LocalSupplierEntry = Readonly<{
 export type LocalSupplierConfig = Readonly<{
   version: 1;
   suppliers: readonly LocalSupplierEntry[];
+}>;
+
+export type SupplierConfigAnalysis = Readonly<{
+  config: LocalSupplierConfig;
+  usedLegacyCasing: boolean;
+  supplierCount: number;
+  taxIdCount: number;
 }>;
 
 export function normalizeTaxId(value: string): string | null {
@@ -26,48 +35,82 @@ export function normalizeTaxId(value: string): string | null {
   return null;
 }
 
-export function validateSupplierConfig(value: unknown): LocalSupplierConfig {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error('Configuração de fornecedores inválida.');
+export function analyzeSupplierConfig(value: unknown): SupplierConfigAnalysis {
+  if (!isRecord(value)) {
+    throw new Error('Raiz inválida: esperado objeto JSON.');
   }
 
-  const input = value as Record<string, unknown>;
-  if (input.version !== 1 || !Array.isArray(input.suppliers)) {
-    throw new Error('Versão da configuração de fornecedores inválida.');
+  const versionField = readKeyCaseInsensitive(value, 'version', '$');
+  const suppliersField = readKeyCaseInsensitive(value, 'suppliers', '$');
+
+  if (versionField.value !== 1) {
+    throw new Error('$.version inválido: esperado número 1.');
+  }
+  if (!Array.isArray(suppliersField.value)) {
+    throw new Error('$.suppliers inválido: esperado array.');
   }
 
+  let usedLegacyCasing = versionField.usedLegacyCasing || suppliersField.usedLegacyCasing;
   const seen = new Map<string, string>();
-  const suppliers: LocalSupplierEntry[] = input.suppliers.map((rawSupplier) => {
-    if (!rawSupplier || typeof rawSupplier !== 'object' || Array.isArray(rawSupplier)) {
-      throw new Error('Fornecedor inválido.');
+  let taxIdCount = 0;
+
+  const suppliers: LocalSupplierEntry[] = suppliersField.value.map((rawSupplier, supplierIndex) => {
+    const supplierPath = `$.suppliers[${supplierIndex}]`;
+    if (!isRecord(rawSupplier)) {
+      throw new Error(`${supplierPath} inválido: esperado objeto.`);
     }
 
-    const supplier = rawSupplier as Record<string, unknown>;
-    const id = typeof supplier.id === 'string' ? supplier.id.trim() : '';
-    if (!id || !Array.isArray(supplier.taxIds) || supplier.taxIds.length === 0) {
-      throw new Error('Fornecedor incompleto.');
+    const idField = readKeyCaseInsensitive(rawSupplier, 'id', supplierPath);
+    const taxIdsField = readKeyCaseInsensitive(rawSupplier, 'taxIds', supplierPath);
+    usedLegacyCasing ||= idField.usedLegacyCasing || taxIdsField.usedLegacyCasing;
+
+    const id = typeof idField.value === 'string' ? idField.value.trim() : '';
+    if (!id) {
+      throw new Error(`${supplierPath}.id inválido: esperado texto não vazio.`);
+    }
+    if (!Array.isArray(taxIdsField.value) || taxIdsField.value.length === 0) {
+      throw new Error(`${supplierPath}.taxIds inválido: esperado array com ao menos um identificador.`);
     }
 
-    const taxIds = supplier.taxIds.map((rawTaxId) => {
-      if (typeof rawTaxId !== 'string') throw new Error('Identificador fiscal inválido.');
+    const taxIds = taxIdsField.value.map((rawTaxId, taxIdIndex) => {
+      const taxIdPath = `${supplierPath}.taxIds[${taxIdIndex}]`;
+      if (typeof rawTaxId !== 'string') {
+        throw new Error(`${taxIdPath} inválido: esperado texto.`);
+      }
+
       const normalized = normalizeTaxId(rawTaxId);
-      if (!normalized) throw new Error('Identificador fiscal inválido.');
+      if (!normalized) {
+        throw new Error(`${taxIdPath} inválido: CPF/CNPJ fora do formato aceito.`);
+      }
 
       const existing = seen.get(normalized);
       if (existing && existing !== id) {
         throw new Error('Identificador fiscal configurado para fornecedores diferentes.');
       }
+
       seen.set(normalized, id);
+      taxIdCount += 1;
       return normalized;
     });
 
     return Object.freeze({ id, taxIds: Object.freeze(taxIds) });
   });
 
-  return Object.freeze({
-    version: 1,
+  const config = Object.freeze({
+    version: 1 as const,
     suppliers: Object.freeze(suppliers),
   });
+
+  return Object.freeze({
+    config,
+    usedLegacyCasing,
+    supplierCount: suppliers.length,
+    taxIdCount,
+  });
+}
+
+export function validateSupplierConfig(value: unknown): LocalSupplierConfig {
+  return analyzeSupplierConfig(value).config;
 }
 
 export function resolveSupplierFromConfig(
@@ -102,4 +145,30 @@ export async function saveSupplierConfig(config: unknown): Promise<void> {
 
 export async function clearSupplierConfig(): Promise<void> {
   await chrome.storage.local.remove(SUPPLIER_CONFIG_KEY);
+}
+
+function isRecord(value: unknown): value is JsonObject {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function readKeyCaseInsensitive(
+  object: JsonObject,
+  expected: string,
+  path: string,
+): Readonly<{ value: unknown; usedLegacyCasing: boolean }> {
+  const matches = Object.keys(object).filter((key) => key.toLowerCase() === expected.toLowerCase());
+
+  if (matches.length > 1) {
+    throw new Error(`${path} contém campos ambíguos para "${expected}".`);
+  }
+
+  if (matches.length === 0) {
+    return { value: undefined, usedLegacyCasing: false };
+  }
+
+  const actual = matches[0];
+  return {
+    value: object[actual],
+    usedLegacyCasing: actual !== expected,
+  };
 }
