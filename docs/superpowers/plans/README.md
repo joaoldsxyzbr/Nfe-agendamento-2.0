@@ -26,7 +26,7 @@ Quando houver conflito entre um plano histórico e o código/documentação atua
 
 ## Estado atual
 
-A v0.0.22 mantém o fluxo híbrido vigente e adiciona o gate isolado extension-only com extensão Chromium MV3 v0.2.0. Bridge standalone e WebView2 continuam preservados até a validação física sem Bridge.
+A v0.0.23 mantém o fluxo híbrido vigente e o gate isolado extension-only, agora com extensão Chromium MV3 v0.2.1 e handshake resiliente a carregamento tardio/cold start. Bridge standalone e WebView2 continuam preservados até a validação física sem Bridge.
 
 Authenticode e branch protection/required status checks são opcionais por decisão do projeto em 18/09/2026 e não representam backlog.
 
