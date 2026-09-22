@@ -140,7 +140,7 @@ jobs:
                   raise SystemExit(
                       f"Versão da extensão divergente: {manifest.get('version')!r} != {expected_version!r}"
                   )
-              required = {'background.js', 'site-bridge.js', 'portal-content.js', 'manifest.json'}
+              required = {'background.js', 'site-bridge.js', 'portal-content.js', 'options.js', 'options.html', 'manifest.json'}
               missing = required.difference(archive.namelist())
               if missing:
                   raise SystemExit(f'Extensão incompleta: {sorted(missing)}')
