@@ -5,7 +5,7 @@
 ```text
 Site
  ↓
-Extensão 0.2.6
+Extensão 0.2.7
  ├─ NFeDistribuicaoDFe
  └─ Portal Nacional (fallback)
 ```
