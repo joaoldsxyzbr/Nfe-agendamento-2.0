@@ -159,7 +159,7 @@ describe('batch controller direct-first', () => {
     expect(h.portalStarts).toHaveLength(0);
     expect(h.optionsOpens).toEqual(['opened']);
     expect(h.snapshots.at(-1)?.map((item) => item.status)).toEqual(['queued', 'queued']);
-    expect(h.route.textContent).toContain('Configure o CNPJ');
+    expect(h.route.textContent).toContain('configuração da extensão foi aberta');
   });
 
   it('does not claim configuration opened with an old extension', async () => {
