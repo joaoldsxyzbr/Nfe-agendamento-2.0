@@ -119,9 +119,9 @@ CI: `web`, `extension` e `danfe-print`. CodeQL analisa JavaScript/TypeScript.
 
 ## Releases
 
-A `main` contém a extensão **0.2.10**, que move a autenticação TLS da consulta direta para uma janela interna da extensão para permitir que Chrome/Edge selecionem o A1 instalado no Windows. Essa alteração ainda precisa do gate físico antes de uma nova release.
+A **v0.0.33 / extensão 0.2.10** move a autenticação TLS da consulta direta para uma janela interna da extensão, permitindo que Chrome/Edge usem ou solicitem o A1 instalado no Windows. Esta release é destinada à validação física do fluxo com certificado real; os testes automatizados não comprovam a negociação TLS com o A1.
 
-A última release publicada é a **v0.0.32**, ainda com extensão **0.2.9**. Ela restaura corretamente ações de resultados anteriores após o preflight e bloqueia reconsulta pelo Portal enquanto a configuração fiscal está sendo verificada.
+A v0.0.32/extensão 0.2.9 restaurou corretamente ações de resultados anteriores após o preflight e bloqueou reconsulta pelo Portal enquanto a configuração fiscal estava sendo verificada.
 
 A v0.0.31/extensão 0.2.9 endureceu o preflight contra duplo clique e compatibilidade com versões antigas. A v0.0.30/extensão 0.2.8 introduziu o preflight automático. A v0.0.29/extensão 0.2.7 corrigiu o layout da configuração local. A v0.0.28/extensão 0.2.6 foi a primeira release direct-first.
 
