@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createBatchController, type BatchItemView } from '../src/batch/controller';
 const A = '42260912345678000195550010000000011123456786';
-const B = '42260912345678000195550010000000021123456781';
+const B = '35260812345678000195550010000000011000000018';
 const el = <T extends object>(value: T): T => value;
 
 function harness(overrides: Record<string, unknown> = {}) {
