@@ -15,7 +15,7 @@ function harness(overrides: Record<string, unknown> = {}) {
   const portal = {
     getInfo: async () => ({
       version: '0.2.6',
-      capabilities: { directLookup: true, portalLookup: true, supplierResolution: true },
+      capabilities: { directLookup: true, openOptions: true, portalLookup: true, supplierResolution: true },
       configuration: { fiscalIdentityConfigured: true },
     }),
     openOptions: async () => { optionsOpens.push('opened'); },
@@ -115,11 +115,39 @@ describe('batch controller direct-first', () => {
     expect(h.snapshots.at(-1)?.every((item) => item.source === 'Portal')).toBe(true);
   });
 
+  it('serializes the preflight so double submit cannot start parallel batches', async () => {
+    let resolveInfo!: (value: unknown) => void;
+    let infoCalls = 0;
+    const h = harness({
+      getInfo: () => new Promise((resolve) => {
+        infoCalls += 1;
+        resolveInfo = resolve;
+      }),
+    });
+    h.input.value = `${A}\n${B}`;
+    h.controller.syncDraft();
+
+    const first = h.controller.start();
+    const second = h.controller.start();
+
+    expect(infoCalls).toBe(1);
+    expect(h.controller.isBusy()).toBe(true);
+    resolveInfo({
+      version: '0.2.9',
+      capabilities: { directLookup: true, openOptions: true, portalLookup: true, supplierResolution: true },
+      configuration: { fiscalIdentityConfigured: true },
+    });
+    await Promise.all([first, second]);
+
+    expect(h.directKeys).toEqual([A, B]);
+    expect(h.portalStarts).toHaveLength(0);
+  });
+
   it('does not start or cancel the batch when fiscal configuration is missing', async () => {
     const h = harness({
       getInfo: async () => ({
         version: '0.2.8',
-        capabilities: { directLookup: true, portalLookup: true, supplierResolution: true },
+        capabilities: { directLookup: true, openOptions: true, portalLookup: true, supplierResolution: true },
         configuration: { fiscalIdentityConfigured: false },
       }),
     });
@@ -132,5 +160,23 @@ describe('batch controller direct-first', () => {
     expect(h.optionsOpens).toEqual(['opened']);
     expect(h.snapshots.at(-1)?.map((item) => item.status)).toEqual(['queued', 'queued']);
     expect(h.route.textContent).toContain('Configure o CNPJ');
+  });
+
+  it('does not claim configuration opened with an old extension', async () => {
+    const h = harness({
+      getInfo: async () => ({
+        version: '0.2.7',
+        capabilities: { directLookup: true, openOptions: false, portalLookup: true, supplierResolution: true },
+        configuration: { fiscalIdentityConfigured: false },
+      }),
+    });
+    h.input.value = `${A}\n${B}`;
+    h.controller.syncDraft();
+    await h.controller.start();
+
+    expect(h.optionsOpens).toHaveLength(0);
+    expect(h.directKeys).toHaveLength(0);
+    expect(h.route.textContent).toContain('extensão é antiga');
+    expect(h.snapshots.at(-1)?.map((item) => item.status)).toEqual(['queued', 'queued']);
   });
 });
