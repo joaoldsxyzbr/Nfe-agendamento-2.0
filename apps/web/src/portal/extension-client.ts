@@ -21,6 +21,7 @@ export type PortalExtensionInfo = Readonly<{
 }>;
 
 type ExtensionEvent =
+  | { type: 'bridge_ready'; version: string }
   | { type: 'state'; operationId: string; state: string; message?: string }
   | { type: 'completed'; operationId: string; xml: string }
   | { type: 'failed'; operationId: string; code?: string; message: string }
@@ -118,6 +119,13 @@ export class BrowserPortalExtensionClient {
 
   async isAvailable(signal?: AbortSignal): Promise<boolean> {
     return (await this.getInfo(signal)) !== null;
+  }
+
+  onReadyHint(listener: (version: string) => void): () => void {
+    return this.transport.subscribe((value) => {
+      if (!isRecord(value) || value.type !== 'bridge_ready' || typeof value.version !== 'string') return;
+      listener(value.version);
+    });
   }
 
   async start(accessKey: string, signal?: AbortSignal): Promise<string> {
