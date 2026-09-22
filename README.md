@@ -75,7 +75,7 @@ CNPJ/CPF real de fornecedor não faz parte do bundle público. A configuração 
 
 ## Extensão
 
-Versão em desenvolvimento: **0.2.6**.
+Versão atual: **0.2.7**.
 
 Permissões:
 
@@ -115,9 +115,9 @@ CI: `web`, `extension` e `danfe-print`. CodeQL analisa JavaScript/TypeScript.
 
 ## Releases
 
-A v0.0.27/extensão 0.2.5 permanece como a release Portal-first anterior a esta mudança.
+A **v0.0.29 / extensão 0.2.7** mantém o fluxo direct-first da v0.0.28 e corrige o layout da configuração local do CNPJ do A1.
 
-A próxima release de teste direct-first será **v0.0.28 / extensão 0.2.6** após os gates automatizados ficarem verdes.
+A v0.0.28/extensão 0.2.6 é a primeira release direct-first. A v0.0.27/extensão 0.2.5 permanece como a release Portal-first anterior.
 
 A seta do site baixa sempre `NFeAgendamento-Extension.zip` da release mais recente.
 
