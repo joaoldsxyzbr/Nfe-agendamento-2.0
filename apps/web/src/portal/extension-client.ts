@@ -3,6 +3,8 @@ import type { PortalOperationStatus } from '../bridge/contracts';
 const SITE_ORIGIN = 'https://nfeagendamento.joaolds.xyz.br';
 const PAGE_CHANNEL = 'nfe-agendamento:portal-extension';
 const DEFAULT_HANDSHAKE_TIMEOUT_MS = 1_200;
+const HANDSHAKE_ATTEMPTS = 3;
+const HANDSHAKE_RETRY_DELAY_MS = 200;
 
 type ExtensionCommand =
   | { type: 'ping'; requestId: string }
@@ -94,13 +96,24 @@ export class BrowserPortalExtensionClient {
   constructor(private readonly transport: PortalExtensionTransport = new WindowPortalExtensionTransport()) {}
 
   async getInfo(signal?: AbortSignal): Promise<PortalExtensionInfo | null> {
-    const requestId = globalThis.crypto.randomUUID();
-    try {
-      const response = await this.transport.request({ type: 'ping', requestId }, signal);
-      return parseReadyResponse(response);
-    } catch {
-      return null;
+    for (let attempt = 0; attempt < HANDSHAKE_ATTEMPTS; attempt += 1) {
+      if (signal?.aborted) return null;
+      const requestId = globalThis.crypto.randomUUID();
+
+      try {
+        const response = await this.transport.request({ type: 'ping', requestId }, signal);
+        const info = parseReadyResponse(response);
+        if (info) return info;
+      } catch {
+        if (signal?.aborted) return null;
+      }
+
+      if (attempt < HANDSHAKE_ATTEMPTS - 1) {
+        await waitForHandshakeRetry(signal);
+      }
     }
+
+    return null;
   }
 
   async isAvailable(signal?: AbortSignal): Promise<boolean> {
@@ -157,6 +170,25 @@ export class BrowserPortalExtensionClient {
     }
     return { supplierId: response.supplierId };
   }
+}
+
+async function waitForHandshakeRetry(signal?: AbortSignal): Promise<void> {
+  if (signal?.aborted) return;
+
+  await new Promise<void>((resolve) => {
+    const timeout = globalThis.setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, HANDSHAKE_RETRY_DELAY_MS);
+
+    const onAbort = () => {
+      globalThis.clearTimeout(timeout);
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    };
+
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
 }
 
 function parseReadyResponse(value: unknown): PortalExtensionInfo | null {

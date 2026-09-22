@@ -75,6 +75,31 @@ describe('BrowserPortalExtensionClient', () => {
     });
   });
 
+  it('retries the handshake when the content script is not ready yet', async () => {
+    const { BrowserPortalExtensionClient } = await import('../src/portal/extension-client');
+    let attempts = 0;
+    const client = new BrowserPortalExtensionClient({
+      request: async (message: { type: string }) => {
+        attempts += 1;
+        if (message.type !== 'ping') throw new Error('unexpected');
+        if (attempts < 3) throw new Error('content script ainda não carregou');
+        return {
+          type: 'ready',
+          requestId: 'ping',
+          version: '0.2.1',
+          capabilities: { portalLookup: true, supplierResolution: true },
+        };
+      },
+      subscribe: () => () => {},
+    } as never);
+
+    await expect(client.getInfo()).resolves.toEqual({
+      version: '0.2.1',
+      capabilities: { portalLookup: true, supplierResolution: true },
+    });
+    expect(attempts).toBe(3);
+  });
+
   it('treats a missing extension as unavailable instead of throwing', async () => {
     const { BrowserPortalExtensionClient } = await import('../src/portal/extension-client');
     const client = new BrowserPortalExtensionClient({

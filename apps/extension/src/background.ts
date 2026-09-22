@@ -27,6 +27,14 @@ type ActiveOperation = {
   state: PortalExtensionState;
 };
 
+chrome.runtime.onInstalled.addListener(() => {
+  void injectSiteBridgeIntoOpenTabs();
+});
+
+chrome.runtime.onStartup.addListener(() => {
+  void injectSiteBridgeIntoOpenTabs();
+});
+
 chrome.runtime.onMessage.addListener(
   (message: unknown, sender: any, sendResponse: (response: unknown) => void) => {
     void handleMessage(message, sender)
@@ -53,6 +61,25 @@ chrome.webRequest.onBeforeRequest.addListener(
   PORTAL_DOWNLOAD_FILTER,
   ['requestBody'],
 );
+
+async function injectSiteBridgeIntoOpenTabs(): Promise<void> {
+  const tabs = await chrome.tabs.query({ url: `${SITE_ORIGIN}/*` }).catch(() => []);
+  await Promise.all(
+    (tabs ?? []).map(async (tab: any) => {
+      const tabId = tab?.id;
+      if (!Number.isInteger(tabId)) return;
+
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          files: ['site-bridge.js'],
+        });
+      } catch {
+        // Aba fechada, bloqueada por política ou sem permissão: o próximo reload injeta pelo manifest.
+      }
+    }),
+  );
+}
 
 async function handleMessage(message: unknown, sender: any): Promise<unknown> {
   if (!message || typeof message !== 'object' || Array.isArray(message)) {
