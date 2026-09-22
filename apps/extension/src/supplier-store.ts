@@ -99,3 +99,7 @@ export async function saveSupplierConfig(config: unknown): Promise<void> {
   const validated = validateSupplierConfig(config);
   await chrome.storage.local.set({ [SUPPLIER_CONFIG_KEY]: validated });
 }
+
+export async function clearSupplierConfig(): Promise<void> {
+  await chrome.storage.local.remove(SUPPLIER_CONFIG_KEY);
+}
