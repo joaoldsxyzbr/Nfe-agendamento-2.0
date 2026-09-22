@@ -11,13 +11,15 @@ A extensão não substitui a consulta direta SEFAZ nesta fase. O Bridge continua
 
 ## Obter o pacote
 
-Na release pública **v0.0.22**, baixe o asset:
+Na release pública **v0.0.23**, baixe o asset:
 
-`NFeAgendamento-Extension-v0.2.0.zip`
+`NFeAgendamento-Extension-v0.2.1.zip`
 
 O job `extension` do GitHub Actions também mantém o artifact técnico `NFeAgendamento-Extension-MV3` para rastreabilidade do CI.
 
 Extraia o ZIP para uma pasta local antes de carregar a extensão. O pacote é uma extensão **não compactada** para teste interno; esta fase não publica automaticamente na Chrome Web Store.
+
+A v0.0.23 endurece a conexão inicial: o site repete o handshake quando a ponte ainda está carregando, a extensão reinjeta a ponte de forma idempotente em abas oficiais já abertas durante instalação/inicialização e a página de teste revalida o estado quando volta ao foco. Isso reduz falsos **Extensão não conectada** em PCs mais lentos sem ampliar permissões.
 
 ## Instalar no Chrome
 
@@ -88,7 +90,7 @@ Para testar o rollback:
 
 ## Gate isolado sem Bridge
 
-Para este gate use a extensão **0.2.0** publicada na release **v0.0.22**. A extensão **0.1.0** da v0.0.21 não possui o handshake/capabilities necessários e será tratada como incompatível pela página de teste.
+Para este gate use a extensão **0.2.1** publicada na release **v0.0.23**. A extensão **0.1.0** da v0.0.21 não possui o handshake/capabilities necessários e será tratada como incompatível pela página de teste.
 
 
 Antes de migrar o aplicativo principal, use a página `/extension-test.html` no domínio oficial.
@@ -96,7 +98,7 @@ Antes de migrar o aplicativo principal, use a página `/extension-test.html` no 
 Para este teste:
 
 1. pare ou desinstale o Bridge;
-2. mantenha a extensão 0.2.0 da release v0.0.22 instalada;
+2. mantenha a extensão 0.2.1 da release v0.0.23 instalada;
 3. abra `https://nfeagendamento.joaolds.xyz.br/extension-test.html`;
 4. confirme **Extensão conectada** e a versão;
 5. informe uma chave legítima;
