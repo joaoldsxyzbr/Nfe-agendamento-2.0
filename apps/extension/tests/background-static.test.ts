@@ -14,6 +14,8 @@ describe('extension background contract', () => {
     expect(source).toContain("type: 'popup'");
     expect(source).toContain('chrome.tabs.query({ windowId: portalWindowId })');
     expect(source).toContain('chrome.storage.session');
+    expect(source).toContain('chrome.storage.local.setAccessLevel');
+    expect(source).toContain("'TRUSTED_CONTEXTS'");
     expect(source).toContain('chrome.webRequest.onBeforeRequest');
     expect(source).not.toContain('webRequestBlocking');
   });
