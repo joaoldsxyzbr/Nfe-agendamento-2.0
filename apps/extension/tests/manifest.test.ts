@@ -19,7 +19,7 @@ describe('extension manifest', () => {
     };
 
     expect(manifest.manifest_version).toBe(3);
-    expect((manifest as { version?: string }).version).toBe('0.2.1');
+    expect((manifest as { version?: string }).version).toBe('0.2.2');
     expect(Number(manifest.minimum_chrome_version)).toBeGreaterThanOrEqual(120);
     expect([...(manifest.permissions ?? [])].sort()).toEqual(['scripting', 'storage', 'webRequest']);
     expect([...(manifest.host_permissions ?? [])].sort()).toEqual([
