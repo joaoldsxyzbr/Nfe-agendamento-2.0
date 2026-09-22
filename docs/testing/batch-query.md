@@ -4,7 +4,7 @@ O lote reutiliza a lógica fiscal do antigo Bridge, executada pela extensão.
 
 ## Preflight
 
-Antes de iniciar o lote, o site verifica a configuração fiscal da extensão. Essa etapa possui lock próprio: enquanto o handshake/preflight está em andamento, novos cliques em **Consultar** não iniciam outra execução.
+Antes de iniciar o lote, o site verifica a configuração fiscal da extensão. Essa etapa possui lock próprio: enquanto o handshake/preflight está em andamento, novos cliques em **Consultar** e ações de **Tentar pelo Portal** não iniciam outra operação. Ao terminar o preflight sem iniciar um novo lote, ações válidas de resultados anteriores têm seu estado restaurado.
 
 Se o CNPJ do A1 não estiver configurado:
 
