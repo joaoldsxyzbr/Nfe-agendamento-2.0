@@ -8,12 +8,14 @@ function harness(overrides: Record<string, unknown> = {}) {
   const successes: any[] = [];
   const directKeys: string[] = [];
   const portalStarts: string[] = [];
+  const optionsOpens: string[] = [];
   const portal = {
     getInfo: async () => ({
       version: '0.2.6',
       capabilities: { directLookup: true, portalLookup: true, supplierResolution: true },
       configuration: { fiscalIdentityConfigured: true },
     }),
+    openOptions: async () => { optionsOpens.push('opened'); },
     directLookup: async (accessKey: string) => {
       directKeys.push(accessKey);
       return { category: 'success' as const, xml: '<xml />', cStat: '138', message: 'ok' };
@@ -43,7 +45,7 @@ function harness(overrides: Record<string, unknown> = {}) {
     focusInput: () => {},
     resetView: () => {},
   });
-  return { controller, states, successes, directKeys, portalStarts };
+  return { controller, states, successes, directKeys, portalStarts, optionsOpens };
 }
 
 describe('consultation controller direct-first', () => {
@@ -72,7 +74,24 @@ describe('consultation controller direct-first', () => {
     expect(h.portalStarts).toEqual([KEY]);
   });
 
-  it('does not silently bypass a missing fiscal identity', async () => {
+  it('opens configuration before any lookup when the fiscal identity is missing', async () => {
+    const h = harness({
+      getInfo: async () => ({
+        version: '0.2.8',
+        capabilities: { directLookup: true, portalLookup: true, supplierResolution: true },
+        configuration: { fiscalIdentityConfigured: false },
+      }),
+    });
+    await h.controller.submit();
+
+    expect(h.directKeys).toHaveLength(0);
+    expect(h.portalStarts).toHaveLength(0);
+    expect(h.optionsOpens).toEqual(['opened']);
+    expect(h.states.at(-1)?.[0]).toBe('Configure o CNPJ do A1');
+    expect(h.states.at(-1)?.[1]).toContain('Nenhuma consulta foi enviada à SEFAZ');
+  });
+
+  it('still handles a late configuration error without falling back to Portal', async () => {
     const h = harness({
       directLookup: async () => ({ category: 'configuration_error', xml: null, cStat: null, message: 'Configure o CNPJ.' }),
     });
