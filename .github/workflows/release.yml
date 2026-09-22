@@ -92,7 +92,6 @@ jobs:
           version="${{ steps.version.outputs.version }}"
           setup="release/installer/NFeAgendamentoBridge-Setup-v${version}.exe"
           package="release/NfeAgendamentoBridge-win-x64-v${version}.zip"
-          extension="release/NFeAgendamento-Extension-v${{ steps.version.outputs.extension_version }}.zip"
           extension_source="release/extension/NFeAgendamento-Extension-MV3.zip"
           extension="release/NFeAgendamento-Extension-v${{ steps.version.outputs.extension_version }}.zip"
           test -s "$setup"
@@ -157,6 +156,7 @@ jobs:
           validated_sha="${{ github.event.workflow_run.head_sha }}"
           setup="release/installer/NFeAgendamentoBridge-Setup-v${version}.exe"
           package="release/NfeAgendamentoBridge-win-x64-v${version}.zip"
+          extension="release/NFeAgendamento-Extension-v${{ steps.version.outputs.extension_version }}.zip"
 
           verify_release_asset() {
             local asset_name="$1"
