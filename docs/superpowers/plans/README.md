@@ -10,10 +10,10 @@ Este diretório preserva planos/specs históricos. Checkboxes antigos não repre
 4. `docs/testing/browser-extension-portal.md`;
 5. testes automatizados do HEAD.
 
-A migração de `2026-09-22-extension-only-migration.md` foi executada na arquitetura atual: o produto passou a **site + extensão Chromium**, sem Bridge/WebView2/SEFAZ direta.
+A arquitetura atual é **site + extensão Chromium, Portal-only**, sem Bridge/WebView2 e sem consulta direta à SEFAZ.
 
 ## Histórico
 
-Specs e planos anteriores que descrevem Bridge, instalador Windows, coordenador fiscal ou helper WebView2 permanecem somente como registro das versões em que esses componentes existiam.
+Specs e planos anteriores que descrevem Bridge, instalador Windows, coordenador fiscal, helper WebView2 ou `NFeDistribuicaoDFe` permanecem somente como registro das versões em que esses componentes existiam.
 
-A v0.0.25 é a última release híbrida histórica. A `main` atual é extension-only e usa extensão 0.2.4 até uma nova release ser explicitamente publicada.
+A última release publicada antes da migração Portal-only é a v0.0.33/extensão 0.2.10. A `main` atual usa extensão 0.2.11 e aguarda release explícita.

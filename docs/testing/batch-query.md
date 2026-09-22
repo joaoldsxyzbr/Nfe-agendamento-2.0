@@ -1,36 +1,41 @@
-# Consulta em lote — direct-first
+# Consulta em lote — Portal-only
 
-O lote reutiliza a lógica fiscal do antigo Bridge, executada pela extensão.
+O lote usa somente o Portal Nacional da NF-e.
 
 ## Preflight
 
-Antes de iniciar o lote, o site verifica a configuração fiscal da extensão. Essa etapa possui lock próprio: enquanto o handshake/preflight está em andamento, novos cliques em **Consultar** e ações de **Tentar pelo Portal** não iniciam outra operação. Ao terminar o preflight sem iniciar um novo lote, ações válidas de resultados anteriores têm seu estado restaurado.
+Antes de iniciar, o site confirma que:
 
-Se o CNPJ do A1 não estiver configurado:
+- a extensão está conectada;
+- a capability `portalLookup` está disponível.
 
-- a tela de opções da extensão é aberta automaticamente;
-- nenhuma consulta é enviada à SEFAZ;
-- nenhuma NF-e é marcada como erro;
-- nenhuma NF-e é cancelada;
-- o lote permanece aguardando nova tentativa após salvar o CNPJ.
+Não existe preflight de CNPJ/certificado para consulta direta.
 
-## Roteamento
+## Processamento
 
-Cada item começa pela consulta direta enquanto a rota estiver em SEFAZ:
+Cada item segue o mesmo fluxo:
 
-- **sucesso**: conclui como origem `SEFAZ`;
-- **217**: aquele item usa Portal e o próximo volta para SEFAZ;
-- **656/429/limite local**: ativa rota Portal para o item atual e para os itens seguintes;
-- **erro técnico/transporte**: item fica em erro; não há retry fiscal automático nem fallback escondido.
+```text
+chave
+ ↓
+Portal Nacional
+ ↓
+hCaptcha manual
+ ↓
+XML
+ ↓
+validação
+```
+
+O próximo item só começa depois que o anterior termina.
 
 ## Invariantes
 
 - processamento estritamente sequencial;
-- no máximo uma chamada direta por vez;
 - no máximo uma operação Portal ativa;
-- hCaptcha manual;
+- hCaptcha manual em cada consulta que exigir;
 - cancelamento impede novos itens;
 - XML validado antes de sucesso;
-- ZIP/impressão usam somente concluídas.
-
-Proteção local: 20 tentativas diretas/hora e cooldown de 1 hora.
+- todos os itens concluídos usam origem `Portal`;
+- ZIP/impressão usam somente concluídas;
+- não existe rota SEFAZ, cooldown 656 ou retry fiscal automático.

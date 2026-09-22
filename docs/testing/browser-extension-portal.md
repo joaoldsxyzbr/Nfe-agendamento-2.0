@@ -1,86 +1,81 @@
-# Extensão Chromium — SEFAZ direta + Portal fallback
+# Extensão Chromium — Portal Nacional
 
 ## Arquitetura
 
 ```text
 Site
  ↓
-Extensão 0.2.10
- ├─ NFeDistribuicaoDFe
- └─ Portal Nacional (fallback)
+Extensão Chromium
+ ↓
+Portal Nacional
+ ↓
+hCaptcha manual
+ ↓
+XML oficial
 ```
 
-Não existe Bridge, WebView2 helper ou Native Messaging.
+Não existe Bridge, WebView2 helper, Native Messaging ou consulta direta `NFeDistribuicaoDFe`.
 
 ## Configuração inicial
 
 1. instalar/carregar a extensão;
-2. clicar no ícone **NFe Agendamento**;
-3. informar uma vez o CNPJ da empresa vinculada ao certificado A1 usado naquele computador;
-4. confirmar no site que a consulta direta aparece como configurada.
+2. abrir o site;
+3. confirmar **Extensão conectada**;
+4. opcionalmente clicar no ícone da extensão para importar regras privadas de fornecedor.
 
-Se o usuário tentar consultar antes disso, o site solicita a abertura das opções da extensão automaticamente e não envia a consulta à SEFAZ. A extensão 0.2.10 preserva esse preflight; a 0.2.8+ continua reconhecida por compatibilidade. Versões anteriores orientam atualização ou abertura manual das opções.
+Não existe configuração de CNPJ do A1.
 
-O CNPJ fica em `chrome.storage.local`. O certificado e sua chave privada não são copiados para a extensão.
+## Consulta
 
-## Autenticação do A1
+A extensão abre:
 
-Na 0.2.9 a chamada direta era iniciada pelo service worker MV3. Esse contexto não possui uma aba associada para exibir o seletor de certificado cliente quando a escolha manual é necessária.
+`https://www.nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx`
 
-Na 0.2.10 o background cria uma janela interna da própria extensão e navega para `direct-lookup.html`. Somente um UUID de operação vai na URL; chave NF-e e CNPJ são entregues por mensagem interna depois que a página comprova o vínculo com a aba criada. O `fetch` da SEFAZ roda nessa página visível, permitindo ao Chrome/Edge usar o repositório de certificados do Windows e apresentar o seletor do A1 quando necessário.
+Fluxo:
 
-A janela é fechada após o resultado. Fechar a janela manualmente encerra a tentativa sem retry automático. Nenhuma permissão nova foi adicionada.
+1. o site envia somente a chave validada;
+2. a extensão cria um popup real do Chrome/Edge;
+3. o content script reconhece a página oficial e preenche a chave;
+4. o usuário resolve o hCaptcha manualmente;
+5. a extensão continua somente após a resposta válida do captcha;
+6. o download oficial é acompanhado pela extensão;
+7. o XML é obtido dentro da própria sessão autenticada;
+8. o payload é validado contra a chave consultada;
+9. o XML retorna ao site.
 
-## Consulta direta
+## Certificado
 
-Endpoint:
+Se o Portal exigir certificado digital durante o download, Chrome/Edge e Windows cuidam da autenticação. A extensão não lê PFX/P12, senha ou chave privada.
 
-`https://www1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx`
+## Hardening
 
-Contrato preservado do antigo Bridge:
-
-- POST SOAP;
-- `distDFeInt` versão 1.01;
-- ambiente 1;
-- CNPJ configurado localmente;
-- `consChNFe/chNFe`;
-- timeout de 45 s;
-- resposta/XML limitado a 10 MiB;
-- `docZip` gzip;
-- somente `procNFe` da chave solicitada é aceito.
-
-## Fallback
-
-- 138 + XML: sucesso direto;
-- 217: Portal somente para a NF-e;
-- 656/HTTP 429/limite local: Portal e cooldown;
-- transporte/timeout/erro técnico: erro explícito, sem retry/fallback automático.
-
-## Proteção local
-
-- 20 tentativas diretas por hora;
-- cooldown de 1 hora;
-- estado persistido localmente.
-
-A coordenação multi-PC antiga não está nesta versão.
-
-## Portal
-
-Permanece com o hardening da 0.2.5:
-
-- popup real Chrome/Edge;
-- hCaptcha manual;
+- popup restrito ao host oficial;
 - lifecycle em `chrome.storage.session`;
+- uma operação ativa;
 - captura única do download;
-- replay dentro da própria aba autenticada;
-- XML validado contra a chave.
+- replay do request dentro da própria aba autenticada;
+- XML máximo de 10 MiB;
+- DTD proibido;
+- chave do XML deve coincidir com a chave consultada;
+- hCaptcha nunca é executado/fabricado pela extensão.
 
 ## Permissões/hosts
 
 Permissões: `scripting`, `storage`, `webRequest`.
 
-Hosts: site oficial, Portal Nacional e endpoint `www1.nfe.fazenda.gov.br`.
+Hosts: site oficial e `www.nfe.fazenda.gov.br`.
+
+Não existe permissão para `www1.nfe.fazenda.gov.br`.
 
 ## Gate físico
 
-É obrigatório validar em Windows real que a janela interna da extensão permite ao Chrome/Edge negociar o A1 corretamente com o endpoint direto. O CI valida o roteamento para esse contexto visível, mas não consegue provar a negociação TLS real com o certificado do Windows.
+Validar no Windows real:
+
+- popup;
+- preenchimento da chave;
+- hCaptcha manual;
+- certificado quando solicitado;
+- captura do XML;
+- segunda consulta;
+- cancelamento;
+- Chrome e Edge.

@@ -1,15 +1,21 @@
 # Fronteiras do frontend
 
-**Estado atual: site + extensão Chromium, sem Bridge.**
+**Estado atual: site + extensão Chromium, Portal-only, sem Bridge e sem consulta direta à SEFAZ.**
 
 ## Fluxo
 
 ```text
-Site → extensão → SEFAZ direta
-                    │
-                    ├─ XML: conclui
-                    ├─ 217: Portal para aquela NF-e
-                    └─ 656/429/limite: Portal para atual + restantes do lote
+Site
+ ↓
+Extensão
+ ↓
+Portal Nacional
+ ↓
+hCaptcha manual
+ ↓
+XML oficial
+ ↓
+Site / DANFE
 ```
 
 ## Site
@@ -18,31 +24,30 @@ Responsável por:
 
 - validar chave;
 - orquestrar consulta unitária e lote;
-- aplicar as regras de roteamento a partir do resultado tipado da extensão;
-- parsear/validar XML novamente;
-- DANFE, impressão/PDF, XML e ZIP;
+- iniciar/cancelar operações do Portal pela extensão;
+- parsear e validar novamente o XML recebido;
+- gerar DANFE, impressão/PDF, XML e ZIP;
 - resolver apresentação a partir do `supplierId`.
 
-O site não acessa localhost, certificado ou endpoint fiscal diretamente.
+O site não acessa localhost, certificado ou endpoint fiscal da SEFAZ diretamente.
 
 ## Extensão
 
 Responsável por:
 
 - handshake com o site;
-- abrir um contexto visível curto para a autenticação TLS da consulta direta;
-- consulta `NFeDistribuicaoDFe`;
-- montar SOAP `consChNFe`;
-- proteção local de consumo;
-- armazenar localmente o CNPJ do A1;
-- abrir e acompanhar o Portal somente como fallback;
-- manter hCaptcha humano;
-- capturar/validar o XML oficial;
-- guardar regras privadas de fornecedor.
+- abrir e acompanhar o popup oficial do Portal;
+- preencher a chave;
+- manter o hCaptcha humano;
+- acompanhar a continuação/download oficial;
+- capturar e validar o XML antes do handoff;
+- guardar regras privadas de fornecedor localmente.
+
+A extensão não implementa `NFeDistribuicaoDFe`, não mantém CNPJ fiscal para consulta direta e não possui rota `direct_lookup`.
 
 ## Navegador/Windows
 
-Responsável pela autenticação TLS com certificado A1 instalado no Windows. Quando a seleção manual é necessária, o Chrome/Edge pode exibir o seletor na janela interna criada pela extensão. O projeto não recebe PFX/P12, senha ou chave privada.
+Responsável pelo certificado digital quando o Portal exigir autenticação. O projeto não recebe PFX/P12, senha ou chave privada.
 
 ## Cloudflare
 
@@ -51,10 +56,10 @@ Responsável por servir o site. Não é intermediário da consulta fiscal atual.
 ## Invariantes
 
 - não existe `BridgeClient` nem `127.0.0.1:17345`;
-- consulta direta vem antes do Portal;
-- 217 não muda permanentemente a rota do lote;
-- 656/429/limite local muda o restante do lote para Portal;
-- falha ambígua de transporte não é repetida nem convertida em Portal automaticamente;
+- não existe consulta direta à SEFAZ;
+- toda chave é processada pelo Portal Nacional;
 - lote é sequencial;
+- no máximo uma operação Portal fica ativa;
 - hCaptcha é manual;
-- no máximo uma operação Portal fica ativa.
+- XML deve corresponder à chave consultada;
+- falhas não disparam outra rota escondida.

@@ -1,92 +1,84 @@
-# Aceitação física — NFe Agendamento direct-first
+# Aceitação física — NFe Agendamento Portal-only
 
 ## Pré-requisitos
 
 - Windows 10/11;
 - Chrome ou Edge;
-- extensão 0.2.10 ou superior;
-- certificado A1 válido instalado;
-- CNPJ da empresa vinculada ao A1 configurado nas opções da extensão;
-- site oficial do NFe Agendamento.
+- extensão compatível com Portal;
+- site oficial do NFe Agendamento;
+- certificado digital válido instalado quando o Portal exigir autenticação para download.
 
-## 1. Diagnóstico e preflight
+## 1. Integração
 
 1. confirmar **Extensão conectada**;
-2. com o CNPJ fiscal ainda ausente, iniciar uma consulta;
-3. confirmar que a página de opções da extensão abre automaticamente;
-4. confirmar que nenhuma consulta é enviada à SEFAZ;
-5. em lote, confirmar que os itens permanecem aguardando, sem erro/cancelamento;
-6. durante o preflight, clicar rapidamente em **Consultar** mais de uma vez e confirmar que apenas uma verificação/início ocorre;
-7. se houver resultado anterior concluído, forçar um preflight que termine sem iniciar lote e confirmar que ZIP/impressão continuam disponíveis;
-8. se houver item anterior com erro de Portal, confirmar que **Tentar pelo Portal** fica bloqueado enquanto o preflight estiver pendente;
-9. com uma extensão anterior à 0.2.8, confirmar orientação de atualização/configuração manual, sem afirmar que as opções foram abertas;
-10. salvar o CNPJ e confirmar **Consulta direta: Configurada**;
-11. desabilitar/reabilitar a extensão e validar recuperação.
+2. confirmar **Portal Nacional: Disponível** nas configurações;
+3. confirmar que não existe pedido de CNPJ do A1;
+4. confirmar que não existe tentativa direta à SEFAZ.
 
-## 2. Consulta direta
+## 2. Consulta unitária
 
-Usar uma NF-e que possa retornar XML pelo `NFeDistribuicaoDFe`:
+1. informar uma chave válida;
+2. clicar em **Consultar**;
+3. confirmar abertura do popup oficial do Portal;
+4. confirmar a chave preenchida;
+5. resolver o hCaptcha manualmente;
+6. deixar a extensão continuar o fluxo oficial;
+7. usar/selecionar certificado digital se o Portal solicitar;
+8. confirmar que o XML retorna ao site;
+9. confirmar DANFE e download do XML;
+10. confirmar que o popup fecha ao concluir.
 
-1. informar a chave;
-2. iniciar consulta;
-3. confirmar indicação de rota **SEFAZ**;
-4. confirmar que abre uma janela pequena **Autenticando certificado A1**;
-5. se o Chrome/Edge exibir o seletor, escolher o A1 instalado no Windows;
-6. confirmar que a janela interna fecha após a tentativa;
-7. confirmar que **nenhum popup do Portal abre** quando a SEFAZ devolve o XML;
-8. confirmar XML, DANFE e download.
+## 3. Segunda consulta
 
-Se o navegador estiver administrado com seleção automática de certificado cliente, o passo 5 pode ocorrer sem diálogo.
+Sem reiniciar navegador/extensão:
 
-Este continua sendo o gate físico mais importante.
+1. consultar outra NF-e;
+2. confirmar novo popup sem estado residual;
+3. resolver hCaptcha;
+4. confirmar XML/DANFE normalmente.
 
-## 3. Fallback 217
-
-Com um caso que resulte em 217:
-
-1. confirmar tentativa direta primeiro;
-2. confirmar abertura do Portal somente depois do 217;
-3. resolver hCaptcha manualmente;
-4. validar XML/DANFE.
-
-## 4. Proteção 656/limite
-
-Quando for possível validar sem provocar consumo indevido deliberadamente:
-
-- confirmar que um limite já conhecido/local leva ao Portal;
-- confirmar que a extensão não insiste na SEFAZ durante o cooldown;
-- não gerar 656 propositalmente em produção.
-
-## 5. Lote
+## 4. Lote
 
 Com pelo menos duas chaves:
 
-- processamento sequencial;
-- sucesso direto não abre Portal;
-- 217 manda apenas aquele item ao Portal e a próxima volta à SEFAZ;
-- quando a proteção de consumo estiver ativa, restantes seguem pelo Portal;
-- nunca dois popups Portal simultâneos;
-- cancelamento impede novos itens.
+- Portal abre uma NF-e por vez;
+- nunca existem dois popups simultâneos;
+- cada item concluído fica com origem **Portal**;
+- ZIP usa apenas itens concluídos;
+- impressão usa apenas itens concluídos.
 
-## 6. Erro de transporte
+## 5. Cancelamento
 
-Simular apenas quando seguro:
+Durante uma operação:
 
-- timeout/falha direta deve aparecer como erro;
-- não pode haver retry automático;
-- não pode abrir Portal escondido.
+1. cancelar o lote ou fechar a janela do Portal;
+2. confirmar estado de cancelamento/erro explícito;
+3. confirmar que nenhum próximo item começa depois de cancelamento do lote;
+4. iniciar uma nova consulta e confirmar recuperação normal.
+
+## 6. Falha do Portal
+
+Quando houver falha real/controlada:
+
+- não deve existir fallback para SEFAZ direta;
+- não deve existir retry fiscal escondido;
+- a recuperação manual por XML pode ser usada quando oferecida pelo site;
+- XML importado manualmente continua validado contra a chave.
 
 ## 7. Chrome e Edge
 
-Validar pelo menos uma consulta direta completa em cada navegador.
+Validar pelo menos uma consulta completa em cada navegador.
 
 ## Critério de aceite
 
 - CI e CodeQL verdes;
-- consulta direta real com A1 aprovada;
+- popup Portal aprovado;
+- hCaptcha manual aprovado;
+- certificado aprovado quando exigido;
 - XML/DANFE aprovados;
-- fallback 217 aprovado quando houver caso disponível;
+- segunda consulta aprovada;
 - lote sequencial aprovado;
+- cancelamento aprovado;
 - Chrome e Edge aprovados.
 
 O hCaptcha permanece manual.
