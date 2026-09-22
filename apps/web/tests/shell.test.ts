@@ -8,7 +8,9 @@ describe('application shell', () => {
     expect(existsSync(fromWeb('src/portal/fallback.ts'))).toBe(false);
     const main = readFileSync(fromWeb('src/main.ts'), 'utf8');
     expect(main).toContain('Extensão conectada'); expect(main).toContain('Portal Nacional');
-    expect(main).not.toContain('Bridge'); expect(main).not.toContain('SEFAZ'); expect(main).not.toContain('certificate-select');
+    expect(main).not.toContain('Bridge');
+    expect(main).toContain('SEFAZ');
+    expect(main).not.toContain('certificate-select');
   });
   it('keeps DANFE/XML actions and batch UI', () => {
     const main = readFileSync(fromWeb('src/main.ts'), 'utf8');

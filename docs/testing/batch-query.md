@@ -1,16 +1,24 @@
-# Consulta em lote — arquitetura extension-only
+# Consulta em lote — direct-first
 
-O lote consulta somente pelo Portal Nacional através da extensão.
+O lote reutiliza a lógica fiscal do antigo Bridge, executada pela extensão.
 
-## Contrato
+## Roteamento
+
+Cada item começa pela consulta direta enquanto a rota estiver em SEFAZ:
+
+- **sucesso**: conclui como origem `SEFAZ`;
+- **217**: aquele item usa Portal e o próximo volta para SEFAZ;
+- **656/429/limite local**: ativa rota Portal para o item atual e para os itens seguintes;
+- **erro técnico/transporte**: item fica em erro; não há retry fiscal automático nem fallback escondido.
+
+## Invariantes
 
 - processamento estritamente sequencial;
+- no máximo uma chamada direta por vez;
 - no máximo uma operação Portal ativa;
-- hCaptcha manual para cada NF-e;
-- nenhum retry fiscal automático;
-- erro de um item não cria uma rota alternativa escondida;
-- cancelamento impede o início dos itens restantes;
-- XML de cada item é validado antes de marcar sucesso;
-- ZIP e impressão usam somente itens concluídos.
+- hCaptcha manual;
+- cancelamento impede novos itens;
+- XML validado antes de sucesso;
+- ZIP/impressão usam somente concluídas.
 
-A aceitação física fica em `docs/testing/acceptance.md`.
+Proteção local: 20 tentativas diretas/hora e cooldown de 1 hora.

@@ -1,80 +1,76 @@
-# Portal via extensão Chromium MV3
-
-**Estado atual:** componente local único do NFe Agendamento.
+# Extensão Chromium — SEFAZ direta + Portal fallback
 
 ## Arquitetura
 
 ```text
-Site → extensão Chromium → Portal Nacional → A1 via navegador/Windows
+Site
+ ↓
+Extensão 0.2.6
+ ├─ NFeDistribuicaoDFe
+ └─ Portal Nacional (fallback)
 ```
 
-Não existe Bridge ou helper WebView2 no produto atual.
+Não existe Bridge, WebView2 helper ou Native Messaging.
 
-## Versão
+## Configuração inicial
 
-A `main` usa extensão **0.2.5**. A release correspondente é a **v0.0.27**, com os assets `NFeAgendamento-Extension.zip` e `NFeAgendamento-Extension-v0.2.5.zip`.
+1. instalar/carregar a extensão;
+2. clicar no ícone **NFe Agendamento**;
+3. informar uma vez o CNPJ correspondente ao certificado A1 usado naquele computador;
+4. confirmar no site que a consulta direta aparece como configurada.
 
-## Instalação de desenvolvimento
+O CNPJ fica em `chrome.storage.local`. O certificado e sua chave privada não são copiados para a extensão.
 
-Chrome:
+## Consulta direta
 
-1. abrir `chrome://extensions`;
-2. ativar modo do desenvolvedor;
-3. usar **Carregar sem compactação**;
-4. selecionar a pasta que contém `manifest.json`.
+Endpoint:
 
-Edge: fluxo equivalente em `edge://extensions`.
+`https://www1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx`
 
-## Permissões
+Contrato preservado do antigo Bridge:
 
-Somente `scripting`, `storage` e `webRequest`.
+- POST SOAP;
+- `distDFeInt` versão 1.01;
+- ambiente 1;
+- CNPJ configurado localmente;
+- `consChNFe/chNFe`;
+- timeout de 45 s;
+- resposta/XML limitado a 10 MiB;
+- `docZip` gzip;
+- somente `procNFe` da chave solicitada é aceito.
 
-Hosts somente:
+## Fallback
 
-- domínio oficial do NFe Agendamento;
-- `https://www.nfe.fazenda.gov.br/*`.
+- 138 + XML: sucesso direto;
+- 217: Portal somente para a NF-e;
+- 656/HTTP 429/limite local: Portal e cooldown;
+- transporte/timeout/erro técnico: erro explícito, sem retry/fallback automático.
 
-Sem `<all_urls>`, Native Messaging, `downloads`, `webRequestBlocking` ou acesso genérico ao disco.
+## Proteção local
 
-## Fluxo
+- 20 tentativas diretas por hora;
+- cooldown de 1 hora;
+- estado persistido localmente.
 
-1. site valida chave e faz handshake;
-2. extensão abre popup oficial;
-3. chave é preenchida;
-4. usuário resolve hCaptcha;
-5. extensão continua a consulta;
-6. navegador usa A1 quando solicitado;
-7. extensão observa a requisição oficial de `downloadNFe.aspx`;
-8. XML é obtido pela mesma sessão, limitado e validado;
-9. XML volta ao site;
-10. site valida novamente e renderiza DANFE.
+A coordenação multi-PC antiga não está nesta versão.
 
-## Confiabilidade
+## Portal
 
-A 0.2.5 mantém o hardening da 0.2.4 e altera a captura final do XML: a requisição oficial observada por `webRequest` é serializada e reproduzida por `chrome.scripting.executeScript` dentro da própria aba do Portal, preservando o contexto de sessão do navegador sem adicionar permissões.
+Permanece com o hardening da 0.2.5:
 
-A 0.2.4 já incluía:
-
-- estado em `chrome.storage.session`;
-- reconciliação após cold start;
-- `start` idempotente;
-- mutações serializadas;
-- claim único da captura XML;
-- finalização protegida contra cancelamento concorrente;
-- `stateChangedAt` para preservar timeouts entre navegações;
-- observação reativa do DOM com fallback periódico;
-- erros distintos para sessão/HTTP/XML;
-- captura fechada ao endpoint oficial.
-
-## Segurança
-
+- popup real Chrome/Edge;
 - hCaptcha manual;
-- sem PFX/P12/senha/chave privada na extensão;
-- XML máximo de 10 MiB;
-- DTD rejeitado;
-- XML deve conter `nfeProc` e a chave consultada;
-- configuração privada de fornecedor permanece local.
+- lifecycle em `chrome.storage.session`;
+- captura única do download;
+- replay dentro da própria aba autenticada;
+- XML validado contra a chave.
 
-## Aceitação
+## Permissões/hosts
 
-Usar `docs/testing/acceptance.md`.
+Permissões: `scripting`, `storage`, `webRequest`.
+
+Hosts: site oficial, Portal Nacional e endpoint `www1.nfe.fazenda.gov.br`.
+
+## Gate físico
+
+É obrigatório validar em Windows real que Chrome/Edge negocia o A1 corretamente quando o `fetch` da extensão chama o endpoint direto. Esse comportamento não é comprovável pelo CI.
