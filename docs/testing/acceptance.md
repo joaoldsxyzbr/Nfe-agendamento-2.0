@@ -4,16 +4,20 @@
 
 - Windows 10/11;
 - Chrome ou Edge;
-- extensão 0.2.6 ou superior;
+- extensão 0.2.8 ou superior;
 - certificado A1 válido instalado;
 - CNPJ do A1 configurado nas opções da extensão;
 - site oficial do NFe Agendamento.
 
-## 1. Diagnóstico
+## 1. Diagnóstico e preflight
 
 1. confirmar **Extensão conectada**;
-2. confirmar **Consulta direta: Configurada**;
-3. desabilitar/reabilitar a extensão e validar recuperação.
+2. com o CNPJ fiscal ainda ausente, iniciar uma consulta;
+3. confirmar que a página de opções da extensão abre automaticamente;
+4. confirmar que nenhuma consulta é enviada à SEFAZ;
+5. em lote, confirmar que os itens permanecem aguardando, sem erro/cancelamento;
+6. salvar o CNPJ e confirmar **Consulta direta: Configurada**;
+7. desabilitar/reabilitar a extensão e validar recuperação.
 
 ## 2. Consulta direta
 
@@ -26,7 +30,7 @@ Usar uma NF-e que possa retornar XML pelo `NFeDistribuicaoDFe`:
 5. confirmar que **nenhum popup do Portal abre**;
 6. confirmar XML, DANFE e download.
 
-Este é o gate mais importante da 0.2.6.
+Este continua sendo o gate físico mais importante.
 
 ## 3. Fallback 217
 
