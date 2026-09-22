@@ -20,6 +20,7 @@ export type PortalExtensionState =
 export type SiteCommand =
   | { type: 'ping'; requestId: string }
   | { type: 'start'; requestId: string; accessKey: string }
+  | { type: 'status'; requestId: string; operationId: string }
   | { type: 'cancel'; requestId: string; operationId: string }
   | { type: 'resolve_supplier'; requestId: string; taxId: string };
 
@@ -50,7 +51,7 @@ export function parseSiteCommand(value: unknown): SiteCommand {
     return { type, requestId, accessKey };
   }
 
-  if (type === 'cancel') {
+  if (type === 'status' || type === 'cancel') {
     return { type, requestId, operationId: stringField(input, 'operationId') };
   }
 

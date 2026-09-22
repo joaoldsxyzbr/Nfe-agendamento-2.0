@@ -15,6 +15,11 @@ describe('portal extension protocol', () => {
       requestId: 'req-2',
       accessKey: KEY,
     });
+    expect(parseSiteCommand({ type: 'status', requestId: 'req-status', operationId: 'op-1' })).toEqual({
+      type: 'status',
+      requestId: 'req-status',
+      operationId: 'op-1',
+    });
     expect(parseSiteCommand({
       type: 'resolve_supplier',
       requestId: 'req-3',

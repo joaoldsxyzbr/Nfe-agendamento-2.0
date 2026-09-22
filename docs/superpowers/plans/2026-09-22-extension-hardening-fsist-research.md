@@ -7,8 +7,8 @@
 ## Status de execução
 
 - **Fase 1 — compatibilidade e diagnóstico:** implementada no código desta branch;
-- **Fase 2 — conexão/lifecycle:** base reativa implementada com `bridge_ready`, `focus`, `pageshow` e visibilidade; reconciliação completa de operação após restart do service worker permanece para a próxima rodada;
-- **Fase 3 — Portal real:** ainda depende do gate físico Chrome/Edge + A1 + hCaptcha + XML;
+- **Fase 2 — conexão/lifecycle:** implementada no código do HEAD: `bridge_ready`, `focus`, `pageshow`, visibilidade, retry limitado do handshake do Portal, reconciliação da operação em `storage.session`, limpeza de estado obsoleto e start idempotente após resposta perdida; validação física ainda pendente;
+- **Fase 3 — Portal real:** iniciada com erros diferenciados para popup/aba/navegação/operação perdida e detecção de fechamento de aba; captura real Chrome/Edge + A1 + hCaptcha + XML ainda depende do gate físico;
 - **Fase 4 — distribuição corporativa:** planejada, ainda não iniciada.
 
 ## Evidência externa usada
@@ -55,6 +55,10 @@ O mesmo arquivo que era aceito pelo Bridge importa sem edição manual na extens
 - manter retries limitados de handshake, sem polling infinito;
 - estados/erros de conectividade diferenciados;
 - reconciliação de operação ativa após cold start/reload do service worker;
+- start idempotente para a mesma aba + chave quando a resposta inicial se perde;
+- limpeza segura de operação obsoleta quando popup/aba/site desaparecem;
+- consulta explícita de status para o frontend não aguardar indefinidamente uma operação perdida;
+- retry limitado do handshake do content script do Portal;
 - testes de instalação/reload da extensão com a página já aberta.
 
 ### Critério de saída

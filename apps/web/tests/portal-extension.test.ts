@@ -15,6 +15,13 @@ describe('BrowserPortalExtensionClient', () => {
           capabilities: { portalLookup: true, supplierResolution: true },
         };
         if (message.type === 'start') return { type: 'started', requestId: 'start', operationId: 'ext-op-1' };
+        if (message.type === 'status') return {
+          type: 'operation_status',
+          requestId: 'status',
+          operationId: 'ext-op-1',
+          active: true,
+          state: 'waiting_user',
+        };
         if (message.type === 'cancel') return { type: 'cancelled', requestId: 'cancel', operationId: 'ext-op-1' };
         throw new Error('unexpected');
       },
@@ -113,11 +120,50 @@ describe('BrowserPortalExtensionClient', () => {
 
     const versions: string[] = [];
     const unsubscribe = client.onReadyHint((version) => versions.push(version));
-    emit({ type: 'bridge_ready', version: '0.2.2' });
+    emit({ type: 'bridge_ready', version: '0.2.3' });
     emit({ type: 'state', operationId: 'op', state: 'opening' });
     unsubscribe();
 
-    expect(versions).toEqual(['0.2.2']);
+    expect(versions).toEqual(['0.2.3']);
+  });
+
+  it('retries start once so a lost response does not require opening a second popup', async () => {
+    const { BrowserPortalExtensionClient } = await import('../src/portal/extension-client');
+    let starts = 0;
+    const client = new BrowserPortalExtensionClient({
+      request: async (message: { type: string }) => {
+        if (message.type !== 'start') throw new Error('unexpected');
+        starts += 1;
+        if (starts === 1) throw new Error('resposta perdida após iniciar');
+        return { type: 'started', operationId: 'ext-op-recovered' };
+      },
+      subscribe: () => () => {},
+    } as never);
+
+    await expect(client.start(KEY)).resolves.toBe('ext-op-recovered');
+    expect(starts).toBe(2);
+  });
+
+  it('fails explicitly when an operation cannot be reconciled anymore', async () => {
+    const { BrowserPortalExtensionClient } = await import('../src/portal/extension-client');
+    const client = new BrowserPortalExtensionClient({
+      request: async (message: { type: string; operationId?: string }) => {
+        if (message.type === 'status') {
+          return {
+            type: 'operation_status',
+            operationId: message.operationId,
+            active: false,
+            state: null,
+          };
+        }
+        throw new Error('unexpected');
+      },
+      subscribe: () => () => {},
+    } as never);
+
+    await expect(client.waitForResult('ext-op-missing')).rejects.toThrow(
+      'A operação do Portal não está mais ativa',
+    );
   });
 
   it('treats a missing extension as unavailable instead of throwing', async () => {

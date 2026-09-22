@@ -5,10 +5,14 @@ const PAGE_CHANNEL = 'nfe-agendamento:portal-extension';
 const DEFAULT_HANDSHAKE_TIMEOUT_MS = 1_200;
 const HANDSHAKE_ATTEMPTS = 3;
 const HANDSHAKE_RETRY_DELAY_MS = 200;
+const START_ATTEMPTS = 2;
+const OPERATION_STATUS_ATTEMPTS = 2;
+const COMMAND_RETRY_DELAY_MS = 150;
 
 type ExtensionCommand =
   | { type: 'ping'; requestId: string }
   | { type: 'start'; requestId: string; accessKey: string }
+  | { type: 'status'; requestId: string; operationId: string }
   | { type: 'cancel'; requestId: string; operationId: string }
   | { type: 'resolve_supplier'; requestId: string; taxId: string };
 
@@ -129,15 +133,38 @@ export class BrowserPortalExtensionClient {
   }
 
   async start(accessKey: string, signal?: AbortSignal): Promise<string> {
-    const requestId = globalThis.crypto.randomUUID();
-    const response = await this.transport.request(
-      { type: 'start', requestId, accessKey: accessKey.trim().toUpperCase() },
-      signal,
-    );
-    if (!isStartedResponse(response)) {
-      throw new Error(messageFromFailure(response) ?? 'A extensão não iniciou o Portal.');
+    const normalizedAccessKey = accessKey.trim().toUpperCase();
+    let lastTransportError: unknown = null;
+
+    for (let attempt = 0; attempt < START_ATTEMPTS; attempt += 1) {
+      signal?.throwIfAborted();
+      const requestId = globalThis.crypto.randomUUID();
+      let response: unknown;
+
+      try {
+        response = await this.transport.request(
+          { type: 'start', requestId, accessKey: normalizedAccessKey },
+          signal,
+        );
+      } catch (error) {
+        if (signal?.aborted) throw error;
+        lastTransportError = error;
+        if (attempt < START_ATTEMPTS - 1) {
+          await waitForRetry(COMMAND_RETRY_DELAY_MS, signal);
+          continue;
+        }
+        break;
+      }
+
+      if (!isStartedResponse(response)) {
+        throw new Error(messageFromFailure(response) ?? 'A extensão não iniciou o Portal.');
+      }
+      return response.operationId;
     }
-    return response.operationId;
+
+    throw lastTransportError instanceof Error
+      ? lastTransportError
+      : new Error('A extensão não iniciou o Portal.');
   }
 
   waitForResult(operationId: string, signal?: AbortSignal): Promise<PortalOperationStatus> {
@@ -145,9 +172,15 @@ export class BrowserPortalExtensionClient {
 
     return new Promise((resolve, reject) => {
       let unsubscribe = () => {};
-      const onAbort = () => finish(() => reject(signal?.reason ?? new DOMException('Aborted', 'AbortError')));
+      let settled = false;
+
+      const onAbort = () => {
+        finish(() => reject(signal?.reason ?? new DOMException('Aborted', 'AbortError')));
+      };
 
       const finish = (complete: () => void) => {
+        if (settled) return;
+        settled = true;
         signal?.removeEventListener('abort', onAbort);
         unsubscribe();
         complete();
@@ -160,7 +193,54 @@ export class BrowserPortalExtensionClient {
       });
 
       signal?.addEventListener('abort', onAbort, { once: true });
+
+      void this.isOperationActive(operationId, signal)
+        .then((active) => {
+          if (!active) {
+            finish(() => reject(new Error(
+              'A operação do Portal não está mais ativa. Feche qualquer popup antigo e tente novamente.',
+            )));
+          }
+        })
+        .catch((error) => {
+          finish(() => reject(error instanceof Error
+            ? error
+            : new Error('Não foi possível reconciliar a operação do Portal.')));
+        });
     });
+  }
+
+  private async isOperationActive(operationId: string, signal?: AbortSignal): Promise<boolean> {
+    let lastTransportError: unknown = null;
+
+    for (let attempt = 0; attempt < OPERATION_STATUS_ATTEMPTS; attempt += 1) {
+      signal?.throwIfAborted();
+      const requestId = globalThis.crypto.randomUUID();
+      let response: unknown;
+
+      try {
+        response = await this.transport.request(
+          { type: 'status', requestId, operationId },
+          signal,
+        );
+      } catch (error) {
+        if (signal?.aborted) throw error;
+        lastTransportError = error;
+        if (attempt < OPERATION_STATUS_ATTEMPTS - 1) {
+          await waitForRetry(COMMAND_RETRY_DELAY_MS, signal);
+          continue;
+        }
+        break;
+      }
+
+      const active = parseOperationStatus(response, operationId);
+      if (active !== null) return active;
+      throw new Error(messageFromFailure(response) ?? 'Resposta de estado da extensão inválida.');
+    }
+
+    throw lastTransportError instanceof Error
+      ? lastTransportError
+      : new Error('Não foi possível reconciliar a operação do Portal.');
   }
 
   async cancel(operationId: string): Promise<void> {
@@ -181,13 +261,17 @@ export class BrowserPortalExtensionClient {
 }
 
 async function waitForHandshakeRetry(signal?: AbortSignal): Promise<void> {
+  await waitForRetry(HANDSHAKE_RETRY_DELAY_MS, signal);
+}
+
+async function waitForRetry(delayMs: number, signal?: AbortSignal): Promise<void> {
   if (signal?.aborted) return;
 
   await new Promise<void>((resolve) => {
     const timeout = globalThis.setTimeout(() => {
       signal?.removeEventListener('abort', onAbort);
       resolve();
-    }, HANDSHAKE_RETRY_DELAY_MS);
+    }, delayMs);
 
     const onAbort = () => {
       globalThis.clearTimeout(timeout);
@@ -213,6 +297,16 @@ function parseReadyResponse(value: unknown): PortalExtensionInfo | null {
       supplierResolution: true,
     },
   };
+}
+
+function parseOperationStatus(value: unknown, operationId: string): boolean | null {
+  if (!isRecord(value) ||
+      value.type !== 'operation_status' ||
+      value.operationId !== operationId ||
+      typeof value.active !== 'boolean') {
+    return null;
+  }
+  return value.active;
 }
 
 function isStartedResponse(value: unknown): value is { type: 'started'; operationId: string } {
