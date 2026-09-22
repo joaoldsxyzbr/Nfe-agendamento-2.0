@@ -33,6 +33,14 @@ export function isCaptchaResponseReady(value: unknown): boolean {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
+export function isLikelyHtmlDocument(value: unknown): boolean {
+  if (typeof value !== 'string') return false;
+  const prefix = value.trimStart().slice(0, 512).toLocaleLowerCase('pt-BR');
+  return prefix.startsWith('<!doctype html') ||
+    prefix.startsWith('<html') ||
+    /^<\?xml[^>]*\?>\s*<html(?:\s|>)/i.test(prefix);
+}
+
 function normalize(value: unknown): string {
   return String(value ?? '').replace(/\s+/g, ' ').trim().toLocaleLowerCase('pt-BR');
 }
