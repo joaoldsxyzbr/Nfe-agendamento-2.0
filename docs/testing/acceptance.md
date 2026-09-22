@@ -17,9 +17,11 @@
 4. confirmar que nenhuma consulta é enviada à SEFAZ;
 5. em lote, confirmar que os itens permanecem aguardando, sem erro/cancelamento;
 6. durante o preflight, clicar rapidamente em **Consultar** mais de uma vez e confirmar que apenas uma verificação/início ocorre;
-7. com uma extensão anterior à 0.2.8, confirmar orientação de atualização/configuração manual, sem afirmar que as opções foram abertas;
-8. salvar o CNPJ e confirmar **Consulta direta: Configurada**;
-9. desabilitar/reabilitar a extensão e validar recuperação.
+7. se houver resultado anterior concluído, forçar um preflight que termine sem iniciar lote e confirmar que ZIP/impressão continuam disponíveis;
+8. se houver item anterior com erro de Portal, confirmar que **Tentar pelo Portal** fica bloqueado enquanto o preflight estiver pendente;
+9. com uma extensão anterior à 0.2.8, confirmar orientação de atualização/configuração manual, sem afirmar que as opções foram abertas;
+10. salvar o CNPJ e confirmar **Consulta direta: Configurada**;
+11. desabilitar/reabilitar a extensão e validar recuperação.
 
 ## 2. Consulta direta
 

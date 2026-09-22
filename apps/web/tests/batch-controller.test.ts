@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { createBatchController, type BatchItemView } from '../src/batch/controller';
 
@@ -12,6 +13,8 @@ function harness(overrides: Record<string, unknown> = {}) {
   const optionsOpens: string[] = [];
   const input = el({ value: '', disabled: false } as HTMLTextAreaElement);
   const route = el({ textContent: '' } as HTMLElement);
+  const zipButton = el({ disabled: true } as HTMLButtonElement);
+  const printButton = el({ disabled: true } as HTMLButtonElement);
   const portal = {
     getInfo: async () => ({
       version: '0.2.6',
@@ -40,8 +43,8 @@ function harness(overrides: Record<string, unknown> = {}) {
       inputSummary: el({ textContent: '' } as HTMLElement),
       startButton: el({ disabled: false } as HTMLButtonElement),
       cancelButton: el({ hidden: true } as HTMLButtonElement),
-      zipButton: el({ disabled: true } as HTMLButtonElement),
-      printButton: el({ disabled: true } as HTMLButtonElement),
+      zipButton,
+      printButton,
       progress: el({ textContent: '' } as HTMLElement),
       routeText: route,
       modeSingleButton: el({ disabled: false } as HTMLButtonElement),
@@ -64,7 +67,18 @@ function harness(overrides: Record<string, unknown> = {}) {
     printWindow: () => {},
     renderRows: (items) => snapshots.push(items.map((item) => ({ ...item }))),
   });
-  return { controller, input, route, directKeys, portalStarts, optionsOpens, snapshots };
+
+  return {
+    controller,
+    input,
+    route,
+    zipButton,
+    printButton,
+    directKeys,
+    portalStarts,
+    optionsOpens,
+    snapshots,
+  };
 }
 
 describe('batch controller direct-first', () => {
@@ -162,6 +176,40 @@ describe('batch controller direct-first', () => {
     expect(h.route.textContent).toContain('configuração da extensão foi aberta');
   });
 
+  it('restores completed-result actions when a later preflight exits early', async () => {
+    let infoCalls = 0;
+    const h = harness({
+      getInfo: async () => {
+        infoCalls += 1;
+        if (infoCalls === 1) {
+          return {
+            version: '0.2.9',
+            capabilities: {
+              directLookup: true,
+              openOptions: true,
+              portalLookup: true,
+              supplierResolution: true,
+            },
+            configuration: { fiscalIdentityConfigured: true },
+          };
+        }
+        return null;
+      },
+    });
+    h.input.value = A;
+    h.controller.syncDraft();
+    await h.controller.start();
+
+    expect(h.zipButton.disabled).toBe(false);
+    expect(h.printButton.disabled).toBe(false);
+
+    await h.controller.start();
+
+    expect(h.zipButton.disabled).toBe(false);
+    expect(h.printButton.disabled).toBe(false);
+    expect(h.route.textContent).toContain('Extensão não conectada');
+  });
+
   it('does not claim configuration opened with an old extension', async () => {
     const h = harness({
       getInfo: async () => ({
@@ -178,5 +226,14 @@ describe('batch controller direct-first', () => {
     expect(h.directKeys).toHaveLength(0);
     expect(h.route.textContent).toContain('extensão é antiga');
     expect(h.snapshots.at(-1)?.map((item) => item.status)).toEqual(['queued', 'queued']);
+  });
+});
+
+describe('batch preflight action guards', () => {
+  it('locks Portal retry while preflight is pending', () => {
+    const source = readFileSync(new URL('../src/batch/controller.ts', import.meta.url), 'utf8');
+    expect(source).toContain("item.status !== 'portal_error' || preflighting || running || manualPortalBusy");
+    expect(source).toContain('retry.disabled = preflighting || running || manualPortalBusy');
+    expect(source).toContain('refreshResultActions();');
   });
 });

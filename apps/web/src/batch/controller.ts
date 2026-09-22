@@ -160,6 +160,7 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
     } finally {
       preflighting = false;
       setControlsLocked(false);
+      refreshResultActions();
     }
 
     items = summary.validKeys.map(createBatchItem);
@@ -317,7 +318,7 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
 
   async function retryPortal(index: number): Promise<void> {
     const item = items[index];
-    if (!item || item.status !== 'portal_error' || running || manualPortalBusy) return;
+    if (!item || item.status !== 'portal_error' || preflighting || running || manualPortalBusy) return;
     manualPortalBusy = true;
     setControlsLocked(true);
     try { await processPortalItem(item); }
@@ -330,14 +331,11 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
 
   function renderState(label: string): void {
     const terminal = items.filter((item) => isTerminalStatus(item.status)).length;
-    const completed = completedItems();
     elements.progress.textContent = `${terminal} de ${items.length}`;
     elements.routeText.textContent = running
       ? `${label} · rota ${isPortalRoute() ? 'Portal' : 'SEFAZ'}`
       : label;
-    elements.zipButton.disabled = completed.length === 0 || preflighting || running || manualPortalBusy;
-    elements.printButton.disabled = completed.length === 0 || preflighting || running || manualPortalBusy;
-    renderRows();
+    refreshResultActions();
   }
 
   function renderRows(): void {
@@ -428,7 +426,7 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
         retry.type = 'button';
         retry.className = 'batch-action';
         retry.textContent = 'Tentar pelo Portal';
-        retry.disabled = running || manualPortalBusy;
+        retry.disabled = preflighting || running || manualPortalBusy;
         retry.addEventListener('click', () => void retryPortal(index));
         actions.append(retry);
       }
@@ -436,6 +434,13 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
       row.append(order, information, status, actions);
       list.append(row);
     });
+  }
+
+  function refreshResultActions(): void {
+    const completed = completedItems();
+    elements.zipButton.disabled = completed.length === 0 || preflighting || running || manualPortalBusy;
+    elements.printButton.disabled = completed.length === 0 || preflighting || running || manualPortalBusy;
+    renderRows();
   }
 
   function downloadZip(): void {
