@@ -1,6 +1,5 @@
-import type { PortalOperationStatus } from '../bridge/contracts';
+import type { PortalOperationStatus } from './contracts';
 
-const SITE_ORIGIN = 'https://nfeagendamento.joaolds.xyz.br';
 const PAGE_CHANNEL = 'nfe-agendamento:portal-extension';
 const DEFAULT_HANDSHAKE_TIMEOUT_MS = 1_200;
 const HANDSHAKE_ATTEMPTS = 3;
@@ -37,10 +36,14 @@ export interface PortalExtensionTransport {
 }
 
 export class WindowPortalExtensionTransport implements PortalExtensionTransport {
+  private readonly origin: string;
+
   constructor(
     private readonly windowRef: Window = window,
     private readonly timeoutMs = DEFAULT_HANDSHAKE_TIMEOUT_MS,
-  ) {}
+  ) {
+    this.origin = windowRef.location.origin;
+  }
 
   request(command: ExtensionCommand, signal?: AbortSignal): Promise<unknown> {
     signal?.throwIfAborted();
@@ -53,7 +56,7 @@ export class WindowPortalExtensionTransport implements PortalExtensionTransport 
 
       const onAbort = () => finish(() => reject(signal?.reason ?? new DOMException('Aborted', 'AbortError')));
       const onMessage = (event: MessageEvent) => {
-        if (event.source !== this.windowRef || event.origin !== SITE_ORIGIN) return;
+        if (event.source !== this.windowRef || event.origin !== this.origin) return;
         const envelope = event.data as Record<string, unknown> | null;
         if (!envelope ||
             envelope.channel !== PAGE_CHANNEL ||
@@ -80,14 +83,14 @@ export class WindowPortalExtensionTransport implements PortalExtensionTransport 
           requestId: command.requestId,
           command,
         },
-        SITE_ORIGIN,
+        this.origin,
       );
     });
   }
 
   subscribe(listener: (event: unknown) => void): () => void {
     const onMessage = (event: MessageEvent) => {
-      if (event.source !== this.windowRef || event.origin !== SITE_ORIGIN) return;
+      if (event.source !== this.windowRef || event.origin !== this.origin) return;
       const envelope = event.data as Record<string, unknown> | null;
       if (!envelope || envelope.channel !== PAGE_CHANNEL || envelope.direction !== 'event') return;
       listener(envelope.event);

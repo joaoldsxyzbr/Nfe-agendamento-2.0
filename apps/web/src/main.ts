@@ -1,8 +1,5 @@
 import { createBatchController } from './batch/controller';
 import { createStoredZip } from './batch/zip';
-import { BridgeClient } from './bridge/client';
-import { createCertificateController } from './bridge/certificate-controller';
-import type { NfeLookupResult } from './bridge/contracts';
 import { attachDanfeZoom, renderDanfe } from './danfe/render';
 import { createDanfeViewer } from './danfe/viewer';
 import { validateAccessKey } from './nfe/access-key';
@@ -10,8 +7,6 @@ import { createConsultationController } from './nfe/consultation-controller';
 import { validateManualNfeXml } from './nfe/manual-xml-import';
 import { parseNfeXml, type ParsedNfe } from './nfe/xml';
 import { BrowserPortalExtensionClient } from './portal/extension-client';
-import { PortalFallbackController } from './portal/fallback';
-import { PortalRouter } from './portal/router';
 import './styles.css';
 import './batch.css';
 import './danfe/styles.css';
@@ -32,32 +27,13 @@ app.innerHTML = `
           <img class="brand-mark" src="/brand-mark.png" alt="" aria-hidden="true" />
           <h1 class="brand-title"><span>NF-e</span><span>Agendamento</span></h1>
         </div>
-        <p class="subtitle">Consulta direta usando o certificado A1 deste computador.</p>
+        <p class="subtitle">Consulta pelo Portal Nacional da NF-e usando a extensão do navegador.</p>
       </div>
-      <div class="bridge-pill" id="bridge-status" data-state="checking" role="status" aria-live="polite">
-        <span class="bridge-dot" aria-hidden="true"></span>
-        <span id="bridge-status-text">Verificando Bridge…</span>
+      <div class="integration-pill" id="integration-status" data-state="checking" role="status" aria-live="polite">
+        <span class="integration-dot" aria-hidden="true"></span>
+        <span id="integration-status-text">Verificando extensão…</span>
       </div>
     </header>
-
-    <section class="certificate-card" aria-labelledby="certificate-title">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">Certificado local</p>
-          <h2 id="certificate-title">Certificado A1</h2>
-        </div>
-        <span class="certificate-state" id="certificate-state">Aguardando Bridge</span>
-      </div>
-
-      <label for="certificate-select">Certificado deste computador</label>
-      <div class="certificate-row">
-        <select id="certificate-select" disabled>
-          <option value="">Verificando certificados…</option>
-        </select>
-        <button id="certificate-apply" type="button" disabled>Usar certificado</button>
-      </div>
-      <p class="help-text" id="certificate-help" aria-live="polite">A chave privada permanece no Windows. O site recebe somente nome, emissor, validade e thumbprint.</p>
-    </section>
 
     <section class="lookup-card" aria-labelledby="lookup-title">
       <div class="section-heading lookup-heading">
@@ -89,7 +65,7 @@ app.innerHTML = `
             />
             <button id="lookup-submit" type="submit">Consultar</button>
           </div>
-          <p id="lookup-help" class="help-text">O processamento visual acontece neste site. O Bridge local acessa o certificado A1 e consulta a SEFAZ quando necessário.</p>
+          <p id="lookup-help" class="help-text">A extensão abre o Portal Nacional em uma janela do navegador. Resolva o hCaptcha manualmente; o XML volta automaticamente para este site.</p>
         </form>
 
         <div class="lookup-result-section">
@@ -164,16 +140,9 @@ app.innerHTML = `
   </section>
 `;
 
-const bridgeClient = new BridgeClient();
-const portalBridgeFallback = new PortalFallbackController(bridgeClient);
 const portalExtension = new BrowserPortalExtensionClient();
-const portalFallback = new PortalRouter(portalExtension, portalBridgeFallback);
-const bridgeStatus = requireElement<HTMLElement>('#bridge-status');
-const bridgeStatusText = requireElement<HTMLElement>('#bridge-status-text');
-const certificateSelect = requireElement<HTMLSelectElement>('#certificate-select');
-const certificateApply = requireElement<HTMLButtonElement>('#certificate-apply');
-const certificateState = requireElement<HTMLElement>('#certificate-state');
-const certificateHelp = requireElement<HTMLElement>('#certificate-help');
+const integrationStatus = requireElement<HTMLElement>('#integration-status');
+const integrationStatusText = requireElement<HTMLElement>('#integration-status-text');
 const modeSingle = requireElement<HTMLButtonElement>('#mode-single');
 const modeBatch = requireElement<HTMLButtonElement>('#mode-batch');
 const singlePanel = requireElement<HTMLElement>('#single-consultation-panel');
@@ -200,7 +169,6 @@ const danfeClose = requireElement<HTMLButtonElement>('#danfe-close');
 const danfePrint = requireElement<HTMLButtonElement>('#danfe-print');
 let currentDownloadUrl: string | null = null;
 let consultationMode: ConsultationMode = 'single';
-let manualXmlImportSupported = false;
 
 const danfeViewerController = createDanfeViewer({
   elements: {
@@ -219,18 +187,6 @@ const danfeViewerController = createDanfeViewer({
   print: () => window.print(),
 });
 
-const certificateController = createCertificateController({
-  bridge: bridgeClient,
-  elements: {
-    bridgeStatus,
-    bridgeStatusText,
-    select: certificateSelect,
-    applyButton: certificateApply,
-    certificateState,
-    help: certificateHelp,
-  },
-});
-
 const batchController = createBatchController({
   elements: {
     keysInput: batchKeysInput,
@@ -245,8 +201,7 @@ const batchController = createBatchController({
     modeBatchButton: modeBatch,
     list: batchList,
   },
-  bridge: bridgeClient,
-  portal: portalFallback,
+  portal: portalExtension,
   parseXml: parseNfeXml,
   createZip: createStoredZip,
   downloadBlob,
@@ -254,8 +209,6 @@ const batchController = createBatchController({
   downloadXml,
   openDanfeDocuments: (documents, title) => danfeViewerController.openMany(documents, title),
   printWindow: () => danfeViewerController.print(),
-  setCertificateControlsEnabled: (enabled) => certificateController.setControlsEnabled(enabled),
-  hasSelectableCertificates: () => certificateController.hasSelectableCertificates(),
 });
 
 const consultationController = createConsultationController({
@@ -264,21 +217,15 @@ const consultationController = createConsultationController({
     accessKeyInput.value = '';
   },
   validateAccessKey,
-  bridge: bridgeClient,
-  portal: portalFallback,
+  portal: portalExtension,
   parseXml: parseNfeXml,
   renderState: renderLookupState,
-  renderFailure: renderLookupFailure,
   renderPortalFailure,
   renderSuccess: renderLookupSuccess,
   renderInvalidXml,
   setBusy: setLookupBusy,
   focusInput: () => accessKeyInput.focus(),
   resetView: renderInitialResult,
-});
-
-certificateApply.addEventListener('click', () => {
-  void certificateController.applySelection();
 });
 
 modeSingle.addEventListener('click', () => setConsultationMode('single'));
@@ -301,22 +248,31 @@ batchZip.addEventListener('click', () => batchController.downloadZip());
 batchPrint.addEventListener('click', () => batchController.printDanfes());
 
 lookupReset.addEventListener('click', () => consultationController.reset());
+const stopExtensionReadyHint = portalExtension.onReadyHint(() => { void refreshExtensionStatus(); });
+window.addEventListener('focus', () => void refreshExtensionStatus());
+window.addEventListener('pageshow', () => void refreshExtensionStatus());
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') void refreshExtensionStatus();
+});
 window.addEventListener('pagehide', () => {
+  stopExtensionReadyHint();
   danfeViewerController.dispose();
   batchController.dispose();
   void consultationController.cancelActivePortal();
 });
-
-void certificateController.refresh();
-void bridgeClient.health()
-  .then((health) => {
-    manualXmlImportSupported = health.capabilities?.manualXmlImport === true;
-    return portalFallback.prewarm(health);
-  })
-  .catch(() => {
-    // O diagnóstico principal já cobre Bridge ausente; prewarm não bloqueia o site.
-  });
+void refreshExtensionStatus();
 batchController.syncDraft();
+
+async function refreshExtensionStatus(): Promise<void> {
+  const info = await portalExtension.getInfo();
+  if (info) {
+    integrationStatus.dataset.state = 'connected';
+    integrationStatusText.textContent = `Extensão conectada · v${info.version}`;
+    return;
+  }
+  integrationStatus.dataset.state = 'disconnected';
+  integrationStatusText.textContent = 'Extensão não conectada';
+}
 
 function setConsultationMode(mode: ConsultationMode): void {
   if (batchController.isBusy() || mode === consultationMode) return;
@@ -344,40 +300,9 @@ function renderInvalidXml(error: unknown): void {
   );
 }
 
-function renderLookupFailure(lookup: NfeLookupResult): void {
-  const message = lookup.message ?? 'A SEFAZ não retornou XML para esta consulta.';
-  const status = lookup.cStat ? `Status SEFAZ ${lookup.cStat}. ${message}` : message;
-
-  switch (lookup.category) {
-    case 'consumption_limit':
-      renderLookupState('Limite de consultas atingido', status);
-      break;
-    case 'certificate_error':
-      renderLookupState('Certificado A1 indisponível', status);
-      break;
-    case 'transport_unavailable':
-      renderLookupState('SEFAZ indisponível', status);
-      break;
-    case 'fiscal_status':
-      if (lookup.cStat === '653') {
-        renderLookupState(
-          'NF-e cancelada',
-          'Esta nota fiscal foi cancelada na SEFAZ e, por isso, o XML não está disponível para download. Código SEFAZ: 653.',
-        );
-        break;
-      }
-      renderLookupState('Resultado fiscal', status);
-      break;
-    default:
-      renderLookupState('Consulta não concluída', status);
-  }
-}
-
 function renderPortalFailure(titleText: string, messageText: string, accessKey: string): void {
   renderLookupState(titleText, messageText);
-  if (manualXmlImportSupported) {
-    appendManualXmlRecovery(accessKey);
-  }
+  appendManualXmlRecovery(accessKey);
 }
 
 function appendManualXmlRecovery(accessKey: string): void {

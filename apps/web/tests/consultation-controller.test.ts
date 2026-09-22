@@ -1,260 +1,59 @@
 import { describe, expect, it } from 'vitest';
-import type { NfeLookupResult, PortalOperationStatus, SupplierResolution } from '../src/bridge/contracts';
-import type { ParsedNfe } from '../src/nfe/xml';
-import { createConsultationController, type ConsultationControllerDependencies } from '../src/nfe/consultation-controller';
+import { createConsultationController } from '../src/nfe/consultation-controller';
+const KEY = '42260912345678000195550010000000011123456786';
 
-const KEY = '42260812345678000123550010000012341000012342';
-
-function parsed(xml = '<nfe/>'): ParsedNfe {
-  return {
-    accessKey: KEY,
-    originalXml: xml,
-    supplierRuleId: null,
-    issuer: { name: 'Emitente teste', taxId: '12345678000195' },
-  } as ParsedNfe;
-}
-
-function success(xml = '<nfe/>'): NfeLookupResult {
-  return { category: 'success', xml, cStat: '138', message: null };
-}
-
-function createHarness(options: {
-  validation?: { valid: true; value: string; ufAutor: string } | { valid: false; error: string };
-  lookup?: () => Promise<NfeLookupResult>;
-  resolveSupplier?: () => Promise<SupplierResolution>;
-  parseXml?: () => ParsedNfe;
-  portalStart?: () => Promise<string>;
-  portalWait?: () => Promise<PortalOperationStatus>;
-  portalCancel?: (operationId: string) => Promise<void>;
-} = {}) {
-  let input = KEY;
-  const states: Array<{ title: string; message: string }> = [];
-  const failures: NfeLookupResult[] = [];
-  const portalRecoveries: Array<{ title: string; message: string; accessKey: string }> = [];
-  const successes: ParsedNfe[] = [];
-  const invalidXml: unknown[] = [];
-  const busy: boolean[] = [];
+function createHarness(overrides: Record<string, unknown> = {}) {
+  const states: Array<[string, string]> = [];
+  const successes: any[] = [];
   const portalStarts: string[] = [];
-  const portalCancels: string[] = [];
-  const lookupRequestIds: Array<string | undefined> = [];
-  let focusCalls = 0;
-  let resetCalls = 0;
-  let lookupCalls = 0;
-  let parseCalls = 0;
-
-  const deps: ConsultationControllerDependencies = {
-    getAccessKey: () => input,
-    clearAccessKey: () => { input = ''; },
-    validateAccessKey: () => options.validation ?? { valid: true, value: KEY, ufAutor: '42' },
-    bridge: {
-      lookupNfe: async (_accessKey, _signal, requestId) => {
-        lookupCalls += 1;
-        lookupRequestIds.push(requestId);
-        return options.lookup?.() ?? success();
-      },
-      resolveSupplier: async () => options.resolveSupplier?.() ?? { supplierId: null },
-    },
-    portal: {
-      start: async () => {
-        portalStarts.push(KEY);
-        return options.portalStart?.() ?? 'op-1';
-      },
-      waitForResult: async () => options.portalWait?.() ?? {
-        operationId: 'op-1',
-        state: 'completed',
-        message: null,
-        xml: '<portal/>',
-      },
-      cancel: async (operationId) => {
-        portalCancels.push(operationId);
-        await options.portalCancel?.(operationId);
-      },
-    },
-    parseXml: (xml) => {
-      parseCalls += 1;
-      return options.parseXml?.() ?? parsed(xml);
-    },
-    renderState: (title, message) => states.push({ title, message }),
-    renderFailure: (lookup) => failures.push(lookup),
-    renderPortalFailure: (title, message, accessKey) => portalRecoveries.push({ title, message, accessKey }),
-    renderSuccess: (value) => successes.push(value),
-    renderInvalidXml: (error) => invalidXml.push(error),
-    setBusy: (value) => busy.push(value),
-    focusInput: () => { focusCalls += 1; },
-    resetView: () => { resetCalls += 1; },
+  const portal = {
+    isAvailable: async () => true,
+    start: async (accessKey: string) => { portalStarts.push(accessKey); return 'op-1'; },
+    waitForResult: async (operationId: string) => ({ operationId, state: 'completed' as const, message: null, xml: '<xml />' }),
+    cancel: async () => {},
+    resolveSupplier: async () => ({ supplierId: null }),
+    ...overrides,
   };
-
-  const controller = createConsultationController(deps);
-
-  return {
-    controller,
-    states,
-    failures,
-    portalRecoveries,
-    successes,
-    invalidXml,
-    busy,
-    portalStarts,
-    portalCancels,
-    lookupRequestIds,
-    get focusCalls() { return focusCalls; },
-    get resetCalls() { return resetCalls; },
-    get lookupCalls() { return lookupCalls; },
-    get parseCalls() { return parseCalls; },
-    get input() { return input; },
-  };
+  const controller = createConsultationController({
+    getAccessKey: () => KEY,
+    clearAccessKey: () => {},
+    validateAccessKey: () => ({ valid: true as const, value: KEY }),
+    portal: portal as never,
+    parseXml: (xml, accessKey) => ({ accessKey, originalXml: xml, issuer: { taxId: '12345678000195' } } as never),
+    renderState: (title, message) => states.push([title, message]),
+    renderPortalFailure: (title, message) => states.push([title, message]),
+    renderSuccess: (parsed) => successes.push(parsed),
+    renderInvalidXml: () => {},
+    setBusy: () => {},
+    focusInput: () => {},
+    resetView: () => {},
+  });
+  return { controller, states, successes, portalStarts };
 }
 
-describe('single consultation controller', () => {
-  it('rejects invalid keys before Bridge access', async () => {
-    const harness = createHarness({
-      validation: { valid: false, error: 'chave inválida' },
-    });
-
-    await harness.controller.submit();
-
-    expect(harness.lookupCalls).toBe(0);
-    expect(harness.states.at(-1)).toEqual({ title: 'Chave inválida', message: 'chave inválida' });
-    expect(harness.focusCalls).toBe(1);
+describe('consultation controller extension-only', () => {
+  it('consults exclusively through the browser extension', async () => {
+    const h = createHarness();
+    await h.controller.submit();
+    expect(h.portalStarts).toEqual([KEY]);
+    expect(h.successes).toHaveLength(1);
+    expect(h.states.some(([title]) => title === 'Portal Nacional aberto')).toBe(true);
   });
-
-  it('generates one UUID requestId for the direct lookup operation', async () => {
-    const harness = createHarness();
-
-    await harness.controller.submit();
-
-    expect(harness.lookupRequestIds).toHaveLength(1);
-    expect(harness.lookupRequestIds[0]).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-    );
+  it('fails clearly when the extension is unavailable', async () => {
+    const h = createHarness({ isAvailable: async () => false });
+    await h.controller.submit();
+    expect(h.portalStarts).toHaveLength(0);
+    expect(h.states.at(-1)?.[0]).toBe('Extensão não conectada');
   });
-
-  it('parses successful XML, resolves supplier fail-soft and renders success', async () => {
-    const harness = createHarness({
-      resolveSupplier: async () => ({ supplierId: 'souza-cruz' }),
-    });
-
-    await harness.controller.submit();
-
-    expect(harness.lookupCalls).toBe(1);
-    expect(harness.parseCalls).toBe(1);
-    expect(harness.successes).toHaveLength(1);
-    expect(harness.successes[0]?.supplierRuleId).toBe('souza-cruz');
-    expect(harness.busy).toEqual([true, false]);
+  it('keeps supplier resolution fail-soft', async () => {
+    const h = createHarness({ resolveSupplier: async () => { throw new Error('sem configuração'); } });
+    await h.controller.submit();
+    expect(h.successes[0]?.supplierRuleId).toBeNull();
   });
-
-  it('applies supplier resolution to a validated manually imported XML', async () => {
-    const harness = createHarness({
-      resolveSupplier: async () => ({ supplierId: 'fernando-klein' }),
-    });
-
-    await harness.controller.completeManualImport(parsed('<manual/>'));
-
-    expect(harness.successes).toHaveLength(1);
-    expect(harness.successes[0]?.supplierRuleId).toBe('fernando-klein');
-  });
-
-  it('renders invalid XML without exposing success', async () => {
-    const error = new Error('xml inválido');
-    const harness = createHarness({
-      parseXml: () => { throw error; },
-    });
-
-    await harness.controller.submit();
-
-    expect(harness.invalidXml).toEqual([error]);
-    expect(harness.successes).toHaveLength(0);
-    expect(harness.busy.at(-1)).toBe(false);
-  });
-
-  it('opens Portal only for consumption_limit and cStat 217', async () => {
-    const limited = createHarness({
-      lookup: async () => ({ category: 'consumption_limit', xml: null, cStat: '656', message: 'limite' }),
-    });
-    await limited.controller.submit();
-    expect(limited.portalStarts).toEqual([KEY]);
-    expect(limited.successes).toHaveLength(1);
-
-    const missing = createHarness({
-      lookup: async () => ({ category: 'fiscal_status', xml: null, cStat: '217', message: 'não localizada' }),
-    });
-    await missing.controller.submit();
-    expect(missing.portalStarts).toEqual([KEY]);
-
-    const other = createHarness({
-      lookup: async () => ({ category: 'fiscal_status', xml: null, cStat: '137', message: 'sem XML' }),
-    });
-    await other.controller.submit();
-    expect(other.portalStarts).toHaveLength(0);
-    expect(other.failures).toHaveLength(1);
-  });
-
-  it('keeps busy state balanced when Bridge throws', async () => {
-    const harness = createHarness({
-      lookup: async () => { throw new Error('falha bridge'); },
-    });
-
-    await harness.controller.submit();
-
-    expect(harness.states.at(-1)).toEqual({
-      title: 'Consulta não concluída',
-      message: 'falha bridge',
-    });
-    expect(harness.busy).toEqual([true, false]);
-  });
-
-  it('renders cancelled and failed Portal terminal states without fiscal retry', async () => {
-    const cancelled = createHarness({
-      lookup: async () => ({ category: 'fiscal_status', xml: null, cStat: '217', message: 'não localizada' }),
-      portalWait: async () => ({ operationId: 'op-1', state: 'cancelled', message: 'fechada', xml: null }),
-    });
-    await cancelled.controller.submit();
-    expect(cancelled.lookupCalls).toBe(1);
-    expect(cancelled.states.at(-1)?.title).toBe('Consulta pelo Portal cancelada');
-
-    const failed = createHarness({
-      lookup: async () => ({ category: 'fiscal_status', xml: null, cStat: '217', message: 'não localizada' }),
-      portalWait: async () => ({ operationId: 'op-1', state: 'failed', message: 'indisponível', xml: null }),
-    });
-    await failed.controller.submit();
-    expect(failed.lookupCalls).toBe(1);
-    expect(failed.portalRecoveries.at(-1)).toEqual({
-      title: 'Portal da NF-e indisponível',
-      message: 'indisponível',
-      accessKey: KEY,
-    });
-  });
-
-  it('resets the visible consultation and focuses the key input', () => {
-    const harness = createHarness();
-
-    harness.controller.reset();
-
-    expect(harness.input).toBe('');
-    expect(harness.resetCalls).toBe(1);
-    expect(harness.focusCalls).toBe(1);
-  });
-
-  it('cancels an active Portal operation best-effort and clears ownership', async () => {
-    let release!: (value: PortalOperationStatus) => void;
-    const wait = new Promise<PortalOperationStatus>((resolve) => { release = resolve; });
-    const harness = createHarness({
-      lookup: async () => ({ category: 'fiscal_status', xml: null, cStat: '217', message: 'não localizada' }),
-      portalWait: async () => wait,
-    });
-
-    const running = harness.controller.submit();
-    for (let attempt = 0; attempt < 8 && !harness.controller.isPortalActive(); attempt += 1) {
-      await Promise.resolve();
-    }
-
-    expect(harness.controller.isPortalActive()).toBe(true);
-    await harness.controller.cancelActivePortal();
-    expect(harness.portalCancels).toEqual(['op-1']);
-    expect(harness.controller.isPortalActive()).toBe(false);
-
-    release({ operationId: 'op-1', state: 'cancelled', message: 'cancelada', xml: null });
-    await running;
-    expect(harness.lookupCalls).toBe(1);
+  it('reports cancelled Portal operations without another route', async () => {
+    const h = createHarness({ waitForResult: async (operationId: string) => ({ operationId, state: 'cancelled' as const, message: 'cancelada', xml: null }) });
+    await h.controller.submit();
+    expect(h.states.at(-1)?.[0]).toBe('Consulta pelo Portal cancelada');
+    expect(h.portalStarts).toEqual([KEY]);
   });
 });

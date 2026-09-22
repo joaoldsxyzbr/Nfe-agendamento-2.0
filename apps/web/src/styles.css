@@ -180,7 +180,7 @@ h2 {
   margin-bottom: 0;
 }
 
-.bridge-pill {
+.integration-pill {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -195,30 +195,28 @@ h2 {
   white-space: nowrap;
 }
 
-.bridge-dot {
+.integration-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
   background: var(--yellow);
 }
 
-.bridge-pill[data-state="connected"] .bridge-dot {
+.integration-pill[data-state="connected"] .integration-dot {
   background: var(--green);
 }
 
-.bridge-pill[data-state="missing"] .bridge-dot,
-.bridge-pill[data-state="permission"] .bridge-dot {
+.integration-pill[data-state="missing"] .integration-dot,
+.integration-pill[data-state="permission"] .integration-dot {
   background: var(--danger);
 }
 
-.certificate-card,
 .lookup-card {
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--surface);
 }
 
-.certificate-card,
 .lookup-card {
   padding: 22px;
 }
