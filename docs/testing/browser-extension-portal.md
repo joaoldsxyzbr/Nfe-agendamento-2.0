@@ -5,7 +5,7 @@
 ```text
 Site
  ↓
-Extensão 0.2.8
+Extensão 0.2.9
  ├─ NFeDistribuicaoDFe
  └─ Portal Nacional (fallback)
 ```
@@ -19,7 +19,7 @@ Não existe Bridge, WebView2 helper ou Native Messaging.
 3. informar uma vez o CNPJ correspondente ao certificado A1 usado naquele computador;
 4. confirmar no site que a consulta direta aparece como configurada.
 
-Se o usuário tentar consultar antes disso, o site solicita a abertura das opções da extensão automaticamente e não envia a consulta à SEFAZ.
+Se o usuário tentar consultar antes disso, o site solicita a abertura das opções da extensão automaticamente e não envia a consulta à SEFAZ. A extensão 0.2.9 anuncia explicitamente essa capacidade; a 0.2.8 é reconhecida por compatibilidade. Versões anteriores orientam atualização ou abertura manual das opções.
 
 O CNPJ fica em `chrome.storage.local`. O certificado e sua chave privada não são copiados para a extensão.
 
