@@ -36,3 +36,4 @@ for (const [entry, output] of [
 await cp(new URL('../manifest.json', import.meta.url), new URL('manifest.json', outdir));
 
 await cp(new URL('../options.html', import.meta.url), new URL('options.html', outdir));
+await cp(new URL('../icon.png', import.meta.url), new URL('icon.png', outdir));

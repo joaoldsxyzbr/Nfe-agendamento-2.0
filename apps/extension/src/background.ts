@@ -7,7 +7,11 @@ import {
   validateXmlPayload,
 } from './protocol';
 import { isLikelyHtmlDocument, isOfficialDownloadUrl } from './portal-dom';
-import { buildReplayRequest, shouldCapturePortalRequest } from './portal-request';
+import {
+  buildPageReplayRequest,
+  shouldCapturePortalRequest,
+  type PageReplayRequest,
+} from './portal-request';
 import { loadSupplierConfig, resolveSupplierFromConfig } from './supplier-store';
 
 declare const chrome: any;
@@ -401,9 +405,9 @@ async function handlePortalDownload(details: any): Promise<void> {
   });
 
   try {
-    let replay: ReturnType<typeof buildReplayRequest>;
+    let replay: PageReplayRequest;
     try {
-      replay = buildReplayRequest(details);
+      replay = buildPageReplayRequest(details);
     } catch (error) {
       throw new ExtensionFailure(
         'portal_request_replay_invalid',
@@ -413,15 +417,7 @@ async function handlePortalDownload(details: any): Promise<void> {
       );
     }
 
-    let response: Response;
-    try {
-      response = await fetch(replay.url, replay.init);
-    } catch {
-      throw new ExtensionFailure(
-        'portal_xml_capture_unavailable',
-        'Não foi possível acessar o download oficial pela sessão atual do navegador.',
-      );
-    }
+    const response = await fetchPortalXmlInPage(operation.portalTabId, replay);
 
     if (response.status === 401 || response.status === 403) {
       throw new ExtensionFailure(
@@ -444,7 +440,7 @@ async function handlePortalDownload(details: any): Promise<void> {
       );
     }
 
-    const payload = await response.text();
+    const payload = response.payload;
     if (isLikelyHtmlDocument(payload)) {
       throw new ExtensionFailure(
         'portal_session_lost',
@@ -479,6 +475,104 @@ async function handlePortalDownload(details: any): Promise<void> {
         : 'Não foi possível obter o XML pela sessão do navegador.',
     });
   }
+}
+
+type PortalPageFetchResult = Readonly<{
+  ok: boolean;
+  status: number;
+  redirected: boolean;
+  url: string;
+  payload: string;
+}>;
+
+async function fetchPortalXmlInPage(
+  tabId: number,
+  request: PageReplayRequest,
+): Promise<PortalPageFetchResult> {
+  let injection: any[];
+  try {
+    injection = await chrome.scripting.executeScript({
+      target: { tabId },
+      world: 'MAIN',
+      args: [request],
+      func: async (input: PageReplayRequest) => {
+        try {
+          let body: BodyInit | undefined;
+          if (input.body?.encoding === 'text') {
+            body = input.body.value;
+          } else if (input.body?.encoding === 'base64') {
+            const binary = atob(input.body.value);
+            const bytes = new Uint8Array(binary.length);
+            for (let index = 0; index < binary.length; index += 1) {
+              bytes[index] = binary.charCodeAt(index);
+            }
+            body = bytes;
+          }
+
+          const response = await fetch(input.url, {
+            method: input.method,
+            headers: input.headers,
+            body,
+            credentials: 'include',
+            redirect: 'follow',
+            cache: 'no-store',
+          });
+
+          return {
+            ok: response.ok,
+            status: response.status,
+            redirected: response.redirected,
+            url: response.url,
+            payload: await response.text(),
+            networkError: null,
+          };
+        } catch (error) {
+          return {
+            ok: false,
+            status: 0,
+            redirected: false,
+            url: input.url,
+            payload: '',
+            networkError: error instanceof Error ? error.message : 'Falha de rede no Portal.',
+          };
+        }
+      },
+    });
+  } catch {
+    throw new ExtensionFailure(
+      'portal_xml_capture_unavailable',
+      'Não foi possível executar o download dentro da sessão atual do Portal.',
+    );
+  }
+
+  const result = injection?.[0]?.result;
+  if (
+    !result ||
+    typeof result !== 'object' ||
+    typeof result.status !== 'number' ||
+    typeof result.url !== 'string' ||
+    typeof result.payload !== 'string'
+  ) {
+    throw new ExtensionFailure(
+      'portal_xml_capture_unavailable',
+      'O Portal não devolveu uma resposta válida para a captura do XML.',
+    );
+  }
+
+  if (typeof result.networkError === 'string' && result.networkError) {
+    throw new ExtensionFailure(
+      'portal_xml_capture_unavailable',
+      'Não foi possível acessar o download oficial pela sessão atual do Portal.',
+    );
+  }
+
+  return {
+    ok: Boolean(result.ok),
+    status: result.status,
+    redirected: Boolean(result.redirected),
+    url: result.url,
+    payload: result.payload,
+  };
 }
 
 async function handleWindowRemoved(windowId: number): Promise<void> {

@@ -12,7 +12,7 @@ Não existe Bridge ou helper WebView2 no produto atual.
 
 ## Versão
 
-A `main` usa extensão **0.2.4**. A release extension-only correspondente é a **v0.0.26**, com os assets `NFeAgendamento-Extension.zip` e `NFeAgendamento-Extension-v0.2.4.zip`.
+A `main` usa extensão **0.2.5**. A release correspondente é a **v0.0.27**, com os assets `NFeAgendamento-Extension.zip` e `NFeAgendamento-Extension-v0.2.5.zip`.
 
 ## Instalação de desenvolvimento
 
@@ -51,7 +51,9 @@ Sem `<all_urls>`, Native Messaging, `downloads`, `webRequestBlocking` ou acesso 
 
 ## Confiabilidade
 
-A 0.2.4 inclui:
+A 0.2.5 mantém o hardening da 0.2.4 e altera a captura final do XML: a requisição oficial observada por `webRequest` é serializada e reproduzida por `chrome.scripting.executeScript` dentro da própria aba do Portal, preservando o contexto de sessão do navegador sem adicionar permissões.
+
+A 0.2.4 já incluía:
 
 - estado em `chrome.storage.session`;
 - reconciliação após cold start;

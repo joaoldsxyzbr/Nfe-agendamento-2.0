@@ -48,7 +48,7 @@ CNPJ/CPF real de fornecedor não faz parte do bundle público. A configuração 
 
 ## Extensão
 
-Manifest V3, versão de desenvolvimento atual: **0.2.4**.
+Manifest V3, versão de desenvolvimento atual: **0.2.5**.
 
 Permissões:
 
@@ -89,9 +89,11 @@ O CI vigente possui apenas os gates `web`, `extension` e `danfe-print`. CodeQL a
 
 ## Releases
 
-A **v0.0.26** é a primeira release totalmente extension-only e publica a extensão **0.2.4**.
+A **v0.0.27** corrige a captura do XML dentro da própria sessão autenticada do Portal e publica a extensão **0.2.5** com a logo do NFe Agendamento.
 
-O site oferece uma seta de download que aponta para o asset estável `NFeAgendamento-Extension.zip` da release mais recente. A mesma release também preserva o ZIP versionado `NFeAgendamento-Extension-v0.2.4.zip`.
+O site oferece uma seta de download que aponta para o asset estável `NFeAgendamento-Extension.zip` da release mais recente. A mesma release também preserva o ZIP versionado `NFeAgendamento-Extension-v0.2.5.zip`.
+
+A **v0.0.26** permanece como a primeira release totalmente extension-only.
 
 A **v0.0.25** permanece como registro da última release híbrida que ainda incluía Bridge/Windows.
 

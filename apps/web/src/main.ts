@@ -29,9 +29,11 @@ app.innerHTML = `
         </div>
         <p class="subtitle">Consulta pelo Portal Nacional da NF-e usando a extensão do navegador.</p>
       </div>
-      <div class="integration-pill" id="integration-status" data-state="checking" role="status" aria-live="polite">
-        <span class="integration-dot" aria-hidden="true"></span>
-        <span id="integration-status-text">Verificando extensão…</span>
+      <div class="topbar-controls" id="topbar-controls">
+        <div class="integration-pill" id="integration-status" data-state="checking" role="status" aria-live="polite">
+          <span class="integration-dot" aria-hidden="true"></span>
+          <span id="integration-status-text">Verificando extensão…</span>
+        </div>
       </div>
     </header>
 

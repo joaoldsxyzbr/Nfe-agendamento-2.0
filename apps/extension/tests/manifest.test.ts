@@ -16,10 +16,12 @@ describe('extension manifest', () => {
       background?: { service_worker?: string; type?: string };
       content_scripts?: Array<{ matches?: string[]; js?: string[] }>;
       options_page?: string;
+      icons?: Record<string, string>;
+      action?: { default_title?: string; default_icon?: Record<string, string> };
     };
 
     expect(manifest.manifest_version).toBe(3);
-    expect((manifest as { version?: string }).version).toBe('0.2.4');
+    expect((manifest as { version?: string }).version).toBe('0.2.5');
     expect(Number(manifest.minimum_chrome_version)).toBeGreaterThanOrEqual(120);
     expect([...(manifest.permissions ?? [])].sort()).toEqual(['scripting', 'storage', 'webRequest']);
     expect([...(manifest.host_permissions ?? [])].sort()).toEqual([
@@ -29,6 +31,14 @@ describe('extension manifest', () => {
     expect(JSON.stringify(manifest)).not.toContain('<all_urls>');
     expect(manifest.background).toEqual({ service_worker: 'background.js', type: 'module' });
     expect(manifest.options_page).toBe('options.html');
+    expect(manifest.icons).toEqual({
+      '16': 'icon.png',
+      '32': 'icon.png',
+      '48': 'icon.png',
+      '128': 'icon.png',
+    });
+    expect(manifest.action?.default_title).toBe('NFe Agendamento');
+    expect(manifest.action?.default_icon?.['128']).toBe('icon.png');
 
     const scripts = manifest.content_scripts ?? [];
     expect(scripts).toHaveLength(2);

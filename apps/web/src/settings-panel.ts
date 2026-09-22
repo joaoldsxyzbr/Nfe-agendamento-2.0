@@ -5,10 +5,10 @@ const client = new BrowserPortalExtensionClient();
 window.addEventListener('DOMContentLoaded', initializeSettingsPanel, { once: true });
 
 function initializeSettingsPanel(): void {
-  const topbar = document.querySelector<HTMLElement>('.topbar');
+  const topbarControls = document.querySelector<HTMLElement>('#topbar-controls');
   const integrationStatus = document.querySelector<HTMLElement>('#integration-status');
   const integrationStatusText = document.querySelector<HTMLElement>('#integration-status-text');
-  if (!topbar || !integrationStatus || !integrationStatusText) return;
+  if (!topbarControls || !integrationStatus || !integrationStatusText) return;
   const statusElement = integrationStatus;
   const statusTextElement = integrationStatusText;
 
@@ -64,7 +64,7 @@ function initializeSettingsPanel(): void {
 
   panel.append(header, diagnostics, note, refresh);
   actions.append(downloadTrigger, trigger);
-  topbar.append(actions);
+  topbarControls.append(actions);
   document.body.append(panel);
 
   const open = () => { panel.hidden = false; trigger.setAttribute('aria-expanded', 'true'); void refreshDiagnostics(); };

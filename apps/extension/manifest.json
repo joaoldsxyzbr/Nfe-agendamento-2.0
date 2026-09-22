@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "NFe Agendamento - Portal",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Integra o NFe Agendamento ao Portal Nacional da NF-e no navegador.",
   "minimum_chrome_version": "120",
   "permissions": [
@@ -37,5 +37,20 @@
       "run_at": "document_idle"
     }
   ],
-  "options_page": "options.html"
+  "options_page": "options.html",
+  "icons": {
+    "16": "icon.png",
+    "32": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  },
+  "action": {
+    "default_title": "NFe Agendamento",
+    "default_icon": {
+      "16": "icon.png",
+      "32": "icon.png",
+      "48": "icon.png",
+      "128": "icon.png"
+    }
+  }
 }
