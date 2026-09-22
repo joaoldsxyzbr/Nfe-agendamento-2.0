@@ -1,23 +1,33 @@
 import { describe, expect, it } from 'vitest';
 import { createBatchController, type BatchItemView } from '../src/batch/controller';
+
 const A = '42260912345678000195550010000000011123456786';
 const B = '35260812345678000195550010000000011000000018';
 const el = <T extends object>(value: T): T => value;
 
 function harness(overrides: Record<string, unknown> = {}) {
   const snapshots: BatchItemView[][] = [];
-  const starts: string[] = [];
-  let active = 0;
-  let maxActive = 0;
+  const directKeys: string[] = [];
+  const portalStarts: string[] = [];
   const input = el({ value: '', disabled: false } as HTMLTextAreaElement);
   const route = el({ textContent: '' } as HTMLElement);
   const portal = {
-    isAvailable: async () => true,
-    start: async (key: string) => { starts.push(key); return `op-${starts.length}`; },
-    waitForResult: async (operationId: string) => {
-      active += 1; maxActive = Math.max(maxActive, active); await Promise.resolve(); active -= 1;
-      return { operationId, state: 'completed' as const, message: null, xml: '<xml />' };
+    getInfo: async () => ({
+      version: '0.2.6',
+      capabilities: { directLookup: true, portalLookup: true, supplierResolution: true },
+      configuration: { fiscalIdentityConfigured: true },
+    }),
+    directLookup: async (key: string) => {
+      directKeys.push(key);
+      return { category: 'success' as const, xml: '<xml />', cStat: '138', message: 'ok' };
     },
+    start: async (key: string) => { portalStarts.push(key); return `op-${portalStarts.length}`; },
+    waitForResult: async (operationId: string) => ({
+      operationId,
+      state: 'completed' as const,
+      message: null,
+      xml: '<xml />',
+    }),
     cancel: async () => {},
     resolveSupplier: async () => ({ supplierId: null }),
     ...overrides,
@@ -36,27 +46,83 @@ function harness(overrides: Record<string, unknown> = {}) {
       modeBatchButton: el({ disabled: false } as HTMLButtonElement),
     },
     portal: portal as never,
-    parseXml: (xml, accessKey) => ({ accessKey, originalXml: xml, issuer: { taxId: '12345678000195', name: 'Emitente' }, totals: { invoice: 10 }, number: '1', series: '1' } as never),
-    createZip: () => new Blob(), downloadBlob: () => {}, openDanfe: () => {}, downloadXml: () => {},
-    openDanfeDocuments: () => {}, printWindow: () => {},
+    parseXml: (xml, accessKey) => ({
+      accessKey,
+      originalXml: xml,
+      issuer: { taxId: '12345678000195', name: 'Emitente' },
+      totals: { invoice: 10 },
+      number: '1',
+      series: '1',
+    } as never),
+    createZip: () => new Blob(),
+    downloadBlob: () => {},
+    openDanfe: () => {},
+    downloadXml: () => {},
+    openDanfeDocuments: () => {},
+    printWindow: () => {},
     renderRows: (items) => snapshots.push(items.map((item) => ({ ...item }))),
   });
-  return { controller, input, route, starts, snapshots, get maxActive(){ return maxActive; } };
+  return { controller, input, route, directKeys, portalStarts, snapshots };
 }
 
-describe('batch controller extension-only', () => {
-  it('processes Portal operations strictly one at a time', async () => {
-    const h = harness(); h.input.value = `${A}\n${B}`; h.controller.syncDraft(); await h.controller.start();
-    expect(h.starts).toEqual([A, B]); expect(h.maxActive).toBe(1);
-    expect(h.snapshots.at(-1)?.map((item) => item.status)).toEqual(['success', 'success']);
+describe('batch controller direct-first', () => {
+  it('uses direct SEFAZ for each item when XML is available', async () => {
+    const h = harness();
+    h.input.value = `${A}\n${B}`;
+    h.controller.syncDraft();
+    await h.controller.start();
+
+    expect(h.directKeys).toEqual([A, B]);
+    expect(h.portalStarts).toHaveLength(0);
+    expect(h.snapshots.at(-1)?.every((item) => item.source === 'SEFAZ')).toBe(true);
+  });
+
+  it('sends only the 217 item to the Portal and returns to direct lookup', async () => {
+    let calls = 0;
+    const h = harness({
+      directLookup: async (key: string) => {
+        h.directKeys.push(key);
+        calls += 1;
+        return calls === 1
+          ? { category: 'fiscal_status', xml: null, cStat: '217', message: 'não consta' }
+          : { category: 'success', xml: '<xml />', cStat: '138', message: 'ok' };
+      },
+    });
+    h.input.value = `${A}\n${B}`;
+    h.controller.syncDraft();
+    await h.controller.start();
+
+    expect(h.portalStarts).toEqual([A]);
+    expect(h.directKeys).toEqual([A, B]);
+    expect(h.snapshots.at(-1)?.map((item) => item.source)).toEqual(['Portal', 'SEFAZ']);
+  });
+
+  it('switches remaining items to Portal after consumption limit', async () => {
+    const h = harness({
+      directLookup: async (key: string) => {
+        h.directKeys.push(key);
+        return { category: 'consumption_limit', xml: null, cStat: '656', message: 'limite' };
+      },
+    });
+    h.input.value = `${A}\n${B}`;
+    h.controller.syncDraft();
+    await h.controller.start();
+
+    expect(h.directKeys).toEqual([A]);
+    expect(h.portalStarts).toEqual([A, B]);
     expect(h.snapshots.at(-1)?.every((item) => item.source === 'Portal')).toBe(true);
   });
-  it('blocks the batch before the first popup when the extension is missing', async () => {
-    const h = harness({ isAvailable: async () => false }); h.input.value = A; h.controller.syncDraft(); await h.controller.start();
-    expect(h.starts).toHaveLength(0); expect(h.route.textContent).toContain('Extensão não conectada');
-  });
-  it('keeps supplier rules fail-soft', async () => {
-    const h = harness({ resolveSupplier: async () => { throw new Error('sem regra'); } }); h.input.value = A; h.controller.syncDraft(); await h.controller.start();
-    expect(h.snapshots.at(-1)?.[0]?.status).toBe('success'); expect(h.snapshots.at(-1)?.[0]?.parsed?.supplierRuleId).toBeNull();
+
+  it('stops instead of hiding missing fiscal configuration behind Portal', async () => {
+    const h = harness({
+      directLookup: async () => ({ category: 'configuration_error', xml: null, cStat: null, message: 'Configure CNPJ' }),
+    });
+    h.input.value = `${A}\n${B}`;
+    h.controller.syncDraft();
+    await h.controller.start();
+
+    expect(h.portalStarts).toHaveLength(0);
+    expect(h.snapshots.at(-1)?.[0]?.status).toBe('transport_error');
+    expect(h.snapshots.at(-1)?.[1]?.status).toBe('cancelled');
   });
 });

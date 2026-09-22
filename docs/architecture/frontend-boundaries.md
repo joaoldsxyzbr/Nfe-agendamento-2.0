@@ -1,68 +1,59 @@
 # Fronteiras do frontend
 
-**Estado atual: arquitetura extension-only.**
+**Estado atual: site + extensão Chromium, sem Bridge.**
 
-O frontend é um site Vite + TypeScript. Toda consulta de NF-e depende exclusivamente da extensão Chromium MV3 e do Portal Nacional.
+## Fluxo
 
-## Composition root
+```text
+Site → extensão → SEFAZ direta
+                    │
+                    ├─ XML: conclui
+                    ├─ 217: Portal para aquela NF-e
+                    └─ 656/429/limite: Portal para atual + restantes do lote
+```
 
-`apps/web/src/main.ts` compõe:
-
-- consulta unitária;
-- lote sequencial;
-- cliente da extensão;
-- parser XML;
-- regras de apresentação;
-- visualizador DANFE;
-- download de XML/ZIP;
-- diagnóstico simples da extensão.
-
-Não existe cliente HTTP local, seleção de certificado ou código de atualização Windows.
-
-## Limites
-
-### Site
+## Site
 
 Responsável por:
 
 - validar chave;
-- apresentar estado da consulta;
-- parsear e validar XML;
-- resolver apresentação de fornecedor a partir do `supplierId` retornado pela extensão;
+- orquestrar consulta unitária e lote;
+- aplicar as regras de roteamento a partir do resultado tipado da extensão;
+- parsear/validar XML novamente;
 - DANFE, impressão/PDF, XML e ZIP;
-- manter lote sequencial.
+- resolver apresentação a partir do `supplierId`.
 
-### Extensão
+O site não acessa localhost, certificado ou endpoint fiscal diretamente.
+
+## Extensão
 
 Responsável por:
 
 - handshake com o site;
-- abrir e acompanhar o Portal Nacional;
-- preencher a chave;
-- aguardar hCaptcha humano;
-- acionar apenas controles oficiais conhecidos;
-- observar/reproduzir com segurança somente a requisição oficial de XML;
-- guardar regras privadas de fornecedor em `chrome.storage.local`.
+- consulta `NFeDistribuicaoDFe`;
+- montar SOAP `consChNFe`;
+- proteção local de consumo;
+- armazenar localmente o CNPJ do A1;
+- abrir e acompanhar o Portal somente como fallback;
+- manter hCaptcha humano;
+- capturar/validar o XML oficial;
+- guardar regras privadas de fornecedor.
 
-### Navegador/Windows
+## Navegador/Windows
 
-Responsável pela autenticação TLS com certificado A1 quando o Portal solicitar. O projeto não acessa diretamente a chave privada.
+Responsável pela autenticação TLS com certificado A1. O projeto não recebe PFX/P12, senha ou chave privada.
 
-### Cloudflare
+## Cloudflare
 
-Responsável por servir o site. Não recebe chave NF-e, XML, certificado ou identificadores privados de fornecedor por causa do fluxo de consulta.
-
-## Contratos
-
-Os contratos genéricos do Portal ficam em `apps/web/src/portal/contracts.ts`. Eles não pertencem mais a um módulo Windows.
-
-O cliente principal é `BrowserPortalExtensionClient`.
+Responsável por servir o site. Não é intermediário da consulta fiscal atual.
 
 ## Invariantes
 
-- nenhum runtime web referencia `127.0.0.1:17345`;
-- nenhum runtime web instancia `BridgeClient`;
-- nenhuma consulta usa `lookupNfe`/SEFAZ direta;
-- no máximo uma operação Portal por vez no lote;
-- hCaptcha permanece manual;
-- falha do Portal não abre uma segunda rota automaticamente.
+- não existe `BridgeClient` nem `127.0.0.1:17345`;
+- consulta direta vem antes do Portal;
+- 217 não muda permanentemente a rota do lote;
+- 656/429/limite local muda o restante do lote para Portal;
+- falha ambígua de transporte não é repetida nem convertida em Portal automaticamente;
+- lote é sequencial;
+- hCaptcha é manual;
+- no máximo uma operação Portal fica ativa.

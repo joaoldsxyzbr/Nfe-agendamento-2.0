@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 const ACCESS_KEY = '42260812345678000123550010000012341000012342';
 const xml = await readFile(new URL('../../apps/web/tests/fixtures/nfe-basic.xml', import.meta.url), 'utf8');
 
-test('consulta unitária preserva o card usando somente a extensão', async ({ page }) => {
+test('consulta unitária usa SEFAZ direta antes do Portal', async ({ page }) => {
   await page.addInitScript(({ xmlPayload }) => {
     const channel = 'nfe-agendamento:portal-extension';
     let operationId = '';
@@ -13,7 +13,24 @@ test('consulta unitária preserva o card usando somente a extensão', async ({ p
       if (!envelope || envelope.channel !== channel || envelope.direction !== 'request') return;
       const command = envelope.command;
       const respond = (response: unknown) => window.postMessage({ channel, direction: 'response', requestId: envelope.requestId, response }, window.location.origin);
-      if (command?.type === 'ping') { respond({ type: 'ready', requestId: command.requestId, version: '0.2.4', capabilities: { portalLookup: true, supplierResolution: true } }); return; }
+      if (command?.type === 'ping') {
+        respond({
+          type: 'ready',
+          requestId: command.requestId,
+          version: '0.2.6',
+          capabilities: { directLookup: true, portalLookup: true, supplierResolution: true },
+          configuration: { fiscalIdentityConfigured: true },
+        });
+        return;
+      }
+      if (command?.type === 'direct_lookup') {
+        respond({
+          type: 'direct_lookup_result',
+          requestId: command.requestId,
+          result: { category: 'success', xml: xmlPayload, cStat: '138', message: 'Documento localizado' },
+        });
+        return;
+      }
       if (command?.type === 'start') {
         operationId = 'e2e-op';
         respond({ type: 'started', requestId: command.requestId, operationId });
@@ -34,7 +51,7 @@ test('consulta unitária preserva o card usando somente a extensão', async ({ p
   await input.fill(ACCESS_KEY);
   await expect(consult).toBeEnabled();
   await consult.click();
-  await expect(page.locator('#batch-route')).toContainText('Portal');
+  await expect(page.locator('#batch-route')).toContainText('SEFAZ');
   await expect(cancel).toBeVisible();
   const row = page.locator('.batch-item[data-state="success"]');
   await expect(row).toBeVisible();

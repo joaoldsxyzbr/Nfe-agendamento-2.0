@@ -27,7 +27,7 @@ app.innerHTML = `
           <img class="brand-mark" src="/brand-mark.png" alt="" aria-hidden="true" />
           <h1 class="brand-title"><span>NF-e</span><span>Agendamento</span></h1>
         </div>
-        <p class="subtitle">Consulta pelo Portal Nacional da NF-e usando a extensão do navegador.</p>
+        <p class="subtitle">Consulta direta na SEFAZ com Portal Nacional como fallback.</p>
       </div>
       <div class="topbar-controls" id="topbar-controls">
         <div class="integration-pill" id="integration-status" data-state="checking" role="status" aria-live="polite">
@@ -67,7 +67,7 @@ app.innerHTML = `
             />
             <button id="lookup-submit" type="submit">Consultar</button>
           </div>
-          <p id="lookup-help" class="help-text">A extensão abre o Portal Nacional em uma janela do navegador. Resolva o hCaptcha manualmente; o XML volta automaticamente para este site.</p>
+          <p id="lookup-help" class="help-text">A extensão consulta primeiro a SEFAZ. O Portal Nacional só abre como fallback quando necessário.</p>
         </form>
 
         <div class="lookup-result-section">

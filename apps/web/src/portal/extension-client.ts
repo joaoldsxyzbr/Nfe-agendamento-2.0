@@ -1,7 +1,8 @@
-import type { PortalOperationStatus } from './contracts';
+import type { DirectLookupResult, PortalOperationStatus } from './contracts';
 
 const PAGE_CHANNEL = 'nfe-agendamento:portal-extension';
 const DEFAULT_HANDSHAKE_TIMEOUT_MS = 1_200;
+const DIRECT_LOOKUP_TIMEOUT_MS = 50_000;
 const HANDSHAKE_ATTEMPTS = 3;
 const HANDSHAKE_RETRY_DELAY_MS = 200;
 const START_ATTEMPTS = 2;
@@ -10,6 +11,7 @@ const COMMAND_RETRY_DELAY_MS = 150;
 
 type ExtensionCommand =
   | { type: 'ping'; requestId: string }
+  | { type: 'direct_lookup'; requestId: string; accessKey: string }
   | { type: 'start'; requestId: string; accessKey: string }
   | { type: 'status'; requestId: string; operationId: string }
   | { type: 'cancel'; requestId: string; operationId: string }
@@ -18,8 +20,12 @@ type ExtensionCommand =
 export type PortalExtensionInfo = Readonly<{
   version: string;
   capabilities: Readonly<{
-    portalLookup: true;
-    supplierResolution: true;
+    directLookup: boolean;
+    portalLookup: boolean;
+    supplierResolution: boolean;
+  }>;
+  configuration: Readonly<{
+    fiscalIdentityConfigured: boolean;
   }>;
 }>;
 
@@ -31,7 +37,7 @@ type ExtensionEvent =
   | { type: 'cancelled'; operationId: string; message?: string };
 
 export interface PortalExtensionTransport {
-  request(command: ExtensionCommand, signal?: AbortSignal): Promise<unknown>;
+  request(command: ExtensionCommand, signal?: AbortSignal, timeoutMs?: number): Promise<unknown>;
   subscribe(listener: (event: unknown) => void): () => void;
 }
 
@@ -45,13 +51,17 @@ export class WindowPortalExtensionTransport implements PortalExtensionTransport 
     this.origin = windowRef.location.origin;
   }
 
-  request(command: ExtensionCommand, signal?: AbortSignal): Promise<unknown> {
+  request(
+    command: ExtensionCommand,
+    signal?: AbortSignal,
+    timeoutMs = this.timeoutMs,
+  ): Promise<unknown> {
     signal?.throwIfAborted();
 
     return new Promise((resolve, reject) => {
       const timeout = globalThis.setTimeout(
-        () => finish(() => reject(new Error('Extensão do Portal não respondeu.'))),
-        this.timeoutMs,
+        () => finish(() => reject(new Error('Extensão do NFe Agendamento não respondeu.'))),
+        timeoutMs,
       );
 
       const onAbort = () => finish(() => reject(signal?.reason ?? new DOMException('Aborted', 'AbortError')));
@@ -107,7 +117,6 @@ export class BrowserPortalExtensionClient {
     for (let attempt = 0; attempt < HANDSHAKE_ATTEMPTS; attempt += 1) {
       if (signal?.aborted) return null;
       const requestId = globalThis.crypto.randomUUID();
-
       try {
         const response = await this.transport.request({ type: 'ping', requestId }, signal);
         const info = parseReadyResponse(response);
@@ -115,12 +124,8 @@ export class BrowserPortalExtensionClient {
       } catch {
         if (signal?.aborted) return null;
       }
-
-      if (attempt < HANDSHAKE_ATTEMPTS - 1) {
-        await waitForHandshakeRetry(signal);
-      }
+      if (attempt < HANDSHAKE_ATTEMPTS - 1) await waitForHandshakeRetry(signal);
     }
-
     return null;
   }
 
@@ -135,6 +140,19 @@ export class BrowserPortalExtensionClient {
     });
   }
 
+  async directLookup(accessKey: string, signal?: AbortSignal): Promise<DirectLookupResult> {
+    const requestId = globalThis.crypto.randomUUID();
+    const response = await this.transport.request(
+      { type: 'direct_lookup', requestId, accessKey: accessKey.trim().toUpperCase() },
+      signal,
+      DIRECT_LOOKUP_TIMEOUT_MS,
+    );
+    if (!isRecord(response) || response.type !== 'direct_lookup_result' || !isDirectLookupResult(response.result)) {
+      throw new Error(messageFromFailure(response) ?? 'A extensão não retornou um resultado válido da consulta direta.');
+    }
+    return response.result;
+  }
+
   async start(accessKey: string, signal?: AbortSignal): Promise<string> {
     const normalizedAccessKey = accessKey.trim().toUpperCase();
     let lastTransportError: unknown = null;
@@ -143,7 +161,6 @@ export class BrowserPortalExtensionClient {
       signal?.throwIfAborted();
       const requestId = globalThis.crypto.randomUUID();
       let response: unknown;
-
       try {
         response = await this.transport.request(
           { type: 'start', requestId, accessKey: normalizedAccessKey },
@@ -177,10 +194,7 @@ export class BrowserPortalExtensionClient {
       let unsubscribe = () => {};
       let settled = false;
 
-      const onAbort = () => {
-        finish(() => reject(signal?.reason ?? new DOMException('Aborted', 'AbortError')));
-      };
-
+      const onAbort = () => finish(() => reject(signal?.reason ?? new DOMException('Aborted', 'AbortError')));
       const finish = (complete: () => void) => {
         if (settled) return;
         settled = true;
@@ -194,7 +208,6 @@ export class BrowserPortalExtensionClient {
         if (!event) return;
         finish(() => resolve(event));
       });
-
       signal?.addEventListener('abort', onAbort, { once: true });
 
       void this.isOperationActive(operationId, signal)
@@ -215,17 +228,12 @@ export class BrowserPortalExtensionClient {
 
   private async isOperationActive(operationId: string, signal?: AbortSignal): Promise<boolean> {
     let lastTransportError: unknown = null;
-
     for (let attempt = 0; attempt < OPERATION_STATUS_ATTEMPTS; attempt += 1) {
       signal?.throwIfAborted();
       const requestId = globalThis.crypto.randomUUID();
       let response: unknown;
-
       try {
-        response = await this.transport.request(
-          { type: 'status', requestId, operationId },
-          signal,
-        );
+        response = await this.transport.request({ type: 'status', requestId, operationId }, signal);
       } catch (error) {
         if (signal?.aborted) throw error;
         lastTransportError = error;
@@ -269,37 +277,50 @@ async function waitForHandshakeRetry(signal?: AbortSignal): Promise<void> {
 
 async function waitForRetry(delayMs: number, signal?: AbortSignal): Promise<void> {
   if (signal?.aborted) return;
-
   await new Promise<void>((resolve) => {
     const timeout = globalThis.setTimeout(() => {
       signal?.removeEventListener('abort', onAbort);
       resolve();
     }, delayMs);
-
     const onAbort = () => {
       globalThis.clearTimeout(timeout);
       signal?.removeEventListener('abort', onAbort);
       resolve();
     };
-
     signal?.addEventListener('abort', onAbort, { once: true });
   });
 }
 
 function parseReadyResponse(value: unknown): PortalExtensionInfo | null {
   if (!isRecord(value) || value.type !== 'ready' || typeof value.version !== 'string') return null;
-  if (!isRecord(value.capabilities) ||
-      value.capabilities.portalLookup !== true ||
-      value.capabilities.supplierResolution !== true) {
-    return null;
-  }
+  if (!isRecord(value.capabilities)) return null;
+  const configuration = isRecord(value.configuration) ? value.configuration : {};
   return {
     version: value.version,
     capabilities: {
-      portalLookup: true,
-      supplierResolution: true,
+      directLookup: value.capabilities.directLookup === true,
+      portalLookup: value.capabilities.portalLookup === true,
+      supplierResolution: value.capabilities.supplierResolution === true,
+    },
+    configuration: {
+      fiscalIdentityConfigured: configuration.fiscalIdentityConfigured === true,
     },
   };
+}
+
+function isDirectLookupResult(value: unknown): value is DirectLookupResult {
+  if (!isRecord(value)) return false;
+  return [
+    'success',
+    'fiscal_status',
+    'consumption_limit',
+    'configuration_error',
+    'transport_unavailable',
+    'technical_error',
+  ].includes(String(value.category)) &&
+    (value.xml === null || typeof value.xml === 'string') &&
+    (value.cStat === null || typeof value.cStat === 'string') &&
+    typeof value.message === 'string';
 }
 
 function parseOperationStatus(value: unknown, operationId: string): boolean | null {
@@ -321,7 +342,6 @@ function isStartedResponse(value: unknown): value is { type: 'started'; operatio
 
 function parseTerminalEvent(value: unknown, operationId: string): PortalOperationStatus | null {
   if (!isRecord(value) || value.operationId !== operationId) return null;
-
   if (value.type === 'completed' && typeof value.xml === 'string' && value.xml.length > 0) {
     return { operationId, state: 'completed', message: null, xml: value.xml };
   }

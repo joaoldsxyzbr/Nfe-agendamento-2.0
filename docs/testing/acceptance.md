@@ -1,78 +1,80 @@
-# Aceitação física — NFe Agendamento extension-only
-
-Este checklist cobre o que o CI não consegue provar no ambiente real.
+# Aceitação física — NFe Agendamento direct-first
 
 ## Pré-requisitos
 
 - Windows 10/11;
-- Chrome ou Edge compatível;
-- extensão NFe Agendamento instalada/ativa;
-- certificado A1 válido instalado no Windows quando exigido pelo Portal;
-- site oficial `https://nfeagendamento.joaolds.xyz.br`;
-- acesso ao Portal Nacional da NF-e.
-
-Não é necessário instalar Bridge, WebView2 helper, .NET ou Setup do NFe Agendamento.
+- Chrome ou Edge;
+- extensão 0.2.6 ou superior;
+- certificado A1 válido instalado;
+- CNPJ do A1 configurado nas opções da extensão;
+- site oficial do NFe Agendamento.
 
 ## 1. Diagnóstico
 
-1. abrir o site;
-2. confirmar **Extensão conectada** e versão;
-3. desabilitar a extensão e confirmar **Extensão não conectada**;
-4. reabilitar/recarregar e confirmar recuperação.
+1. confirmar **Extensão conectada**;
+2. confirmar **Consulta direta: Configurada**;
+3. desabilitar/reabilitar a extensão e validar recuperação.
 
-## 2. Consulta unitária
+## 2. Consulta direta
 
-1. informar chave válida;
-2. confirmar abertura de um único popup;
-3. confirmar chave preenchida;
-4. resolver o hCaptcha manualmente;
-5. usar/selecionar o A1 quando Chrome/Edge solicitar;
-6. confirmar retorno do XML;
-7. confirmar chave do XML;
-8. abrir DANFE;
-9. baixar XML;
-10. imprimir/PDF se necessário.
+Usar uma NF-e que possa retornar XML pelo `NFeDistribuicaoDFe`:
 
-## 3. Repetição e lifecycle
+1. informar a chave;
+2. iniciar consulta;
+3. confirmar indicação de rota **SEFAZ**;
+4. selecionar/autorizar o A1 no Chrome/Edge caso solicitado;
+5. confirmar que **nenhum popup do Portal abre**;
+6. confirmar XML, DANFE e download.
 
-1. concluir uma segunda consulta na mesma sessão;
-2. iniciar uma consulta e fechar o popup;
-3. confirmar cancelamento explícito;
-4. iniciar nova consulta e confirmar recuperação;
-5. recarregar/fechar a página durante uma operação e confirmar que não fica estado preso.
+Este é o gate mais importante da 0.2.6.
 
-## 4. Lote
+## 3. Fallback 217
 
-1. informar pelo menos duas chaves legítimas;
-2. iniciar lote;
-3. confirmar que nunca existem dois popups/operações Portal simultâneos;
-4. concluir cada hCaptcha manualmente;
-5. confirmar que a segunda NF-e só começa depois da primeira terminar;
-6. validar XML/DANFE das concluídas;
-7. testar cancelamento e confirmar que novos itens não iniciam.
+Com um caso que resulte em 217:
 
-## 5. Fornecedor local
+1. confirmar tentativa direta primeiro;
+2. confirmar abertura do Portal somente depois do 217;
+3. resolver hCaptcha manualmente;
+4. validar XML/DANFE.
 
-Quando aplicável:
+## 4. Proteção 656/limite
 
-1. importar o JSON privado pelas opções da extensão;
-2. confirmar que a regra visual correta é aplicada;
-3. confirmar que o XML original não foi alterado;
-4. confirmar que CNPJ/CPF privado não aparece em rede/logs do aplicativo.
+Quando for possível validar sem provocar consumo indevido deliberadamente:
 
-## 6. Chrome e Edge
+- confirmar que um limite já conhecido/local leva ao Portal;
+- confirmar que a extensão não insiste na SEFAZ durante o cooldown;
+- não gerar 656 propositalmente em produção.
 
-Repetir pelo menos uma consulta completa em Chrome e Edge.
+## 5. Lote
+
+Com pelo menos duas chaves:
+
+- processamento sequencial;
+- sucesso direto não abre Portal;
+- 217 manda apenas aquele item ao Portal e a próxima volta à SEFAZ;
+- quando a proteção de consumo estiver ativa, restantes seguem pelo Portal;
+- nunca dois popups Portal simultâneos;
+- cancelamento impede novos itens.
+
+## 6. Erro de transporte
+
+Simular apenas quando seguro:
+
+- timeout/falha direta deve aparecer como erro;
+- não pode haver retry automático;
+- não pode abrir Portal escondido.
+
+## 7. Chrome e Edge
+
+Validar pelo menos uma consulta direta completa em cada navegador.
 
 ## Critério de aceite
 
-- CI/CodeQL do SHA final verdes;
-- extensão detectada;
-- consulta unitária aprovada;
-- segunda consulta aprovada;
-- cancelamento/recuperação aprovados;
-- lote sequencial aprovado;
+- CI e CodeQL verdes;
+- consulta direta real com A1 aprovada;
 - XML/DANFE aprovados;
+- fallback 217 aprovado quando houver caso disponível;
+- lote sequencial aprovado;
 - Chrome e Edge aprovados.
 
-O hCaptcha deve permanecer exclusivamente manual.
+O hCaptcha permanece manual.

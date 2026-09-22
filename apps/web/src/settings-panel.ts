@@ -51,12 +51,13 @@ function initializeSettingsPanel(): void {
   diagnostics.className = 'diagnostics-card';
   const extensionState = diagnosticRow('Extensão', 'Verificando…');
   const versionState = diagnosticRow('Versão', '—');
-  const portalState = diagnosticRow('Portal', 'Verificando…');
-  diagnostics.append(extensionState.row, versionState.row, portalState.row);
+  const directState = diagnosticRow('Consulta direta', 'Verificando…');
+  const portalState = diagnosticRow('Portal fallback', 'Verificando…');
+  diagnostics.append(extensionState.row, versionState.row, directState.row, portalState.row);
 
   const note = document.createElement('p');
   note.className = 'settings-help';
-  note.textContent = 'O certificado A1 é usado pelo próprio Chrome/Edge quando o Portal Nacional solicitar. Regras privadas de fornecedor ficam somente na extensão.';
+  note.textContent = 'A consulta direta usa o A1 pelo Chrome/Edge. Clique no ícone da extensão para configurar uma única vez o CNPJ do certificado. O Portal só é usado como fallback.';
   const refresh = document.createElement('button');
   refresh.type = 'button';
   refresh.className = 'settings-refresh';
@@ -93,12 +94,18 @@ function initializeSettingsPanel(): void {
       statusTextElement.textContent = `Extensão conectada · v${info.version}`;
       extensionState.value.textContent = 'Conectada';
       versionState.value.textContent = info.version;
+      directState.value.textContent = !info.capabilities.directLookup
+        ? 'Atualize a extensão'
+        : info.configuration.fiscalIdentityConfigured
+          ? 'Configurada'
+          : 'Configurar CNPJ';
       portalState.value.textContent = info.capabilities.portalLookup ? 'Disponível' : 'Indisponível';
     } else {
       statusElement.dataset.state = 'disconnected';
       statusTextElement.textContent = 'Extensão não conectada';
       extensionState.value.textContent = 'Não conectada';
       versionState.value.textContent = '—';
+      directState.value.textContent = 'Indisponível';
       portalState.value.textContent = 'Indisponível';
     }
     refresh.disabled = false;

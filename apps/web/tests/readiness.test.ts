@@ -8,7 +8,10 @@ describe('extension-only readiness', () => {
   it('has no active Windows Bridge frontend', () => {
     expect(existsSync(new URL('apps/web/src/bridge', repoRoot))).toBe(false);
     const active = `${main}\n${single}\n${batch}`;
-    expect(active).not.toContain('127.0.0.1:17345'); expect(active).not.toContain('BridgeClient'); expect(active).not.toContain('lookupNfe'); expect(active).not.toContain('SEFAZ');
+    expect(active).not.toContain('127.0.0.1:17345');
+    expect(active).not.toContain('BridgeClient');
+    expect(active).toContain('directLookup');
+    expect(active).toContain('SEFAZ');
   });
   it('keeps explicit extension/Portal states', () => {
     for (const state of ['Extensão não conectada','Chave inválida','Portal Nacional aberto','Consulta pelo Portal cancelada','XML inválido']) expect(`${main}\n${single}`).toContain(state);

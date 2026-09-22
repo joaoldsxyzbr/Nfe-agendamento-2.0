@@ -4,51 +4,78 @@ Aplicação interna para consultar NF-e, obter o XML oficial e gerar/visualizar 
 
 ## Arquitetura atual
 
-A `main` usa somente:
+O produto continua sem Bridge/EXE. O componente local único é a extensão Chromium:
 
 ```text
 Site NFe Agendamento
         ↓
 Extensão Chromium MV3
-        ↓
-Popup Chrome/Edge
-        ↓
-Portal Nacional da NF-e
-        ↓
-A1 instalado no Windows, quando o Portal solicitar
+        ├── 1. NFeDistribuicaoDFe / SEFAZ
+        │      ↓ sucesso: XML
+        │
+        └── 2. Portal Nacional somente como fallback
+               ↓
+             hCaptcha manual
+               ↓
+              XML
 ```
 
-O Bridge Windows, helper WebView2, consulta direta `NFeDistribuicaoDFe`, instalador Inno Setup e coordenação fiscal Cloudflare foram removidos da arquitetura atual.
+A consulta direta é a rota principal. O Portal Nacional não abre quando a SEFAZ devolve o XML.
 
-## Fluxo de consulta
+## Regra de fallback
 
-1. o site valida a chave de acesso;
-2. verifica se a extensão está conectada;
-3. a extensão abre o Portal Nacional em um popup do navegador;
-4. a chave é preenchida;
-5. o usuário resolve o hCaptcha manualmente;
-6. o Chrome/Edge usa o certificado A1 instalado no Windows quando o Portal solicitar;
-7. a extensão observa somente o download oficial do XML;
-8. o XML é validado contra a chave e devolvido ao site;
-9. o site executa parser, regras de apresentação e DANFE.
+A lógica segue a usada pelo antigo Bridge:
 
-Não existe solver/bypass de captcha e não existe fallback nativo oculto.
+- **sucesso / cStat 138 com procNFe**: conclui pela SEFAZ;
+- **cStat 217**: somente aquela NF-e segue para o Portal;
+- **cStat 656, HTTP 429 ou limite local**: a proteção fiscal é ativada e a NF-e atual mais as próximas do lote seguem pelo Portal;
+- **falha de transporte, timeout ou resposta tecnicamente inválida**: não existe retry automático nem fallback oculto.
 
-## Consulta em lote
+O lote é sempre sequencial.
 
-O lote é estritamente sequencial. Cada NF-e conclui todo o fluxo do Portal antes da próxima começar. A extensão mantém no máximo uma operação Portal ativa.
+## Proteção fiscal local
+
+A extensão mantém em `chrome.storage.local`:
+
+- CNPJ correspondente ao certificado A1;
+- histórico local das tentativas diretas;
+- cooldown fiscal.
+
+Limites atuais, iguais à proteção local do Bridge:
+
+- máximo de **20 tentativas diretas por hora**;
+- cooldown de **1 hora** após 656/429 ou quando o limite local é atingido.
+
+A antiga coordenação multi-PC por Cloudflare não foi reativada nesta etapa. Portanto, a proteção desta versão é por navegador/computador e precisa de validação física antes de qualquer decisão sobre coordenação compartilhada.
 
 ## Certificado A1
 
-O site e a extensão não enumeram, importam, exportam nem armazenam PFX/P12, senha ou chave privada. A seleção/uso do certificado cliente fica a cargo do Chrome/Edge e do Windows.
+A extensão não lê, importa, exporta nem armazena PFX/P12, senha ou chave privada.
+
+Como o Chromium no Windows não expõe à extensão a identidade do certificado cliente, o **CNPJ do A1 é informado uma única vez nas opções da extensão** e permanece local. A autenticação TLS e eventual seleção do certificado continuam sob responsabilidade do Chrome/Edge e do Windows.
+
+Clicar no ícone da extensão abre essa configuração.
+
+## Portal Nacional
+
+O Portal é fallback. Quando necessário:
+
+1. a extensão abre um popup oficial;
+2. preenche a chave;
+3. o usuário resolve o hCaptcha manualmente;
+4. o navegador usa o A1 quando solicitado;
+5. a extensão captura o download oficial dentro da própria sessão autenticada;
+6. o XML é validado contra a chave e devolvido ao site.
+
+Não existe solver/bypass de captcha.
 
 ## Regras privadas de fornecedor
 
-CNPJ/CPF real de fornecedor não faz parte do bundle público. A configuração privada é importada explicitamente na página de opções da extensão e fica em `chrome.storage.local`, restrito aos contextos confiáveis da extensão. O site recebe apenas o `supplierId` lógico.
+CNPJ/CPF real de fornecedor não faz parte do bundle público. A configuração privada é importada na página de opções da extensão e fica em `chrome.storage.local`. O site recebe apenas o `supplierId` lógico.
 
 ## Extensão
 
-Manifest V3, versão de desenvolvimento atual: **0.2.5**.
+Versão em desenvolvimento: **0.2.6**.
 
 Permissões:
 
@@ -59,15 +86,14 @@ Permissões:
 Hosts:
 
 - `https://nfeagendamento.joaolds.xyz.br/*`;
-- `https://www.nfe.fazenda.gov.br/*`.
+- `https://www.nfe.fazenda.gov.br/*`;
+- `https://www1.nfe.fazenda.gov.br/*`.
 
-Não são usados `<all_urls>`, Native Messaging, `downloads`, `webRequestBlocking` ou acesso genérico ao sistema de arquivos.
+Sem `<all_urls>`, Native Messaging, `downloads`, `webRequestBlocking` ou acesso genérico ao sistema de arquivos.
 
 ## Cloudflare
 
-O Worker atual serve os assets do site. As rotas de coordenação fiscal e atualização Windows foram removidas porque ficaram sem consumidor na arquitetura extension-only.
-
-O antigo Durable Object `FiscalCoordinator` fica temporariamente declarado como tombstone `deleted` em `wrangler.jsonc` até a Cloudflare reconciliar a exclusão do namespace.
+O Worker serve o site. A consulta fiscal acontece no navegador/extensão; XML, certificado e CNPJ do A1 não são enviados ao Worker pelo fluxo de consulta.
 
 ## Desenvolvimento e validação
 
@@ -85,20 +111,18 @@ npm test --prefix tests/playwright
 ./node_modules/.bin/wrangler deploy --dry-run
 ```
 
-O CI vigente possui apenas os gates `web`, `extension` e `danfe-print`. CodeQL analisa JavaScript/TypeScript.
+CI: `web`, `extension` e `danfe-print`. CodeQL analisa JavaScript/TypeScript.
 
 ## Releases
 
-A **v0.0.27** corrige a captura do XML dentro da própria sessão autenticada do Portal e publica a extensão **0.2.5** com a logo do NFe Agendamento.
+A v0.0.27/extensão 0.2.5 permanece como a release Portal-first anterior a esta mudança.
 
-O site oferece uma seta de download que aponta para o asset estável `NFeAgendamento-Extension.zip` da release mais recente. A mesma release também preserva o ZIP versionado `NFeAgendamento-Extension-v0.2.5.zip`.
+A próxima release de teste direct-first será **v0.0.28 / extensão 0.2.6** após os gates automatizados ficarem verdes.
 
-A **v0.0.26** permanece como a primeira release totalmente extension-only.
-
-A **v0.0.25** permanece como registro da última release híbrida que ainda incluía Bridge/Windows.
-
-Histórico de releases e planos antigos é preservado em `docs/releases/` e `docs/superpowers/`.
+A seta do site baixa sempre `NFeAgendamento-Extension.zip` da release mais recente.
 
 ## Aceitação física
 
-O checklist vigente está em `docs/testing/acceptance.md`. Os pontos essenciais são Chrome e Edge, extensão conectada, hCaptcha manual, A1 pelo navegador, XML/DANFE, segunda consulta, cancelamento e lote sequencial.
+A consulta direta com A1 pelo Chrome/Edge é um gate físico: os testes automatizados validam protocolo, SOAP, parsing, proteção e roteamento, mas não conseguem provar a negociação real do certificado cliente com a SEFAZ.
+
+Checklist: `docs/testing/acceptance.md`.

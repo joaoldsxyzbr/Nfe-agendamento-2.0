@@ -1,16 +1,25 @@
-import type { PortalOperationStatus, SupplierResolution } from '../portal/contracts';
+import type {
+  DirectLookupResult,
+  PortalOperationStatus,
+  SupplierResolution,
+} from '../portal/contracts';
+import type { PortalExtensionInfo } from '../portal/extension-client';
 import type { ParsedNfe } from '../nfe/xml';
 import { MAX_BATCH_ITEMS, parseBatchInput } from './input';
 
 export type BatchItemStatus =
   | 'queued'
+  | 'consulting'
   | 'portal_queued'
   | 'portal_waiting_user'
   | 'success'
+  | 'fiscal_status'
+  | 'transport_error'
   | 'portal_error'
   | 'cancelled';
 
-export type BatchSource = 'Portal';
+export type BatchSource = 'SEFAZ' | 'Portal';
+type BatchRoute = 'sefaz' | 'portal';
 
 export type BatchItemView = Readonly<{
   accessKey: string;
@@ -28,8 +37,9 @@ type MutableBatchItem = {
   source: BatchSource | null;
 };
 
-type PortalBatchClient = Readonly<{
-  isAvailable(signal?: AbortSignal): Promise<boolean>;
+type ExtensionBatchClient = Readonly<{
+  getInfo(signal?: AbortSignal): Promise<PortalExtensionInfo | null>;
+  directLookup(accessKey: string, signal?: AbortSignal): Promise<DirectLookupResult>;
   start(accessKey: string, signal?: AbortSignal): Promise<string>;
   waitForResult(operationId: string, signal?: AbortSignal): Promise<PortalOperationStatus>;
   cancel(operationId: string): Promise<void>;
@@ -52,7 +62,7 @@ export type BatchControllerDependencies = Readonly<{
     modeBatchButton: HTMLButtonElement;
     list?: HTMLElement;
   }>;
-  portal: PortalBatchClient;
+  portal: ExtensionBatchClient;
   parseXml(xml: string, accessKey: string): ParsedNfe;
   createZip(entries: readonly ZipEntry[]): Blob;
   downloadBlob(blob: Blob, filename: string): void;
@@ -80,6 +90,7 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
   let running = false;
   let manualPortalBusy = false;
   let cancelled = false;
+  let route: BatchRoute = 'sefaz';
   let abortController: AbortController | null = null;
   let activePortalOperationId: string | null = null;
 
@@ -91,10 +102,13 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
       `${summary.invalidCount} inválida${summary.invalidCount === 1 ? '' : 's'}`,
       `${summary.duplicateCount} duplicada${summary.duplicateCount === 1 ? '' : 's'}`,
     ];
-    elements.inputSummary.textContent = summary.totalCandidates === 0 ? 'Nenhuma chave informada.' : parts.join(' · ');
+    elements.inputSummary.textContent = summary.totalCandidates === 0
+      ? 'Nenhuma chave informada.'
+      : parts.join(' · ');
     if (summary.exceedsLimit) elements.inputSummary.textContent += ` · máximo ${MAX_BATCH_ITEMS} por lote`;
     elements.startButton.disabled = summary.validKeys.length === 0 || summary.exceedsLimit;
     items = summary.validKeys.map(createBatchItem);
+    route = 'sefaz';
     renderState('Aguardando início');
   }
 
@@ -109,18 +123,27 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
     items = summary.validKeys.map(createBatchItem);
     running = true;
     cancelled = false;
+    route = 'sefaz';
     abortController = new AbortController();
     setControlsRunning(true);
     renderState('Preparando lote');
     let finalFailureMessage: string | null = null;
 
     try {
-      if (!await deps.portal.isAvailable(abortController.signal)) {
-        throw new Error('Extensão não conectada. Instale ou ative a extensão antes de iniciar o lote.');
-      }
+      const info = await deps.portal.getInfo(abortController.signal);
+      if (!info) throw new Error('Extensão não conectada. Instale ou ative a extensão antes de iniciar o lote.');
+      if (!info.capabilities.directLookup) throw new Error('Atualize a extensão para usar a consulta direta à SEFAZ.');
+
       for (const item of items) {
         if (cancelled) break;
-        await processPortalItem(item, abortController.signal);
+        if (isPortalRoute()) {
+          item.status = 'portal_queued';
+          item.message = 'SEFAZ em proteção; aguardando consulta pelo Portal.';
+          renderState('Lote seguindo pelo Portal');
+          await processPortalItem(item, abortController.signal);
+        } else {
+          await processDirectItem(item, abortController.signal);
+        }
       }
     } catch (error) {
       if (!isAbortError(error)) {
@@ -133,6 +156,58 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
       abortController = null;
       setControlsRunning(false);
       renderState(cancelled ? 'Lote cancelado' : finalFailureMessage ?? 'Lote concluído');
+    }
+  }
+
+  async function processDirectItem(item: MutableBatchItem, signal: AbortSignal): Promise<void> {
+    item.status = 'consulting';
+    item.message = 'Consultando SEFAZ…';
+    renderState('Consultando SEFAZ');
+
+    try {
+      const lookup = await deps.portal.directLookup(item.accessKey, signal);
+      if (lookup.category === 'success' && lookup.xml) {
+        await completeItem(item, lookup.xml, 'SEFAZ');
+        return;
+      }
+
+      if (lookup.category === 'consumption_limit') {
+        route = 'portal';
+        item.status = 'portal_queued';
+        item.message = lookup.message;
+        renderState('SEFAZ em proteção · seguindo pelo Portal');
+        await processPortalItem(item, signal);
+        return;
+      }
+
+      if (lookup.category === 'fiscal_status' && lookup.cStat === '217') {
+        item.status = 'portal_queued';
+        item.message = 'NF-e não localizada na consulta direta. Tentando pelo Portal.';
+        renderState('Fallback pelo Portal');
+        await processPortalItem(item, signal);
+        return;
+      }
+
+      if (lookup.category === 'configuration_error') {
+        item.status = 'transport_error';
+        item.message = lookup.message;
+        cancelled = true;
+        return;
+      }
+
+      item.status = lookup.category === 'fiscal_status' ? 'fiscal_status' : 'transport_error';
+      item.message = lookup.cStat
+        ? `Status SEFAZ ${lookup.cStat}. ${lookup.message}`
+        : lookup.message;
+    } catch (error) {
+      if (isAbortError(error) && cancelled) {
+        item.status = 'cancelled';
+        item.message = 'Consulta cancelada pelo usuário.';
+        return;
+      }
+      throw error;
+    } finally {
+      renderState(isPortalRoute() ? 'Lote seguindo pelo Portal' : 'Consultando SEFAZ');
     }
   }
 
@@ -150,7 +225,7 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
 
       const status = await deps.portal.waitForResult(operationId, signal);
       if (status.state === 'completed' && status.xml) {
-        await completeItem(item, status.xml);
+        await completeItem(item, status.xml, 'Portal');
         return;
       }
       if (status.state === 'cancelled') {
@@ -170,11 +245,11 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
       item.message = error instanceof Error ? error.message : 'Não foi possível concluir a consulta pelo Portal.';
     } finally {
       activePortalOperationId = null;
-      renderState('Processando pelo Portal');
+      renderState(isPortalRoute() ? 'Lote seguindo pelo Portal' : 'Consultando lote');
     }
   }
 
-  async function completeItem(item: MutableBatchItem, xml: string): Promise<void> {
+  async function completeItem(item: MutableBatchItem, xml: string, source: BatchSource): Promise<void> {
     try {
       const parsed = deps.parseXml(xml, item.accessKey);
       let supplierRuleId: string | null = null;
@@ -184,11 +259,11 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
         supplierRuleId = null;
       }
       item.parsed = { ...parsed, supplierRuleId };
-      item.source = 'Portal';
+      item.source = source;
       item.status = 'success';
-      item.message = 'XML validado via Portal.';
+      item.message = `XML validado via ${source}.`;
     } catch (error) {
-      item.status = 'portal_error';
+      item.status = source === 'Portal' ? 'portal_error' : 'transport_error';
       item.message = error instanceof Error ? error.message : 'O XML retornado não pôde ser validado.';
     }
   }
@@ -219,7 +294,9 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
     const terminal = items.filter((item) => isTerminalStatus(item.status)).length;
     const completed = completedItems();
     elements.progress.textContent = `${terminal} de ${items.length}`;
-    elements.routeText.textContent = running ? `${label} · Portal` : label;
+    elements.routeText.textContent = running
+      ? `${label} · rota ${isPortalRoute() ? 'Portal' : 'SEFAZ'}`
+      : label;
     elements.zipButton.disabled = completed.length === 0 || running || manualPortalBusy;
     elements.printButton.disabled = completed.length === 0 || running || manualPortalBusy;
     renderRows();
@@ -254,6 +331,7 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
       const order = documentRef.createElement('span');
       order.className = 'batch-order';
       order.textContent = String(index + 1);
+
       const information = documentRef.createElement('div');
       information.className = 'batch-item-info';
       const key = documentRef.createElement('code');
@@ -268,7 +346,9 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
         const invoice = item.parsed.number ? `NF-e ${item.parsed.number}` : 'NF-e';
         const series = item.parsed.series ? ` · Série ${item.parsed.series}` : '';
         const issuer = item.parsed.issuer.name ? ` · ${item.parsed.issuer.name}` : '';
-        const value = Number.isFinite(item.parsed.totals.invoice) ? ` · ${formatCurrency(item.parsed.totals.invoice)}` : '';
+        const value = Number.isFinite(item.parsed.totals.invoice)
+          ? ` · ${formatCurrency(item.parsed.totals.invoice)}`
+          : '';
         details.textContent = `${invoice}${series}${issuer}${value}`;
       } else {
         details.textContent = item.message ?? statusLabel(item.status);
@@ -296,6 +376,7 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
       preview.textContent = 'Visualizar DANFE';
       preview.disabled = item.parsed === null;
       preview.addEventListener('click', () => { if (item.parsed) deps.openDanfe(item.parsed); });
+
       const download = documentRef.createElement('button');
       download.type = 'button';
       download.className = 'batch-action batch-download';
@@ -308,7 +389,7 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
         const retry = documentRef.createElement('button');
         retry.type = 'button';
         retry.className = 'batch-action';
-        retry.textContent = 'Tentar novamente';
+        retry.textContent = 'Tentar pelo Portal';
         retry.disabled = running || manualPortalBusy;
         retry.addEventListener('click', () => void retryPortal(index));
         actions.append(retry);
@@ -330,7 +411,9 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
   }
 
   function printDanfes(): void {
-    const parsed = completedItems().map((item) => item.parsed).filter((item): item is ParsedNfe => item !== null);
+    const parsed = completedItems()
+      .map((item) => item.parsed)
+      .filter((item): item is ParsedNfe => item !== null);
     if (parsed.length === 0) return;
     deps.openDanfeDocuments(parsed, `DANFEs do lote · ${parsed.length} NF-e`);
     deps.printWindow();
@@ -338,6 +421,10 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
 
   function completedItems(): MutableBatchItem[] {
     return items.filter((item) => item.status === 'success' && item.parsed !== null);
+  }
+
+  function isPortalRoute(): boolean {
+    return route === 'portal';
   }
 
   function markQueuedItems(status: BatchItemStatus, message: string | null): void {
@@ -384,21 +471,37 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
 function createBatchItem(accessKey: string): MutableBatchItem {
   return { accessKey, status: 'queued', message: 'Aguardando processamento.', parsed: null, source: null };
 }
+
 function isTerminalStatus(status: BatchItemStatus): boolean {
-  return status === 'success' || status === 'portal_error' || status === 'cancelled';
+  return status === 'success'
+    || status === 'fiscal_status'
+    || status === 'transport_error'
+    || status === 'portal_error'
+    || status === 'cancelled';
 }
+
 function statusLabel(status: BatchItemStatus): string {
   switch (status) {
+    case 'consulting': return 'Consultando SEFAZ';
     case 'portal_queued': return 'Aguardando Portal';
     case 'portal_waiting_user': return 'Resolva o hCaptcha';
     case 'success': return 'Concluída';
+    case 'fiscal_status': return 'Resultado fiscal';
+    case 'transport_error': return 'Erro de consulta';
     case 'portal_error': return 'Erro no Portal';
     case 'cancelled': return 'Cancelada';
     default: return 'Aguardando';
   }
 }
-function abbreviateAccessKey(accessKey: string): string { return `${accessKey.slice(0, 8)}…${accessKey.slice(-8)}`; }
+
+function abbreviateAccessKey(accessKey: string): string {
+  return `${accessKey.slice(0, 8)}…${accessKey.slice(-8)}`;
+}
+
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 }
-function isAbortError(error: unknown): boolean { return error instanceof Error && error.name === 'AbortError'; }
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AbortError';
+}
