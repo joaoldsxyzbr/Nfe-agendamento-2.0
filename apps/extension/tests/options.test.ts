@@ -14,6 +14,11 @@ describe('extension supplier options', () => {
     const html = readFileSync(htmlUrl, 'utf8');
     const source = readFileSync(sourceUrl, 'utf8');
 
+    expect(html).toContain('id="fiscal-cnpj"');
+    expect(html).toContain('id="fiscal-config-save"');
+    expect(html).toContain('id="fiscal-config-clear"');
+    expect(source).toContain('saveFiscalIdentity');
+    expect(source).toContain('clearFiscalIdentity');
     expect(html).toContain('type="file"');
     expect(html).toContain('accept=".json,application/json"');
     expect(html).toContain('id="supplier-config-file"');
