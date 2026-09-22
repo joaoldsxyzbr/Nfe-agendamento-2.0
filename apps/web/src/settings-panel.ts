@@ -51,12 +51,13 @@ function initializeSettingsPanel(): void {
   diagnostics.className = 'diagnostics-card';
   const extensionState = diagnosticRow('Extensão', 'Verificando…');
   const versionState = diagnosticRow('Versão', '—');
-  const portalState = diagnosticRow('Portal', 'Verificando…');
-  diagnostics.append(extensionState.row, versionState.row, portalState.row);
+  const directState = diagnosticRow('Consulta direta', 'Verificando…');
+  const portalState = diagnosticRow('Portal fallback', 'Verificando…');
+  diagnostics.append(extensionState.row, versionState.row, directState.row, portalState.row);
 
   const note = document.createElement('p');
   note.className = 'settings-help';
-  note.textContent = 'O certificado A1 é usado pelo próprio Chrome/Edge quando o Portal Nacional solicitar. Regras privadas de fornecedor ficam somente na extensão.';
+  note.textContent = 'A extensão consulta a SEFAZ primeiro. Configure uma vez o CNPJ do A1 nas opções da extensão; certificado e chave privada continuam sob controle do Chrome/Edge e do Windows.';
   const refresh = document.createElement('button');
   refresh.type = 'button';
   refresh.className = 'settings-refresh';
@@ -93,12 +94,16 @@ function initializeSettingsPanel(): void {
       statusTextElement.textContent = `Extensão conectada · v${info.version}`;
       extensionState.value.textContent = 'Conectada';
       versionState.value.textContent = info.version;
+      directState.value.textContent = info.capabilities.directLookup
+        ? (info.fiscalIdentityConfigured ? 'Pronta' : 'Configurar CNPJ')
+        : 'Indisponível';
       portalState.value.textContent = info.capabilities.portalLookup ? 'Disponível' : 'Indisponível';
     } else {
       statusElement.dataset.state = 'disconnected';
       statusTextElement.textContent = 'Extensão não conectada';
       extensionState.value.textContent = 'Não conectada';
       versionState.value.textContent = '—';
+      directState.value.textContent = 'Indisponível';
       portalState.value.textContent = 'Indisponível';
     }
     refresh.disabled = false;
