@@ -56,6 +56,24 @@ describe('BrowserPortalExtensionClient', () => {
   });
 
 
+  it('opens extension options through the command channel', async () => {
+    const { BrowserPortalExtensionClient } = await import('../src/portal/extension-client');
+    const commands: unknown[] = [];
+    const client = new BrowserPortalExtensionClient({
+      request: async (message: { type: string }) => {
+        commands.push(message);
+        if (message.type === 'open_options') {
+          return { type: 'options_opened', requestId: 'options' };
+        }
+        throw new Error('unexpected');
+      },
+      subscribe: () => () => {},
+    } as never);
+
+    await expect(client.openOptions()).resolves.toBeUndefined();
+    expect(commands[0]).toMatchObject({ type: 'open_options' });
+  });
+
   it('runs direct lookup through the extension command channel', async () => {
     const { BrowserPortalExtensionClient } = await import('../src/portal/extension-client');
     const client = new BrowserPortalExtensionClient({
