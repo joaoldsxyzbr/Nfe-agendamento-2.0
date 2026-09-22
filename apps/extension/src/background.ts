@@ -162,6 +162,14 @@ async function handleSiteCommand(commandValue: unknown, sender: any): Promise<un
     };
   }
 
+  if (command.type === 'open_options') {
+    await chrome.runtime.openOptionsPage();
+    return {
+      type: 'options_opened',
+      requestId: command.requestId,
+    };
+  }
+
   if (command.type === 'direct_lookup') {
     return {
       type: 'direct_lookup_result',
