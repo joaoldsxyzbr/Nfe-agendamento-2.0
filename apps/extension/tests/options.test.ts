@@ -16,8 +16,14 @@ describe('extension supplier options', () => {
 
     expect(html).toContain('type="file"');
     expect(html).toContain('accept=".json,application/json"');
+    expect(html).toContain('id="fiscal-cnpj"');
+    expect(html).toContain('id="fiscal-cnpj-save"');
+    expect(html).toContain('id="fiscal-cnpj-clear"');
     expect(html).toContain('id="supplier-config-file"');
     expect(html).toContain('id="supplier-config-clear"');
+    expect(source).toContain('saveFiscalIdentity');
+    expect(source).toContain('loadFiscalIdentity');
+    expect(source).toContain('clearFiscalIdentity');
     expect(source).toContain('analyzeSupplierConfig');
     expect(source).toContain('saveSupplierConfig');
     expect(source).toContain('Nenhuma configuração anterior foi alterada');
