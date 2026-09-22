@@ -9,7 +9,9 @@ import { validateAccessKey } from './nfe/access-key';
 import { createConsultationController } from './nfe/consultation-controller';
 import { validateManualNfeXml } from './nfe/manual-xml-import';
 import { parseNfeXml, type ParsedNfe } from './nfe/xml';
+import { BrowserPortalExtensionClient } from './portal/extension-client';
 import { PortalFallbackController } from './portal/fallback';
+import { PortalRouter } from './portal/router';
 import './styles.css';
 import './batch.css';
 import './danfe/styles.css';
@@ -163,7 +165,9 @@ app.innerHTML = `
 `;
 
 const bridgeClient = new BridgeClient();
-const portalFallback = new PortalFallbackController(bridgeClient);
+const portalBridgeFallback = new PortalFallbackController(bridgeClient);
+const portalExtension = new BrowserPortalExtensionClient();
+const portalFallback = new PortalRouter(portalExtension, portalBridgeFallback);
 const bridgeStatus = requireElement<HTMLElement>('#bridge-status');
 const bridgeStatusText = requireElement<HTMLElement>('#bridge-status-text');
 const certificateSelect = requireElement<HTMLSelectElement>('#certificate-select');
