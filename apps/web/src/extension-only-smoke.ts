@@ -69,7 +69,16 @@ function mountExtensionOnlySmokePage(): void {
   const extensionState = requireElement<HTMLElement>('#extension-smoke-extension');
   const client = new BrowserPortalExtensionClient();
 
-  void refreshExtensionState(client, extensionState, runButton);
+  const refreshState = () => {
+    void refreshExtensionState(client, extensionState, runButton);
+  };
+
+  refreshState();
+
+  window.addEventListener('focus', refreshState);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') refreshState();
+  });
 
   runButton.addEventListener('click', () => {
     void runFromPage();
