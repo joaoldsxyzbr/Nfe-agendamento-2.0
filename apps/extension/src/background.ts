@@ -12,6 +12,8 @@ import {
   shouldCapturePortalRequest,
   type PageReplayRequest,
 } from './portal-request';
+import { lookupNfeDirect } from './direct-lookup';
+import { loadFiscalIdentity } from './fiscal-config';
 import { loadSupplierConfig, resolveSupplierFromConfig } from './supplier-store';
 
 declare const chrome: any;
@@ -24,6 +26,7 @@ const PORTAL_DOWNLOAD_FILTER = {
 };
 
 let operationMutationQueue: Promise<void> = Promise.resolve();
+let directLookupQueue: Promise<void> = Promise.resolve();
 
 type ActiveOperation = {
   operationId: string;
@@ -71,6 +74,10 @@ chrome.windows.onRemoved.addListener((windowId: number) => {
 
 chrome.tabs.onRemoved.addListener((tabId: number) => {
   void handleTabRemoved(tabId);
+});
+
+chrome.action.onClicked.addListener(() => {
+  void chrome.runtime.openOptionsPage();
 });
 
 chrome.webRequest.onBeforeRequest.addListener(
@@ -140,9 +147,20 @@ async function handleSiteCommand(commandValue: unknown, sender: any): Promise<un
       requestId: command.requestId,
       version: String(chrome.runtime.getManifest().version ?? '0.0.0'),
       capabilities: {
+        directLookup: true,
         portalLookup: true,
         supplierResolution: true,
       },
+      fiscalIdentityConfigured: Boolean(await loadFiscalIdentity()),
+    };
+  }
+
+  if (command.type === 'direct_lookup') {
+    const lookup = await withDirectLookup(() => lookupNfeDirect(command.accessKey));
+    return {
+      type: 'direct_lookup_result',
+      requestId: command.requestId,
+      ...lookup,
     };
   }
 
@@ -747,6 +765,18 @@ async function clearActiveOperationIfCurrent(operationId: string): Promise<boole
     await clearActiveOperation();
     return true;
   });
+}
+
+async function withDirectLookup<T>(lookup: () => Promise<T>): Promise<T> {
+  const previous = directLookupQueue;
+  let release!: () => void;
+  directLookupQueue = new Promise<void>((resolve) => { release = resolve; });
+  await previous;
+  try {
+    return await lookup();
+  } finally {
+    release();
+  }
 }
 
 async function withOperationMutation<T>(mutation: () => Promise<T>): Promise<T> {
