@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "NFe Agendamento - Portal",
-  "version": "0.2.5",
-  "description": "Integra o NFe Agendamento ao Portal Nacional da NF-e no navegador.",
+  "version": "0.2.6",
+  "description": "Consulta NF-e diretamente na SEFAZ e usa o Portal Nacional como fallback.",
   "minimum_chrome_version": "120",
   "permissions": [
     "scripting",
@@ -11,7 +11,8 @@
   ],
   "host_permissions": [
     "https://nfeagendamento.joaolds.xyz.br/*",
-    "https://www.nfe.fazenda.gov.br/*"
+    "https://www.nfe.fazenda.gov.br/*",
+    "https://www1.nfe.fazenda.gov.br/*"
   ],
   "background": {
     "service_worker": "background.js",
