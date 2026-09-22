@@ -1,7 +1,0 @@
-<Project>
-  <PropertyGroup>
-    <Version>0.0.25</Version>
-    <FileVersion>$(Version).0</FileVersion>
-    <AssemblyVersion>$(Version).0</AssemblyVersion>
-  </PropertyGroup>
-</Project>

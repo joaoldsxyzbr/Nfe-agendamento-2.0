@@ -1,240 +1,78 @@
-# Aceitação física — NFe Agendamento 2.0
+# Aceitação física — NFe Agendamento extension-only
 
-Este checklist cobre o que o CI não consegue provar: instalação real no Windows, lifecycle do componente local, navegador falando com loopback, certificado A1, SEFAZ, WebView2, Portal Nacional, hCaptcha, DANFE/PDF e atualização. Desde a v0.0.20, o componente Windows é o Bridge standalone; o App supervisor foi removido.
-
-> Não provoque bloqueio/656 fazendo consultas repetidas. Valide o fallback quando o limite ocorrer naturalmente ou em cenário controlado já disponível.
+Este checklist cobre o que o CI não consegue provar no ambiente real.
 
 ## Pré-requisitos
 
-- Windows 10/11 x64 atualizado;
-- Setup produzido pelo **mesmo commit CI** da release em teste;
-- Microsoft Edge WebView2 Runtime instalado para testar o fallback Portal;
-- certificado A1 válido em `CurrentUser/My` com chave privada;
-- site oficial disponível exatamente em `https://nfeagendamento.joaolds.xyz.br`;
-- acesso à Internet para SEFAZ, GitHub Releases e Portal Nacional da NF-e.
+- Windows 10/11;
+- Chrome ou Edge compatível;
+- extensão NFe Agendamento instalada/ativa;
+- certificado A1 válido instalado no Windows quando exigido pelo Portal;
+- site oficial `https://nfeagendamento.joaolds.xyz.br`;
+- acesso ao Portal Nacional da NF-e.
 
-A versão em teste deve ser lida de `Directory.Build.props` e precisa coincidir com o nome do Setup, o SHA validado pelo CI e a tag/release correspondente. Este checklist não fixa um número de versão para não ficar obsoleto.
+Não é necessário instalar Bridge, WebView2 helper, .NET ou Setup do NFe Agendamento.
 
-> O publish é self-contained: não exige instalação prévia do .NET 10. O WebView2 Runtime continua necessário somente para o fallback Portal.
+## 1. Diagnóstico
 
-Registre antes de começar:
+1. abrir o site;
+2. confirmar **Extensão conectada** e versão;
+3. desabilitar a extensão e confirmar **Extensão não conectada**;
+4. reabilitar/recarregar e confirmar recuperação.
 
-| Campo | Valor |
-| --- | --- |
-| Data | |
-| Commit SHA | |
-| Versão canônica | preencher a partir de `Directory.Build.props` |
-| Run CI / artifact | |
-| URL do site | `https://nfeagendamento.joaolds.xyz.br` |
-| Windows | |
-| Navegador + versão | |
-| PC | |
+## 2. Consulta unitária
 
-## 0. Instalação, instância única e auto-start
+1. informar chave válida;
+2. confirmar abertura de um único popup;
+3. confirmar chave preenchida;
+4. resolver o hCaptcha manualmente;
+5. usar/selecionar o A1 quando Chrome/Edge solicitar;
+6. confirmar retorno do XML;
+7. confirmar chave do XML;
+8. abrir DANFE;
+9. baixar XML;
+10. imprimir/PDF se necessário.
 
-1. Execute o Setup correspondente ao SHA em teste em conta de usuário comum.
-2. Confirme que a instalação não solicita UAC/admin.
-3. Confirme os arquivos em `%LOCALAPPDATA%\NFe Agendamento Bridge`.
-4. Confirme `NfeAgendamento.Bridge.exe` e `NfeAgendamento.Portal.exe` lado a lado e a ausência de `NfeAgendamento.App.exe`.
-5. Confirme atalho no Menu Iniciar e ícone próprio.
-6. Confirme que nenhuma janela preta de console permanece aberta.
-7. Confirme que `NfeAgendamento.Bridge.exe` inicia sem janela de console.
-8. Confirme auto-start em `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` apontando diretamente para `NfeAgendamento.Bridge.exe`.
-9. Abra o site oficial manualmente e confirme conexão com o Bridge.
-10. Inicie novamente o Bridge e confirme que o mutex impede segunda instância e listener concorrente.
-11. Reinicie sessão/PC e confirme início automático único.
-12. Execute também `docs/testing/standalone-bridge.md` para o lifecycle standalone final.
+## 3. Repetição e lifecycle
 
-Resultado: ☐ aprovado
+1. concluir uma segunda consulta na mesma sessão;
+2. iniciar uma consulta e fechar o popup;
+3. confirmar cancelamento explícito;
+4. iniciar nova consulta e confirmar recuperação;
+5. recarregar/fechar a página durante uma operação e confirmar que não fica estado preso.
 
-## 1. Lifecycle e recuperação do Bridge
+## 4. Lote
 
-### Modo padrão `app`
+1. informar pelo menos duas chaves legítimas;
+2. iniciar lote;
+3. confirmar que nunca existem dois popups/operações Portal simultâneos;
+4. concluir cada hCaptcha manualmente;
+5. confirmar que a segunda NF-e só começa depois da primeira terminar;
+6. validar XML/DANFE das concluídas;
+7. testar cancelamento e confirmar que novos itens não iniciam.
 
-1. Com o Bridge ativo, finalize somente `NfeAgendamento.Bridge.exe` pelo Gerenciador de Tarefas.
-2. Pelo diagnóstico do site, confirme indisponibilidade clara; não deve haver reinício silencioso por supervisor.
-3. Inicie novamente o Bridge pelo auto-start/logon ou executável instalado e confirme reconexão.
-4. Tente iniciar uma segunda cópia e confirme que o mutex impede listener concorrente.
-5. Reinicie o Windows e confirme que o Bridge volta pelo HKCU Run, sem console.
-6. Confirme que settings/certificado selecionado permanecem preservados.
+## 5. Fornecedor local
 
-Resultado: ☐ aprovado
+Quando aplicável:
 
-## 2. Bridge HTTP, Origin oficial e permissão local
+1. importar o JSON privado pelas opções da extensão;
+2. confirmar que a regra visual correta é aplicada;
+3. confirmar que o XML original não foi alterado;
+4. confirmar que CNPJ/CPF privado não aparece em rede/logs do aplicativo.
 
-Executar em Chrome, Edge e Firefox quando disponíveis.
+## 6. Chrome e Edge
 
-1. Abra o site oficial com o componente local ativo.
-2. Autorize acesso local quando o navegador solicitar.
-3. Confirme `Bridge conectado`.
-4. Negue/revogue a permissão uma vez e confira tratamento de permissão local quando suportado pelo navegador.
-5. Pare o componente local de forma controlada e confirme `Bridge não encontrado`/estado equivalente no diagnóstico.
-6. Inicie novamente o modo em teste e confirme reconexão sem configurar origem.
-7. Em origem diferente, confirme rejeição da chamada ao Bridge.
-8. Confirme, quando possível, escuta somente em `127.0.0.1:17345`.
-
-Resultado: ☐ aprovado
-
-## 2.1. Diagnóstico local
-
-1. Abra **Configurações** e confirme que o bloco **Diagnóstico local** aparece antes do certificado.
-2. Com Bridge ativo, confirme **Bridge: Conectado** e versão igual à instalada.
-3. Confirme que **Certificado A1** reflete se há thumbprint selecionado.
-4. Com WebView2 Runtime disponível, confirme **Portal / WebView2: Disponível**; sem Runtime, confirme **Indisponível**.
-5. Clique em **Atualizar** e confirme atualização do horário da última verificação.
-6. Pare o Bridge, clique em **Atualizar** e confirme estado **Indisponível** com erro legível.
-7. Confirme que uma mensagem de erro contendo uma sequência alfanumérica de 44 caracteres não exibe essa sequência integralmente.
-
-Resultado: ☐ aprovado
-
-## 3. Certificado A1
-
-1. Confirme que o site lista somente certificados utilizáveis.
-2. Selecione o A1 correto.
-3. Recarregue a página e confirme persistência pelo thumbprint.
-4. Confirme que PFX, senha e chave privada não aparecem nas respostas de rede.
-5. Certificados vencidos não devem ser oferecidos como utilizáveis.
-
-Resultado: ☐ aprovado
-
-## 4. Validação da chave
-
-- menos de 44 caracteres: rejeitar sem consulta fiscal;
-- caracteres fora da estrutura permitida: rejeitar;
-- DV incorreto: rejeitar;
-- chave NF-e modelo 55 numérica válida: aceitar;
-- chave NF-e modelo 55 com CNPJ/chave alfanuméricos válidos: aceitar;
-- chave NFC-e modelo 65: rejeitar explicitamente.
-
-Resultado: ☐ aprovado
-
-## 5. Consulta SEFAZ normal
-
-1. Consulte uma NF-e conhecida e autorizada para o certificado.
-2. Confirme uma única tentativa perceptível, sem retry fiscal automático.
-3. Confira número, série e emitente.
-4. Baixe o XML e compare `infNFe/@Id` com a chave consultada.
-5. Confirme que o XML original não foi alterado por regras de apresentação de fornecedor.
-
-Resultado: ☐ aprovado
-
-## 6. DANFE e interface de consulta
-
-1. Confirme resultado integrado à consulta e ação **Nova consulta**.
-2. Clique em `Visualizar DANFE`.
-3. Confira emitente, destinatário, chave, protocolo, itens, totais e informações adicionais contra o XML.
-4. Para Fernando Klein e Dionisio, confira `cProd` na primeira linha e `[código interno]` abaixo, sem alterar o XML.
-5. Para Souza Cruz, confira quantidade fiscal preservada e `[<unidades> UN]` somente quando a conversão declarada for válida.
-6. Verifique coluna inicial `Item` e contagem/ordem.
-7. Use `Ctrl + scroll`: somente o DANFE deve receber zoom.
-8. Feche por botão, `Esc` e backdrop.
-9. Use `Imprimir / PDF` e confira A4/paginação.
-10. Confirme que transporte/volumes não aparece sem conteúdo útil.
-11. Confirme que o atalho de download aponta para o Setup da versão canônica indicada em `Directory.Build.props`.
-
-Resultado: ☐ aprovado
-
-## 7. Estados fiscais e indisponibilidade
-
-Quando houver casos reais/controlados, confirme:
-
-- `Resultado fiscal` para retorno sem XML;
-- `SEFAZ indisponível` para indisponibilidade de transporte;
-- `Certificado A1 indisponível` quando não houver A1 selecionado/utilizável;
-- `XML inválido` quando XML não corresponder à chave.
-
-Resultado: ☐ aprovado
-
-## 8. WebView2 Runtime e fallback 656/217 / Portal
-
-Antes do cenário de fallback:
-
-1. Com Runtime instalado, confirme `webView2Available=true` sem abrir janela durante health.
-2. Sem Runtime, confirme `webView2Available=false` sem abrir janela apenas para detectar ausência.
-
-Quando houver `consumption_limit` natural/controlado ou uma chave conhecida que retorne `cStat 217` na consulta direta:
-
-3. `consumption_limit` deve iniciar fallback sem repetir `NFeDistribuicaoDFe`.
-4. `fiscal_status` com `cStat 217` também deve iniciar o mesmo fallback, sem repetir `NFeDistribuicaoDFe`.
-5. Outros `fiscal_status` não devem abrir o Portal automaticamente.
-6. Confirme chave pré-preenchida.
-7. Resolva **somente o hCaptcha manualmente**.
-8. Não clique em **Consultar/Continuar**; confirme que a consulta avança sozinha após a resposta válida do hCaptcha.
-9. Não clique em **Download do Documento**; confirme que o helper reconhece também o rótulo com sufixo `*` e aciona o download oficial automaticamente.
-10. A confirmação JavaScript informando que é necessário possuir certificado digital **não deve ficar visível aguardando OK**; o helper deve interceptá-la via `ScriptDialogOpening` e aceitá-la automaticamente.
-11. Confirme uso automático do mesmo A1 selecionado.
-12. Confirme retorno do XML ao Bridge/site usando o mesmo parser/DANFE.
-13. Confirme que o XML corresponde à chave.
-14. Repita uma segunda ocorrência controlada e confirme reutilização do helper/WebView2.
-15. Feche a janela antes do fim e confirme `Consulta pelo Portal cancelada`.
-16. Inicie nova ocorrência após cancelamento e confirme recuperação normal.
-17. Recarregue/feche a página durante uma operação e confirme que ela não fica presa indefinidamente.
-
-Resultado: ☐ aprovado
-
-Detalhes adicionais: `docs/testing/portal-post-hcaptcha.md`.
-
-## 9. Bloqueios do helper WebView2
-
-Durante o teste do Portal:
-
-- navegação externa bloqueada;
-- nova janela externa bloqueada;
-- download fora de `/portal/downloadNFe.aspx` bloqueado;
-- hCaptcha continua exclusivamente manual;
-- não existem `hcaptcha.execute`, `grecaptcha.execute`, serviço de resolução ou fabricação de token;
-- `AreDefaultScriptDialogsEnabled` deve permanecer desativado no helper para que `ScriptDialogOpening` receba os diálogos JavaScript;
-- diálogos JavaScript não são aceitos genericamente: o aceite automático exige origem oficial, janela temporal armada pelo clique de download e mensagem contendo `download` e `certificado digital`;
-- pacote contém WebView2 Core + WinForms e não depende de `Microsoft.Web.WebView2.Wpf.dll`.
-
-Resultado: ☐ aprovado
-
-## 10. Atualização pelo site
-
-1. Instale a última versão pública anterior à release candidata.
-2. Abra **Configurações** no site e confirme que a versão instalada vem de `GET /api/v1/health`.
-3. Confirme que uma release estável mais nova gera a ação **Atualizar componente Windows para X.Y.Z**.
-4. Confirme que o download usa somente `nfeagendamento.joaolds.xyz.br/downloads/windows/...` e o nome exato do Setup versionado.
-5. Execute o Setup e confirme preservação de `%LOCALAPPDATA%\NfeAgendamentoBridge`.
-6. Após o componente voltar, confirme no diagnóstico do site a versão nova e ausência de atualização pendente.
-7. Confirme que não existe App supervisor/updater paralelo; toda descoberta de atualização acontece pelo site.
-
-Detalhes: `docs/testing/bridge-updater.md`.
-
-Resultado: ☐ aprovado
-
-## 11. Desinstalação e persistência local
-
-1. Anote `%LOCALAPPDATA%\NfeAgendamentoBridge\settings.json`, se existir.
-2. Desinstale pelo Windows.
-3. Confirme remoção do diretório do aplicativo, atalho e auto-start.
-4. Confirme preservação de `%LOCALAPPDATA%\NfeAgendamentoBridge\settings.json` quando já existia.
-
-Resultado: ☐ aprovado
-
-## 12. Segundo PC independente
-
-1. Instale o mesmo Setup validado pelo SHA da release em teste.
-2. Confirme início direto do Bridge sem console e sem App supervisor.
-3. Use o A1 instalado nesse segundo PC.
-4. Abra o site oficial e faça consulta normal.
-5. Confirme ausência de Central, pareamento, pasta compartilhada ou dependência do primeiro PC.
-6. Se o segundo PC usar uma cópia do mesmo A1 RSA, confirme que a proteção fiscal compartilhada não permite ultrapassar o teto coordenado entre os PCs.
-
-Resultado: ☐ aprovado
+Repetir pelo menos uma consulta completa em Chrome e Edge.
 
 ## Critério de aceite
 
-Uma release só deve ser declarada fisicamente validada depois de:
+- CI/CodeQL do SHA final verdes;
+- extensão detectada;
+- consulta unitária aprovada;
+- segunda consulta aprovada;
+- cancelamento/recuperação aprovados;
+- lote sequencial aprovado;
+- XML/DANFE aprovados;
+- Chrome e Edge aprovados.
 
-- CI do SHA final totalmente verde;
-- tag/release apontando para o SHA validado;
-- Setup e pacote técnico da mesma execução identificados;
-- etapas 0–7 aprovadas;
-- etapa 8 aprovada em ocorrência real/controlada;
-- lifecycle/recovery aprovado;
-- atualização da versão pública anterior → release candidata validada pelo fluxo site-first e Setup oficial;
-- segundo PC aprovado quando fizer parte da implantação;
-- divergências registradas e corrigidas.
-
-Authenticode e branch protection/ruleset são opcionais neste projeto e não fazem parte do critério de aceite.
+O hCaptcha deve permanecer exclusivamente manual.
