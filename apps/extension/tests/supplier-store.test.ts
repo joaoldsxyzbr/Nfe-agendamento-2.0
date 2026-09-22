@@ -95,4 +95,21 @@ describe('local supplier store', () => {
     expect(await loadSupplierConfig()).toBeNull();
   });
 
+  it('clears only the local supplier config key', async () => {
+    const removed: string[] = [];
+    (globalThis as typeof globalThis & { chrome: unknown }).chrome = {
+      storage: {
+        local: {
+          remove: async (key: string) => { removed.push(key); },
+        },
+      },
+    };
+
+    const { clearSupplierConfig } = await import('../src/supplier-store');
+    await clearSupplierConfig();
+
+    expect(removed).toEqual(['supplierRulesV1']);
+  });
+
+
 });
