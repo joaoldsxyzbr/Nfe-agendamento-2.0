@@ -271,8 +271,17 @@ async function handlePortalMessage(
 ): Promise<unknown> {
   assertSenderOrigin(sender, PORTAL_ORIGIN);
   const operation = await getActiveOperation();
-  if (!operation || sender.tab?.id !== operation.portalTabId) {
-    throw new Error('Esta aba não pertence à operação Portal ativa.');
+  if (!operation) {
+    throw new ExtensionFailure(
+      'portal_operation_lost',
+      'A operação do Portal não está mais disponível na extensão.',
+    );
+  }
+  if (sender.tab?.id !== operation.portalTabId) {
+    throw new ExtensionFailure(
+      'portal_tab_mismatch',
+      'Esta aba não pertence à operação Portal ativa.',
+    );
   }
 
   const type = envelope.type;
@@ -451,8 +460,11 @@ function isActiveOperation(value: unknown): value is ActiveOperation {
   const input = value as Record<string, unknown>;
   return typeof input.operationId === 'string' &&
     typeof input.accessKey === 'string' &&
+    typeof input.siteTabId === 'number' &&
     Number.isInteger(input.siteTabId) &&
+    typeof input.portalTabId === 'number' &&
     Number.isInteger(input.portalTabId) &&
+    typeof input.portalWindowId === 'number' &&
     Number.isInteger(input.portalWindowId) &&
     typeof input.state === 'string' &&
     [
