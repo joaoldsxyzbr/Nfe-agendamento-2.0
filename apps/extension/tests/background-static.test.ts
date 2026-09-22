@@ -14,6 +14,11 @@ describe('extension background contract', () => {
     expect(source).toContain("type: 'popup'");
     expect(source).toContain('chrome.tabs.query({ windowId: portalWindowId })');
     expect(source).toContain('chrome.storage.session');
+    expect(source).toContain('withOperationMutation');
+    expect(source).toContain('claimPortalDownload');
+    expect(source).toContain("operation.state !== 'waiting_result'");
+    expect(source).toContain('clearActiveOperationIfCurrent');
+    expect(source).toContain('stateChangedAt');
     expect(source).toContain('reconcileActiveOperation');
     expect(source).toContain('getReconciledActiveOperation');
     expect(source).toContain('chrome.windows.get');
@@ -45,6 +50,8 @@ describe('extension background contract', () => {
     expect(source).toContain('FALLBACK_TICK_MS');
     expect(source).toContain('RESULT_TIMEOUT_MS');
     expect(source).toContain('DOWNLOAD_TIMEOUT_MS');
+    expect(source).toContain('response.stateChangedAt');
+    expect(source).toContain('validTimestampOrNow');
     expect(source).toContain("'result_timeout'");
     expect(source).toContain("'download_timeout'");
     expect(source).not.toContain('window.setInterval(() => void tick(), 250)');

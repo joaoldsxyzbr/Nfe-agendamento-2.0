@@ -40,7 +40,19 @@ A extensão **0.2.3** publicada na v0.0.25 adiciona:
 - diferenciação entre sessão perdida, erro HTTP, replay inválido e XML inválido;
 - resposta HTML no lugar do XML tratada como provável perda de sessão, sem aceitar conteúdo como documento fiscal.
 
-A versão pública para teste é a **0.2.3 da v0.0.25**. Ela ainda precisa do gate físico antes de ser declarada funcional em Chrome/Edge reais com A1.
+A versão pública para teste é a **0.2.3 da v0.0.25**. O primeiro teste manual foi reportado como funcional em 22/09/2026, mas o gate completo ainda exige repetição, cancelamento, lote e validação no Edge.
+
+## HEAD após v0.0.25 — extensão 0.2.4
+
+O código da `main` prepara a extensão **0.2.4**, ainda sem nova release pública. O hardening mantém as mesmas permissões e o mesmo fluxo visual, mas reforça:
+
+- serialização das mutações da operação para impedir dois `start` concorrentes de abrirem popups duplicados;
+- captura do endpoint `downloadNFe.aspx` somente quando a operação estiver em `waiting_result`, com claim único antes do replay;
+- finalização condicional por `operationId`, impedindo que uma captura atrasada conclua uma operação já cancelada;
+- limpeza reconciliada condicionada ao mesmo `operationId`, evitando apagar uma operação mais nova por uma verificação antiga;
+- persistência de `stateChangedAt` em `chrome.storage.session`, para os timeouts de resultado/download continuarem contando após postback, reload ou reinjeção do content script.
+
+Não foram adicionadas permissões, hosts, automação de captcha ou acesso nativo.
 
 ## Instalar no Chrome
 

@@ -41,11 +41,12 @@ async function initialize(): Promise<void> {
     if (!response || typeof response.accessKey !== 'string') return;
     accessKey = response.accessKey;
     portalState = isPortalState(response.state) ? response.state : 'waiting_user';
+    const stateChangedAt = validTimestampOrNow(response.stateChangedAt);
 
     if (portalState === 'submitting') {
-      submittedAt = Date.now();
+      submittedAt = stateChangedAt;
     } else if (portalState === 'waiting_result') {
-      downloadRequestedAt = Date.now();
+      downloadRequestedAt = stateChangedAt;
       downloadTriggered = true;
     }
 
@@ -212,6 +213,16 @@ async function sendPortalMessageWithRetry(message: Record<string, unknown>): Pro
 
 function delay(milliseconds: number): Promise<void> {
   return new Promise<void>((resolve) => globalThis.setTimeout(resolve, milliseconds));
+}
+
+function validTimestampOrNow(value: unknown): number {
+  const now = Date.now();
+  return typeof value === 'number' &&
+    Number.isFinite(value) &&
+    value > 0 &&
+    value <= now + 60_000
+    ? value
+    : now;
 }
 
 function fillAccessKey(): void {

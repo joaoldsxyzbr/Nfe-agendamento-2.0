@@ -19,6 +19,8 @@ const PORTAL_DOWNLOAD_FILTER = {
   urls: ['https://www.nfe.fazenda.gov.br/portal/downloadNFe.aspx*'],
 };
 
+let operationMutationQueue: Promise<void> = Promise.resolve();
+
 type ActiveOperation = {
   operationId: string;
   accessKey: string;
@@ -26,6 +28,7 @@ type ActiveOperation = {
   portalTabId: number;
   portalWindowId: number;
   state: PortalExtensionState;
+  stateChangedAt: number;
 };
 
 void hardenLocalStorage();
@@ -160,92 +163,97 @@ async function handleSiteCommand(commandValue: unknown, sender: any): Promise<un
   }
 
   if (command.type === 'start') {
-    const existing = await getReconciledActiveOperation();
-    if (existing) {
-      if (existing.siteTabId === siteTabId && existing.accessKey === command.accessKey) {
-        return {
-          type: 'started',
-          requestId: command.requestId,
-          operationId: existing.operationId,
-          resumed: true,
-        };
+    await getReconciledActiveOperation();
+
+    return withOperationMutation(async () => {
+      const existing = await getActiveOperation();
+      if (existing) {
+        if (existing.siteTabId === siteTabId && existing.accessKey === command.accessKey) {
+          return {
+            type: 'started',
+            requestId: command.requestId,
+            operationId: existing.operationId,
+            resumed: true,
+          };
+        }
+        throw new ExtensionFailure(
+          'portal_operation_active',
+          'Já existe uma consulta pelo Portal em andamento.',
+        );
       }
-      throw new ExtensionFailure(
-        'portal_operation_active',
-        'Já existe uma consulta pelo Portal em andamento.',
-      );
-    }
 
-    const operationId = globalThis.crypto.randomUUID();
-    let popup: any;
-    try {
-      popup = await chrome.windows.create({
-        url: 'about:blank',
-        type: 'popup',
-        focused: true,
-        width: 1100,
-        height: 800,
-      });
-    } catch {
-      throw new ExtensionFailure(
-        'portal_popup_open_failed',
-        'Não foi possível abrir a janela do Portal.',
-      );
-    }
+      const operationId = globalThis.crypto.randomUUID();
+      let popup: any;
+      try {
+        popup = await chrome.windows.create({
+          url: 'about:blank',
+          type: 'popup',
+          focused: true,
+          width: 1100,
+          height: 800,
+        });
+      } catch {
+        throw new ExtensionFailure(
+          'portal_popup_open_failed',
+          'Não foi possível abrir a janela do Portal.',
+        );
+      }
 
-    const portalWindowId = popup?.id;
-    if (!Number.isInteger(portalWindowId)) {
-      throw new ExtensionFailure(
-        'portal_popup_open_failed',
-        'Não foi possível identificar a janela do Portal.',
-      );
-    }
+      const portalWindowId = popup?.id;
+      if (!Number.isInteger(portalWindowId)) {
+        throw new ExtensionFailure(
+          'portal_popup_open_failed',
+          'Não foi possível identificar a janela do Portal.',
+        );
+      }
 
-    const popupTabs = await chrome.tabs.query({ windowId: portalWindowId }).catch(() => []);
-    const portalTabId = popupTabs?.[0]?.id;
-    if (!Number.isInteger(portalTabId)) {
-      await chrome.windows.remove(portalWindowId).catch(() => {});
-      throw new ExtensionFailure(
-        'portal_tab_missing',
-        'Não foi possível identificar a aba do Portal.',
-      );
-    }
+      const popupTabs = await chrome.tabs.query({ windowId: portalWindowId }).catch(() => []);
+      const portalTabId = popupTabs?.[0]?.id;
+      if (!Number.isInteger(portalTabId)) {
+        await chrome.windows.remove(portalWindowId).catch(() => {});
+        throw new ExtensionFailure(
+          'portal_tab_missing',
+          'Não foi possível identificar a aba do Portal.',
+        );
+      }
 
-    const operation: ActiveOperation = {
-      operationId,
-      accessKey: command.accessKey,
-      siteTabId,
-      portalTabId,
-      portalWindowId,
-      state: 'opening',
-    };
+      const operation: ActiveOperation = {
+        operationId,
+        accessKey: command.accessKey,
+        siteTabId,
+        portalTabId,
+        portalWindowId,
+        state: 'opening',
+        stateChangedAt: Date.now(),
+      };
 
-    try {
-      await saveActiveOperation(operation);
-    } catch {
-      await chrome.windows.remove(portalWindowId).catch(() => {});
-      throw new ExtensionFailure(
-        'portal_state_unavailable',
-        'Não foi possível salvar o estado da consulta do Portal.',
-      );
-    }
+      try {
+        await saveActiveOperation(operation);
+      } catch {
+        await chrome.windows.remove(portalWindowId).catch(() => {});
+        throw new ExtensionFailure(
+          'portal_state_unavailable',
+          'Não foi possível salvar o estado da consulta do Portal.',
+        );
+      }
 
-    try {
-      await chrome.tabs.update(portalTabId, { url: PORTAL_URL });
-    } catch {
-      await clearActiveOperation();
-      await chrome.windows.remove(portalWindowId).catch(() => {});
-      throw new ExtensionFailure(
-        'portal_navigation_failed',
-        'Não foi possível abrir o Portal Nacional na aba criada.',
-      );
-    }
+      try {
+        await chrome.tabs.update(portalTabId, { url: PORTAL_URL });
+      } catch {
+        await clearActiveOperation();
+        await chrome.windows.remove(portalWindowId).catch(() => {});
+        throw new ExtensionFailure(
+          'portal_navigation_failed',
+          'Não foi possível abrir o Portal Nacional na aba criada.',
+        );
+      }
 
-    return {
-      type: 'started',
-      requestId: command.requestId,
-      operationId,
-    };
+      return {
+        type: 'started',
+        requestId: command.requestId,
+        operationId,
+      };
+    });
   }
 
   const operation = await getReconciledActiveOperation();
@@ -291,16 +299,20 @@ async function handlePortalMessage(
 
   const type = envelope.type;
   if (type === 'ready') {
-    let state = operation.state;
-    if (state === 'opening' || state === 'loading_portal') {
-      state = 'waiting_user';
-      await transition(operation, state, 'Resolva o hCaptcha manualmente.');
+    let activeOperation = operation;
+    if (operation.state === 'opening' || operation.state === 'loading_portal') {
+      activeOperation = await transition(
+        operation,
+        'waiting_user',
+        'Resolva o hCaptcha manualmente.',
+      );
     }
 
     return {
-      operationId: operation.operationId,
-      accessKey: operation.accessKey,
-      state,
+      operationId: activeOperation.operationId,
+      accessKey: activeOperation.accessKey,
+      state: activeOperation.state,
+      stateChangedAt: activeOperation.stateChangedAt,
     };
   }
 
@@ -378,13 +390,17 @@ async function handlePortalMessage(
 }
 
 async function handlePortalDownload(details: any): Promise<void> {
-  const operation = await getActiveOperation();
-  if (!operation || details.tabId !== operation.portalTabId) return;
-  if (!shouldCapturePortalRequest(details)) return;
+  const operation = await claimPortalDownload(details);
+  if (!operation) return;
+
+  await pushToSite(operation.siteTabId, {
+    type: 'state',
+    operationId: operation.operationId,
+    state: 'fetching_xml',
+    message: 'Recebendo o XML oficial.',
+  });
 
   try {
-    await transition(operation, 'fetching_xml', 'Recebendo o XML oficial.');
-
     let replay: ReturnType<typeof buildReplayRequest>;
     try {
       replay = buildReplayRequest(details);
@@ -469,8 +485,7 @@ async function handleWindowRemoved(windowId: number): Promise<void> {
   const operation = await getActiveOperation();
   if (!operation || operation.portalWindowId !== windowId) return;
 
-  await clearActiveOperation();
-  await pushToSite(operation.siteTabId, {
+  await finishOperation(operation, {
     type: 'cancelled',
     operationId: operation.operationId,
     message: 'A janela do Portal foi fechada antes da conclusão.',
@@ -482,8 +497,7 @@ async function handleTabRemoved(tabId: number): Promise<void> {
   if (!operation) return;
 
   if (operation.portalTabId === tabId) {
-    await clearActiveOperation();
-    await pushToSite(operation.siteTabId, {
+    await finishOperation(operation, {
       type: 'cancelled',
       operationId: operation.operationId,
       message: 'A aba do Portal foi fechada antes da conclusão.',
@@ -492,8 +506,11 @@ async function handleTabRemoved(tabId: number): Promise<void> {
   }
 
   if (operation.siteTabId === tabId) {
-    await clearActiveOperation();
-    await chrome.windows.remove(operation.portalWindowId).catch(() => {});
+    await finishOperation(operation, {
+      type: 'cancelled',
+      operationId: operation.operationId,
+      message: 'A aba do NFe Agendamento foi fechada antes da conclusão.',
+    });
   }
 }
 
@@ -501,28 +518,80 @@ async function transition(
   operation: ActiveOperation,
   state: PortalExtensionState,
   message: string,
-): Promise<void> {
-  const next = { ...operation, state };
-  await saveActiveOperation(next);
-  await pushToSite(operation.siteTabId, {
-    type: 'state',
-    operationId: operation.operationId,
-    state,
-    message,
+): Promise<ActiveOperation> {
+  let changed = false;
+  const next = await withOperationMutation(async () => {
+    const current = await getActiveOperation();
+    if (!current || current.operationId !== operation.operationId) {
+      throw new ExtensionFailure(
+        'portal_operation_lost',
+        'A operação do Portal não está mais disponível na extensão.',
+      );
+    }
+
+    if (current.state === state) return current;
+    if (current.state !== operation.state) {
+      throw new ExtensionFailure(
+        'portal_state_invalid',
+        'A operação do Portal mudou enquanto a ação estava em andamento.',
+      );
+    }
+
+    const updated = { ...current, state, stateChangedAt: Date.now() };
+    await saveActiveOperation(updated);
+    changed = true;
+    return updated;
+  });
+
+  if (changed) {
+    await pushToSite(next.siteTabId, {
+      type: 'state',
+      operationId: next.operationId,
+      state,
+      message,
+    });
+  }
+  return next;
+}
+
+async function claimPortalDownload(details: any): Promise<ActiveOperation | null> {
+  if (!shouldCapturePortalRequest(details)) return null;
+
+  return withOperationMutation(async () => {
+    const operation = await getActiveOperation();
+    if (!operation || details.tabId !== operation.portalTabId) return null;
+    if (operation.state !== 'waiting_result') return null;
+
+    const next = {
+      ...operation,
+      state: 'fetching_xml' as const,
+      stateChangedAt: Date.now(),
+    };
+    await saveActiveOperation(next);
+    return next;
   });
 }
 
 async function finishOperation(
   operation: ActiveOperation,
   event: ExtensionEvent,
-): Promise<void> {
-  await clearActiveOperation();
-  await pushToSite(operation.siteTabId, event);
+): Promise<boolean> {
+  const current = await withOperationMutation(async () => {
+    const active = await getActiveOperation();
+    if (!active || active.operationId !== operation.operationId) return null;
+    await clearActiveOperation();
+    return active;
+  });
+
+  if (!current) return false;
+
+  await pushToSite(current.siteTabId, event);
   try {
-    await chrome.windows.remove(operation.portalWindowId);
+    await chrome.windows.remove(current.portalWindowId);
   } catch {
     // A janela pode ter sido fechada pelo usuário enquanto finalizávamos.
   }
+  return true;
 }
 
 async function pushToSite(siteTabId: number, event: ExtensionEvent): Promise<void> {
@@ -570,11 +639,35 @@ async function getReconciledActiveOperation(): Promise<ActiveOperation | null> {
 
   if (valid) return operation;
 
-  await clearActiveOperation();
-  if (portalWindow) {
+  const cleared = await clearActiveOperationIfCurrent(operation.operationId);
+  if (cleared && portalWindow) {
     await chrome.windows.remove(operation.portalWindowId).catch(() => {});
   }
   return null;
+}
+
+async function clearActiveOperationIfCurrent(operationId: string): Promise<boolean> {
+  return withOperationMutation(async () => {
+    const current = await getActiveOperation();
+    if (!current || current.operationId !== operationId) return false;
+    await clearActiveOperation();
+    return true;
+  });
+}
+
+async function withOperationMutation<T>(mutation: () => Promise<T>): Promise<T> {
+  const previous = operationMutationQueue;
+  let release!: () => void;
+  operationMutationQueue = new Promise<void>((resolve) => {
+    release = () => resolve();
+  });
+
+  await previous;
+  try {
+    return await mutation();
+  } finally {
+    release();
+  }
 }
 
 async function saveActiveOperation(operation: ActiveOperation): Promise<void> {
@@ -596,6 +689,9 @@ function isActiveOperation(value: unknown): value is ActiveOperation {
     Number.isInteger(input.portalTabId) &&
     typeof input.portalWindowId === 'number' &&
     Number.isInteger(input.portalWindowId) &&
+    typeof input.stateChangedAt === 'number' &&
+    Number.isFinite(input.stateChangedAt) &&
+    input.stateChangedAt > 0 &&
     typeof input.state === 'string' &&
     [
       'opening',
