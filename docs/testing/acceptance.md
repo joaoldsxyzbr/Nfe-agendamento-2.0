@@ -4,7 +4,7 @@
 
 - Windows 10/11;
 - Chrome ou Edge;
-- extensão 0.2.8 ou superior;
+- extensão 0.2.9 ou superior;
 - certificado A1 válido instalado;
 - CNPJ do A1 configurado nas opções da extensão;
 - site oficial do NFe Agendamento.
@@ -16,8 +16,10 @@
 3. confirmar que a página de opções da extensão abre automaticamente;
 4. confirmar que nenhuma consulta é enviada à SEFAZ;
 5. em lote, confirmar que os itens permanecem aguardando, sem erro/cancelamento;
-6. salvar o CNPJ e confirmar **Consulta direta: Configurada**;
-7. desabilitar/reabilitar a extensão e validar recuperação.
+6. durante o preflight, clicar rapidamente em **Consultar** mais de uma vez e confirmar que apenas uma verificação/início ocorre;
+7. com uma extensão anterior à 0.2.8, confirmar orientação de atualização/configuração manual, sem afirmar que as opções foram abertas;
+8. salvar o CNPJ e confirmar **Consulta direta: Configurada**;
+9. desabilitar/reabilitar a extensão e validar recuperação.
 
 ## 2. Consulta direta
 

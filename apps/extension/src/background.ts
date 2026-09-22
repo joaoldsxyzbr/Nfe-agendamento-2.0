@@ -153,6 +153,7 @@ async function handleSiteCommand(commandValue: unknown, sender: any): Promise<un
       version: String(chrome.runtime.getManifest().version ?? '0.0.0'),
       capabilities: {
         directLookup: true,
+        openOptions: true,
         portalLookup: true,
         supplierResolution: true,
       },

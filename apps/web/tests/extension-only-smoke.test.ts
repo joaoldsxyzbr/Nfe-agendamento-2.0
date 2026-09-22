@@ -8,8 +8,13 @@ const viteConfigUrl = new URL('../vite.config.ts', import.meta.url);
 const xml = readFileSync(new URL('./fixtures/nfe-basic.xml', import.meta.url), 'utf8');
 
 const info = {
-  version: '0.2.6',
-  capabilities: { directLookup: true, portalLookup: true, supplierResolution: true },
+  version: '0.2.9',
+  capabilities: {
+    directLookup: true,
+    openOptions: true,
+    portalLookup: true,
+    supplierResolution: true,
+  },
   configuration: { fiscalIdentityConfigured: true },
 };
 

@@ -17,7 +17,7 @@ test('consulta unitária usa SEFAZ direta antes do Portal', async ({ page }) => 
         respond({
           type: 'ready',
           requestId: command.requestId,
-          version: '0.2.8',
+          version: '0.2.9',
           capabilities: { directLookup: true, portalLookup: true, supplierResolution: true },
           configuration: { fiscalIdentityConfigured: true },
         });

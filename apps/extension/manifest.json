@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "NFe Agendamento",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "description": "Consulta NF-e diretamente na SEFAZ e usa o Portal Nacional como fallback.",
   "minimum_chrome_version": "120",
   "permissions": [

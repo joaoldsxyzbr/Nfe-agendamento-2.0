@@ -22,6 +22,7 @@ export type PortalExtensionInfo = Readonly<{
   version: string;
   capabilities: Readonly<{
     directLookup: boolean;
+    openOptions: boolean;
     portalLookup: boolean;
     supplierResolution: boolean;
   }>;
@@ -308,6 +309,7 @@ function parseReadyResponse(value: unknown): PortalExtensionInfo | null {
     version: value.version,
     capabilities: {
       directLookup: value.capabilities.directLookup === true,
+      openOptions: value.capabilities.openOptions === true || versionAtLeast(value.version, 0, 2, 8),
       portalLookup: value.capabilities.portalLookup === true,
       supplierResolution: value.capabilities.supplierResolution === true,
     },
@@ -315,6 +317,18 @@ function parseReadyResponse(value: unknown): PortalExtensionInfo | null {
       fiscalIdentityConfigured: configuration.fiscalIdentityConfigured === true,
     },
   };
+}
+
+function versionAtLeast(version: string, major: number, minor: number, patch: number): boolean {
+  const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(version.trim());
+  if (!match) return false;
+  const current = [Number(match[1]), Number(match[2]), Number(match[3])];
+  const expected = [major, minor, patch];
+  for (let index = 0; index < expected.length; index += 1) {
+    if (current[index] > expected[index]) return true;
+    if (current[index] < expected[index]) return false;
+  }
+  return true;
 }
 
 function isDirectLookupResult(value: unknown): value is DirectLookupResult {

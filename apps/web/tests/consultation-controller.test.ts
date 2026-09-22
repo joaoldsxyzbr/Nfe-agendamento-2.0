@@ -12,7 +12,7 @@ function harness(overrides: Record<string, unknown> = {}) {
   const portal = {
     getInfo: async () => ({
       version: '0.2.6',
-      capabilities: { directLookup: true, portalLookup: true, supplierResolution: true },
+      capabilities: { directLookup: true, openOptions: true, portalLookup: true, supplierResolution: true },
       configuration: { fiscalIdentityConfigured: true },
     }),
     openOptions: async () => { optionsOpens.push('opened'); },
@@ -78,7 +78,7 @@ describe('consultation controller direct-first', () => {
     const h = harness({
       getInfo: async () => ({
         version: '0.2.8',
-        capabilities: { directLookup: true, portalLookup: true, supplierResolution: true },
+        capabilities: { directLookup: true, openOptions: true, portalLookup: true, supplierResolution: true },
         configuration: { fiscalIdentityConfigured: false },
       }),
     });
@@ -89,6 +89,22 @@ describe('consultation controller direct-first', () => {
     expect(h.optionsOpens).toEqual(['opened']);
     expect(h.states.at(-1)?.[0]).toBe('Configure o CNPJ do A1');
     expect(h.states.at(-1)?.[1]).toContain('Nenhuma consulta foi enviada à SEFAZ');
+  });
+
+  it('asks for an extension update when automatic options are unavailable', async () => {
+    const h = harness({
+      getInfo: async () => ({
+        version: '0.2.7',
+        capabilities: { directLookup: true, openOptions: false, portalLookup: true, supplierResolution: true },
+        configuration: { fiscalIdentityConfigured: false },
+      }),
+    });
+    await h.controller.submit();
+
+    expect(h.directKeys).toHaveLength(0);
+    expect(h.optionsOpens).toHaveLength(0);
+    expect(h.states.at(-1)?.[0]).toBe('Atualize a extensão');
+    expect(h.states.at(-1)?.[1]).toContain('extensão é anterior');
   });
 
   it('still handles a late configuration error without falling back to Portal', async () => {
@@ -104,7 +120,7 @@ describe('consultation controller direct-first', () => {
     const h = harness({
       getInfo: async () => ({
         version: '0.2.5',
-        capabilities: { directLookup: false, portalLookup: true, supplierResolution: true },
+        capabilities: { directLookup: false, openOptions: false, portalLookup: true, supplierResolution: true },
         configuration: { fiscalIdentityConfigured: false },
       }),
     });
