@@ -4,6 +4,13 @@
 **Base:** `main` em `b7b6805753861e36700b308da8d4ed9a00921cfd` (v0.0.23 / extensão 0.2.1)  
 **Objetivo:** tornar o fluxo site → extensão → Portal Nacional confiável em Chrome/Edge reais antes de qualquer remoção do Bridge/WebView2.
 
+## Status de execução
+
+- **Fase 1 — compatibilidade e diagnóstico:** implementada no código desta branch;
+- **Fase 2 — conexão/lifecycle:** base reativa implementada com `bridge_ready`, `focus`, `pageshow` e visibilidade; reconciliação completa de operação após restart do service worker permanece para a próxima rodada;
+- **Fase 3 — Portal real:** ainda depende do gate físico Chrome/Edge + A1 + hCaptcha + XML;
+- **Fase 4 — distribuição corporativa:** planejada, ainda não iniciada.
+
 ## Evidência externa usada
 
 A pesquisa técnica confirmou publicamente apenas o modelo de produto do FSist: instalação de uma extensão Chromium, consulta pelo Portal/consulta pública da Fazenda e uso de certificado instalado no Windows. A implementação interna atual do FSist não está publicamente documentada de forma suficiente para ser tratada como referência de código.
