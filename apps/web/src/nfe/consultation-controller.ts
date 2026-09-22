@@ -1,4 +1,9 @@
-import type { PortalOperationStatus, SupplierResolution } from '../portal/contracts';
+import type {
+  DirectLookupResult,
+  PortalOperationStatus,
+  SupplierResolution,
+} from '../portal/contracts';
+import type { PortalExtensionInfo } from '../portal/extension-client';
 import type { AccessKeyValidation } from './access-key';
 import type { ParsedNfe } from './xml';
 
@@ -10,8 +15,9 @@ export type ConsultationController = Readonly<{
   isPortalActive(): boolean;
 }>;
 
-type ConsultationPortalClient = Readonly<{
-  isAvailable(signal?: AbortSignal): Promise<boolean>;
+type ConsultationExtensionClient = Readonly<{
+  getInfo(signal?: AbortSignal): Promise<PortalExtensionInfo | null>;
+  directLookup(accessKey: string, signal?: AbortSignal): Promise<DirectLookupResult>;
   start(accessKey: string, signal?: AbortSignal): Promise<string>;
   waitForResult(operationId: string, signal?: AbortSignal): Promise<PortalOperationStatus>;
   cancel(operationId: string): Promise<void>;
@@ -22,7 +28,7 @@ export type ConsultationControllerDependencies = Readonly<{
   getAccessKey(): string;
   clearAccessKey(): void;
   validateAccessKey(value: string): AccessKeyValidation;
-  portal: ConsultationPortalClient;
+  portal: ConsultationExtensionClient;
   parseXml(xml: string, accessKey: string): ParsedNfe;
   renderState(title: string, message: string): void;
   renderPortalFailure(title: string, message: string, accessKey: string): void;
@@ -33,7 +39,9 @@ export type ConsultationControllerDependencies = Readonly<{
   resetView(): void;
 }>;
 
-export function createConsultationController(deps: ConsultationControllerDependencies): ConsultationController {
+export function createConsultationController(
+  deps: ConsultationControllerDependencies,
+): ConsultationController {
   let activePortalOperationId: string | null = null;
 
   async function submit(): Promise<void> {
@@ -46,43 +54,101 @@ export function createConsultationController(deps: ConsultationControllerDepende
 
     deps.setBusy(true);
     try {
-      if (!await deps.portal.isAvailable()) {
+      const info = await deps.portal.getInfo();
+      if (!info) {
         deps.renderState(
           'Extensão não conectada',
           'Instale ou ative a extensão NFe Agendamento no Chrome/Edge e tente novamente.',
         );
         return;
       }
-
-      deps.renderState(
-        'Abrindo Portal Nacional',
-        'A extensão está abrindo a consulta oficial. Resolva o hCaptcha manualmente na janela do Portal.',
-      );
-
-      let operationId: string;
-      try {
-        operationId = await deps.portal.start(validation.value);
-      } catch (error) {
-        deps.renderPortalFailure(
-          'Portal da NF-e indisponível',
-          error instanceof Error ? error.message : 'Não foi possível abrir o Portal Nacional da NF-e.',
-          validation.value,
+      if (!info.capabilities.directLookup) {
+        deps.renderState(
+          'Atualize a extensão',
+          'Esta versão da extensão ainda não possui consulta direta à SEFAZ.',
         );
         return;
       }
 
-      activePortalOperationId = operationId;
-      deps.renderState(
-        'Portal Nacional aberto',
-        'Resolva o hCaptcha manualmente. O XML será devolvido automaticamente para este site.',
-      );
+      deps.renderState('Consultando NF-e', 'Consultando diretamente a SEFAZ com o certificado A1 do navegador…');
+      const lookup = await deps.portal.directLookup(validation.value);
 
-      const portalStatus = await deps.portal.waitForResult(operationId);
-      if (portalStatus.state === 'completed' && portalStatus.xml) {
-        await renderParsedXml(portalStatus.xml, validation.value);
+      if (lookup.category === 'success' && lookup.xml) {
+        await renderParsedXml(lookup.xml, validation.value);
         return;
       }
 
+      if (
+        lookup.category === 'consumption_limit' ||
+        (lookup.category === 'fiscal_status' && lookup.cStat === '217')
+      ) {
+        await runPortalFallback(validation.value, lookup);
+        return;
+      }
+
+      renderDirectFailure(lookup);
+    } catch (error) {
+      deps.renderState(
+        'Consulta não concluída',
+        error instanceof Error ? error.message : 'Não foi possível concluir a consulta da NF-e.',
+      );
+    } finally {
+      deps.setBusy(false);
+    }
+  }
+
+  function renderDirectFailure(lookup: DirectLookupResult): void {
+    if (lookup.category === 'configuration_error') {
+      deps.renderState('Configuração necessária', lookup.message);
+      return;
+    }
+    if (lookup.category === 'fiscal_status') {
+      deps.renderState(
+        lookup.cStat ? `Resultado SEFAZ ${lookup.cStat}` : 'Resultado fiscal',
+        lookup.message,
+      );
+      return;
+    }
+    deps.renderState(
+      lookup.category === 'transport_unavailable' ? 'Consulta direta indisponível' : 'Consulta não concluída',
+      lookup.message,
+    );
+  }
+
+  async function runPortalFallback(accessKey: string, lookup: DirectLookupResult): Promise<void> {
+    const sefazStatus = lookup.cStat
+      ? `Status SEFAZ ${lookup.cStat}. ${lookup.message}`
+      : lookup.message;
+
+    deps.renderState(
+      'Abrindo consulta alternativa',
+      `${sefazStatus} Abrindo o Portal Nacional da NF-e. Resolva o hCaptcha manualmente.`,
+    );
+
+    let operationId: string;
+    try {
+      operationId = await deps.portal.start(accessKey);
+    } catch (error) {
+      deps.renderPortalFailure(
+        'Portal da NF-e indisponível',
+        error instanceof Error ? error.message : 'Não foi possível abrir o Portal Nacional da NF-e.',
+        accessKey,
+      );
+      return;
+    }
+
+    activePortalOperationId = operationId;
+    deps.renderState(
+      'Portal Nacional aberto',
+      'Resolva o hCaptcha manualmente. O XML será devolvido automaticamente para este site.',
+    );
+
+    try {
+      const portalStatus = await deps.portal.waitForResult(operationId);
+      if (portalStatus.state === 'completed' && portalStatus.xml) {
+        await renderParsedXml(portalStatus.xml, accessKey);
+        return;
+      }
       if (portalStatus.state === 'cancelled') {
         deps.renderState(
           'Consulta pelo Portal cancelada',
@@ -90,21 +156,19 @@ export function createConsultationController(deps: ConsultationControllerDepende
         );
         return;
       }
-
       deps.renderPortalFailure(
         'Portal da NF-e indisponível',
         portalStatus.message ?? 'O Portal não retornou o XML desta NF-e.',
-        validation.value,
+        accessKey,
       );
     } catch (error) {
       deps.renderPortalFailure(
-        'Consulta não concluída',
-        error instanceof Error ? error.message : 'Não foi possível concluir a consulta da NF-e.',
-        validation.value,
+        'Portal da NF-e indisponível',
+        error instanceof Error ? error.message : 'Não foi possível concluir a consulta pelo Portal Nacional da NF-e.',
+        accessKey,
       );
     } finally {
-      activePortalOperationId = null;
-      deps.setBusy(false);
+      if (activePortalOperationId === operationId) activePortalOperationId = null;
     }
   }
 
@@ -114,8 +178,7 @@ export function createConsultationController(deps: ConsultationControllerDepende
 
   async function renderParsedXml(xml: string, accessKey: string): Promise<void> {
     try {
-      const parsed = await withSupplierRule(deps.parseXml(xml, accessKey));
-      deps.renderSuccess(parsed);
+      deps.renderSuccess(await withSupplierRule(deps.parseXml(xml, accessKey)));
     } catch (error) {
       deps.renderInvalidXml(error);
     }
@@ -140,11 +203,7 @@ export function createConsultationController(deps: ConsultationControllerDepende
     const operationId = activePortalOperationId;
     activePortalOperationId = null;
     if (!operationId) return;
-    try {
-      await deps.portal.cancel(operationId);
-    } catch {
-      // pagehide/unload: best-effort.
-    }
+    try { await deps.portal.cancel(operationId); } catch {}
   }
 
   return {
