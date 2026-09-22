@@ -134,32 +134,36 @@ export class BrowserPortalExtensionClient {
 
   async start(accessKey: string, signal?: AbortSignal): Promise<string> {
     const normalizedAccessKey = accessKey.trim().toUpperCase();
-    let lastError: unknown = null;
+    let lastTransportError: unknown = null;
 
     for (let attempt = 0; attempt < START_ATTEMPTS; attempt += 1) {
       signal?.throwIfAborted();
       const requestId = globalThis.crypto.randomUUID();
+      let response: unknown;
 
       try {
-        const response = await this.transport.request(
+        response = await this.transport.request(
           { type: 'start', requestId, accessKey: normalizedAccessKey },
           signal,
         );
-        if (!isStartedResponse(response)) {
-          throw new Error(messageFromFailure(response) ?? 'A extensão não iniciou o Portal.');
-        }
-        return response.operationId;
       } catch (error) {
         if (signal?.aborted) throw error;
-        lastError = error;
+        lastTransportError = error;
         if (attempt < START_ATTEMPTS - 1) {
           await waitForRetry(COMMAND_RETRY_DELAY_MS, signal);
+          continue;
         }
+        break;
       }
+
+      if (!isStartedResponse(response)) {
+        throw new Error(messageFromFailure(response) ?? 'A extensão não iniciou o Portal.');
+      }
+      return response.operationId;
     }
 
-    throw lastError instanceof Error
-      ? lastError
+    throw lastTransportError instanceof Error
+      ? lastTransportError
       : new Error('A extensão não iniciou o Portal.');
   }
 
@@ -207,31 +211,35 @@ export class BrowserPortalExtensionClient {
   }
 
   private async isOperationActive(operationId: string, signal?: AbortSignal): Promise<boolean> {
-    let lastError: unknown = null;
+    let lastTransportError: unknown = null;
 
     for (let attempt = 0; attempt < OPERATION_STATUS_ATTEMPTS; attempt += 1) {
       signal?.throwIfAborted();
       const requestId = globalThis.crypto.randomUUID();
+      let response: unknown;
 
       try {
-        const response = await this.transport.request(
+        response = await this.transport.request(
           { type: 'status', requestId, operationId },
           signal,
         );
-        const active = parseOperationStatus(response, operationId);
-        if (active !== null) return active;
-        throw new Error(messageFromFailure(response) ?? 'Resposta de estado da extensão inválida.');
       } catch (error) {
         if (signal?.aborted) throw error;
-        lastError = error;
+        lastTransportError = error;
         if (attempt < OPERATION_STATUS_ATTEMPTS - 1) {
           await waitForRetry(COMMAND_RETRY_DELAY_MS, signal);
+          continue;
         }
+        break;
       }
+
+      const active = parseOperationStatus(response, operationId);
+      if (active !== null) return active;
+      throw new Error(messageFromFailure(response) ?? 'Resposta de estado da extensão inválida.');
     }
 
-    throw lastError instanceof Error
-      ? lastError
+    throw lastTransportError instanceof Error
+      ? lastTransportError
       : new Error('Não foi possível reconciliar a operação do Portal.');
   }
 
