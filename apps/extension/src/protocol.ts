@@ -19,7 +19,8 @@ export type PortalExtensionState =
 
 export type SiteCommand =
   | { type: 'ping'; requestId: string }
-  | { type: 'direct_lookup'; requestId: string; accessKey: string }\n  | { type: 'start'; requestId: string; accessKey: string }
+  | { type: 'direct_lookup'; requestId: string; accessKey: string }
+  | { type: 'start'; requestId: string; accessKey: string }
   | { type: 'status'; requestId: string; operationId: string }
   | { type: 'cancel'; requestId: string; operationId: string }
   | { type: 'resolve_supplier'; requestId: string; taxId: string };

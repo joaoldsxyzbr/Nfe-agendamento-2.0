@@ -12,7 +12,8 @@ describe('BrowserPortalExtensionClient', () => {
           type: 'ready',
           requestId: 'ping',
           version: '0.1.0',
-          capabilities: { directLookup: true, portalLookup: true, supplierResolution: true },\n          configuration: { fiscalIdentityConfigured: true },
+          capabilities: { directLookup: true, portalLookup: true, supplierResolution: true },
+          configuration: { fiscalIdentityConfigured: true },
         };
         if (message.type === 'start') return { type: 'started', requestId: 'start', operationId: 'ext-op-1' };
         if (message.type === 'status') return {
@@ -34,7 +35,8 @@ describe('BrowserPortalExtensionClient', () => {
     const client = new BrowserPortalExtensionClient(transport as never);
     expect(await client.getInfo()).toEqual({
       version: '0.1.0',
-      capabilities: { directLookup: true, portalLookup: true, supplierResolution: true },\n          configuration: { fiscalIdentityConfigured: true },
+      capabilities: { directLookup: true, portalLookup: true, supplierResolution: true },
+          configuration: { fiscalIdentityConfigured: true },
     });
     expect(await client.isAvailable()).toBe(true);
     expect(await client.start(KEY)).toBe('ext-op-1');
@@ -113,7 +115,8 @@ describe('BrowserPortalExtensionClient', () => {
           type: 'ready',
           requestId: 'ping',
           version: '0.2.1',
-          capabilities: { directLookup: true, portalLookup: true, supplierResolution: true },\n          configuration: { fiscalIdentityConfigured: true },
+          capabilities: { directLookup: true, portalLookup: true, supplierResolution: true },
+          configuration: { fiscalIdentityConfigured: true },
         };
       },
       subscribe: () => () => {},
@@ -121,7 +124,8 @@ describe('BrowserPortalExtensionClient', () => {
 
     await expect(client.getInfo()).resolves.toEqual({
       version: '0.2.1',
-      capabilities: { directLookup: true, portalLookup: true, supplierResolution: true },\n          configuration: { fiscalIdentityConfigured: true },
+      capabilities: { directLookup: true, portalLookup: true, supplierResolution: true },
+          configuration: { fiscalIdentityConfigured: true },
     });
     expect(attempts).toBe(3);
   });
