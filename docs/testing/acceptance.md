@@ -1,4 +1,4 @@
-# Aceitação física — NFe Agendamento extension-only
+# Aceitação física — NFe Agendamento direto-first
 
 Este checklist cobre o que o CI não consegue provar no ambiente real.
 
@@ -7,72 +7,70 @@ Este checklist cobre o que o CI não consegue provar no ambiente real.
 - Windows 10/11;
 - Chrome ou Edge compatível;
 - extensão NFe Agendamento instalada/ativa;
-- certificado A1 válido instalado no Windows quando exigido pelo Portal;
-- site oficial `https://nfeagendamento.joaolds.xyz.br`;
-- acesso ao Portal Nacional da NF-e.
+- certificado A1 válido instalado no Windows;
+- CNPJ do A1 configurado nas opções da extensão;
+- site oficial `https://nfeagendamento.joaolds.xyz.br`.
 
-Não é necessário instalar Bridge, WebView2 helper, .NET ou Setup do NFe Agendamento.
+Não é necessário Bridge, WebView2 helper, .NET ou Setup.
 
 ## 1. Diagnóstico
 
 1. abrir o site;
-2. confirmar **Extensão conectada** e versão;
-3. desabilitar a extensão e confirmar **Extensão não conectada**;
-4. reabilitar/recarregar e confirmar recuperação.
+2. confirmar **Extensão conectada**;
+3. abrir configurações e confirmar **Consulta direta: Pronta**;
+4. se aparecer **Configurar CNPJ**, clicar no ícone da extensão, informar o CNPJ do A1 e salvar;
+5. desabilitar/reabilitar a extensão e confirmar recuperação.
 
-## 2. Consulta unitária
+## 2. Consulta direta
 
-1. informar chave válida;
-2. confirmar abertura de um único popup;
-3. confirmar chave preenchida;
-4. resolver o hCaptcha manualmente;
-5. usar/selecionar o A1 quando Chrome/Edge solicitar;
-6. confirmar retorno do XML;
-7. confirmar chave do XML;
-8. abrir DANFE;
-9. baixar XML;
-10. imprimir/PDF se necessário.
+1. informar uma chave que a distribuição direta possa devolver;
+2. confirmar **Consultando SEFAZ**;
+3. confirmar que o Portal não abre quando a SEFAZ retorna XML;
+4. confirmar XML e DANFE;
+5. repetir uma segunda consulta.
 
-## 3. Repetição e lifecycle
+Este teste é obrigatório em máquina real porque CI não valida a negociação TLS com A1 do Chrome/Edge.
 
-1. concluir uma segunda consulta na mesma sessão;
-2. iniciar uma consulta e fechar o popup;
-3. confirmar cancelamento explícito;
-4. iniciar nova consulta e confirmar recuperação;
-5. recarregar/fechar a página durante uma operação e confirmar que não fica estado preso.
+## 3. Fallback Portal
 
-## 4. Lote
+Quando houver uma NF-e que produza `217` na consulta direta:
 
-1. informar pelo menos duas chaves legítimas;
-2. iniciar lote;
-3. confirmar que nunca existem dois popups/operações Portal simultâneos;
-4. concluir cada hCaptcha manualmente;
-5. confirmar que a segunda NF-e só começa depois da primeira terminar;
-6. validar XML/DANFE das concluídas;
-7. testar cancelamento e confirmar que novos itens não iniciam.
+1. confirmar que só então o Portal abre;
+2. resolver hCaptcha manualmente;
+3. confirmar retorno do XML;
+4. confirmar que a próxima NF-e tenta a SEFAZ novamente.
 
-## 5. Fornecedor local
+Para `656`/429/proteção, confirmar em ambiente seguro que o lote passa a usar Portal sem insistir na SEFAZ.
 
-Quando aplicável:
+## 4. Lifecycle do Portal
 
-1. importar o JSON privado pelas opções da extensão;
-2. confirmar que a regra visual correta é aplicada;
-3. confirmar que o XML original não foi alterado;
-4. confirmar que CNPJ/CPF privado não aparece em rede/logs do aplicativo.
+1. iniciar um fallback e fechar o popup;
+2. confirmar cancelamento explícito;
+3. iniciar nova consulta e confirmar recuperação;
+4. recarregar/fechar a página durante operação e confirmar que não fica estado preso.
+
+## 5. Lote
+
+1. informar pelo menos duas chaves;
+2. confirmar processamento estritamente sequencial;
+3. confirmar que sucesso direto não abre Portal;
+4. confirmar `217` pontual sem mudar permanentemente a rota;
+5. confirmar que proteção fiscal muda os itens restantes para Portal;
+6. testar cancelamento;
+7. validar ZIP/DANFE somente das concluídas.
 
 ## 6. Chrome e Edge
 
-Repetir pelo menos uma consulta completa em Chrome e Edge.
+Repetir pelo menos uma consulta direta completa em Chrome e Edge.
 
 ## Critério de aceite
 
 - CI/CodeQL do SHA final verdes;
-- extensão detectada;
-- consulta unitária aprovada;
-- segunda consulta aprovada;
-- cancelamento/recuperação aprovados;
-- lote sequencial aprovado;
+- CNPJ fiscal configurado;
+- consulta direta real aprovada;
 - XML/DANFE aprovados;
+- fallback Portal aprovado;
+- lote sequencial aprovado;
 - Chrome e Edge aprovados.
 
 O hCaptcha deve permanecer exclusivamente manual.
