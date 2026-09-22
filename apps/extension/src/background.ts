@@ -81,6 +81,10 @@ async function hardenLocalStorage(): Promise<void> {
   }
 }
 
+async function reconcileActiveOperation(): Promise<void> {
+  await getReconciledActiveOperation();
+}
+
 async function injectSiteBridgeIntoOpenTabs(): Promise<void> {
   const tabs = await chrome.tabs.query({ url: `${SITE_ORIGIN}/*` }).catch(() => []);
   await Promise.all(
