@@ -16,7 +16,9 @@
     .actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
     button, input { font: inherit; }
     button { padding: 8px 14px; cursor: pointer; }
-    #supplier-config-status { min-height: 1.5em; }
+    #supplier-config-status, #fiscal-config-status { min-height: 1.5em; }
+    label { display: block; margin-bottom: 8px; font-weight: 600; }
+    #fiscal-cnpj { width: min(280px, 100%); padding: 8px 10px; }
     code { word-break: break-word; }
   </style>
 </head>
@@ -29,6 +31,18 @@
       </div>
       <p>As regras de fornecedor ficam somente neste navegador. O arquivo não é enviado para o site nem para a Cloudflare.</p>
     </div>
+
+    <section class="card" aria-labelledby="fiscal-config-title">
+      <h2 id="fiscal-config-title">Consulta direta SEFAZ</h2>
+      <p>Informe uma vez o CNPJ do certificado A1 usado neste computador. O CNPJ fica somente no armazenamento local da extensão e é necessário para montar a consulta NFeDistribuicaoDFe. O Chrome/Edge continua responsável pelo certificado e pela chave privada.</p>
+      <label for="fiscal-cnpj">CNPJ do certificado A1</label>
+      <div class="actions">
+        <input id="fiscal-cnpj" inputmode="numeric" autocomplete="off" placeholder="00.000.000/0000-00" aria-describedby="fiscal-config-status" />
+        <button id="fiscal-config-save" type="button">Salvar CNPJ</button>
+        <button id="fiscal-config-clear" type="button">Limpar</button>
+      </div>
+      <p id="fiscal-config-status" role="status" aria-live="polite">Verificando configuração local…</p>
+    </section>
 
     <section class="card" aria-labelledby="supplier-config-title">
       <h2 id="supplier-config-title">Regras de fornecedor</h2>
