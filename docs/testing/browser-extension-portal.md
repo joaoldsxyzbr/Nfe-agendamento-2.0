@@ -33,9 +33,14 @@ O código atual da `main` prepara a extensão **0.2.3**, ainda não publicada em
 - comando interno de status para impedir espera indefinida quando a operação deixou de existir;
 - detecção de fechamento da aba do Portal, além do fechamento da janela;
 - retry limitado do handshake inicial do content script do Portal;
-- códigos de erro distintos para popup, aba, navegação e operação perdida.
+- códigos de erro distintos para popup, aba, navegação e operação perdida;
+- estado da operação preservado entre postbacks/navegações do Portal, sem regressar de `submitting` para `waiting_user`;
+- observação reativa do DOM via `MutationObserver`, mantendo fallback periódico de 1 segundo apenas para mudanças que não gerem mutação;
+- timeout explícito se o resultado não exibir o download ou se o clique não gerar a requisição oficial;
+- diferenciação entre sessão perdida, erro HTTP, replay inválido e XML inválido;
+- resposta HTML no lugar do XML tratada como provável perda de sessão, sem aceitar conteúdo como documento fiscal.
 
-A versão pública para teste continua sendo a **0.2.2 da v0.0.24** até uma nova release ser publicada.
+A versão pública para teste continua sendo a **0.2.2 da v0.0.24** até uma nova release ser publicada. O HEAD 0.2.3 ainda precisa do gate físico antes de ser declarado funcional.
 
 ## Instalar no Chrome
 
