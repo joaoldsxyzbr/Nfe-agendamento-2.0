@@ -14,10 +14,17 @@ describe('extension background contract', () => {
     expect(source).toContain("type: 'popup'");
     expect(source).toContain('chrome.tabs.query({ windowId: portalWindowId })');
     expect(source).toContain('chrome.storage.session');
+    expect(source).toContain('reconcileActiveOperation');
+    expect(source).toContain('getReconciledActiveOperation');
+    expect(source).toContain('chrome.windows.get');
+    expect(source).toContain('chrome.tabs.get');
+    expect(source).toContain('chrome.tabs.onRemoved');
     expect(source).toContain('chrome.storage.local.setAccessLevel');
     expect(source).toContain("'TRUSTED_CONTEXTS'");
     expect(source).toContain('chrome.webRequest.onBeforeRequest');
     expect(source).not.toContain('webRequestBlocking');
+    expect(source).toContain("'portal_operation_active'");
+    expect(source).toContain("'portal_navigation_failed'");
   });
 
   it('never executes or fabricates captcha tokens', () => {
@@ -27,6 +34,8 @@ describe('extension background contract', () => {
 
     expect(source).not.toContain('hcaptcha.execute');
     expect(source).not.toContain('grecaptcha.execute');
+    expect(source).toContain('READY_ATTEMPTS');
+    expect(source).toContain('sendReadyWithRetry');
     expect(source).toContain('h-captcha-response');
     expect(source).toContain('isOfficialConsultUrl(location.href)');
 
