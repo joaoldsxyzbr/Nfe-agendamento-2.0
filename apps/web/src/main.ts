@@ -7,6 +7,7 @@ import { createConsultationController } from './nfe/consultation-controller';
 import { validateManualNfeXml } from './nfe/manual-xml-import';
 import { parseNfeXml, type ParsedNfe } from './nfe/xml';
 import { BrowserPortalExtensionClient } from './portal/extension-client';
+import type { DirectLookupResult } from './portal/contracts';
 import './styles.css';
 import './batch.css';
 import './danfe/styles.css';
@@ -27,7 +28,7 @@ app.innerHTML = `
           <img class="brand-mark" src="/brand-mark.png" alt="" aria-hidden="true" />
           <h1 class="brand-title"><span>NF-e</span><span>Agendamento</span></h1>
         </div>
-        <p class="subtitle">Consulta pelo Portal Nacional da NF-e usando a extensão do navegador.</p>
+        <p class="subtitle">Consulta direta na SEFAZ com Portal Nacional como fallback.</p>
       </div>
       <div class="topbar-controls" id="topbar-controls">
         <div class="integration-pill" id="integration-status" data-state="checking" role="status" aria-live="polite">
@@ -67,7 +68,7 @@ app.innerHTML = `
             />
             <button id="lookup-submit" type="submit">Consultar</button>
           </div>
-          <p id="lookup-help" class="help-text">A extensão abre o Portal Nacional em uma janela do navegador. Resolva o hCaptcha manualmente; o XML volta automaticamente para este site.</p>
+          <p id="lookup-help" class="help-text">A extensão consulta a SEFAZ primeiro. O Portal Nacional só abre como fallback quando necessário.</p>
         </form>
 
         <div class="lookup-result-section">
@@ -222,6 +223,7 @@ const consultationController = createConsultationController({
   portal: portalExtension,
   parseXml: parseNfeXml,
   renderState: renderLookupState,
+  renderDirectFailure,
   renderPortalFailure,
   renderSuccess: renderLookupSuccess,
   renderInvalidXml,
@@ -292,6 +294,35 @@ function setConsultationMode(mode: ConsultationMode): void {
   } else {
     batchController.syncDraft();
     batchKeysInput.focus();
+  }
+}
+
+function renderDirectFailure(lookup: DirectLookupResult): void {
+  const message = lookup.message ?? 'A SEFAZ não retornou XML para esta consulta.';
+  const status = lookup.cStat ? `Status SEFAZ ${lookup.cStat}. ${message}` : message;
+
+  switch (lookup.category) {
+    case 'consumption_limit':
+      renderLookupState('Limite de consultas atingido', status);
+      break;
+    case 'certificate_error':
+      renderLookupState('Configuração do A1 necessária', status);
+      break;
+    case 'transport_unavailable':
+      renderLookupState('SEFAZ indisponível', status);
+      break;
+    case 'fiscal_status':
+      if (lookup.cStat === '653') {
+        renderLookupState(
+          'NF-e cancelada',
+          'Esta nota fiscal foi cancelada na SEFAZ e, por isso, o XML não está disponível para download. Código SEFAZ: 653.',
+        );
+        break;
+      }
+      renderLookupState('Resultado fiscal', status);
+      break;
+    default:
+      renderLookupState('Consulta não concluída', status);
   }
 }
 
