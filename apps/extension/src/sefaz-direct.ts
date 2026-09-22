@@ -123,7 +123,9 @@ async function decompressDocZip(base64: string): Promise<string> {
   } catch {
     throw new Error('docZip inválido.');
   }
-  const stream = new Blob([compressed]).stream().pipeThrough(new DecompressionStream('gzip'));
+  const copy = new ArrayBuffer(compressed.byteLength);
+  new Uint8Array(copy).set(compressed);
+  const stream = new Blob([copy]).stream().pipeThrough(new DecompressionStream('gzip'));
   return new TextDecoder('utf-8').decode(await readStreamLimited(stream, MAX_XML_BYTES));
 }
 
