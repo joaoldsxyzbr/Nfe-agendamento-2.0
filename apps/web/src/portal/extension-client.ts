@@ -11,6 +11,7 @@ const COMMAND_RETRY_DELAY_MS = 150;
 
 type ExtensionCommand =
   | { type: 'ping'; requestId: string }
+  | { type: 'open_options'; requestId: string }
   | { type: 'direct_lookup'; requestId: string; accessKey: string }
   | { type: 'start'; requestId: string; accessKey: string }
   | { type: 'status'; requestId: string; operationId: string }
@@ -138,6 +139,14 @@ export class BrowserPortalExtensionClient {
       if (!isRecord(value) || value.type !== 'bridge_ready' || typeof value.version !== 'string') return;
       listener(value.version);
     });
+  }
+
+  async openOptions(signal?: AbortSignal): Promise<void> {
+    const requestId = globalThis.crypto.randomUUID();
+    const response = await this.transport.request({ type: 'open_options', requestId }, signal);
+    if (!isRecord(response) || response.type !== 'options_opened') {
+      throw new Error(messageFromFailure(response) ?? 'A extensão não abriu a tela de configuração.');
+    }
   }
 
   async directLookup(accessKey: string, signal?: AbortSignal): Promise<DirectLookupResult> {
