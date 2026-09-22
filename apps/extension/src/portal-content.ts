@@ -10,6 +10,9 @@ import { PORTAL_ORIGIN } from './protocol';
 
 declare const chrome: any;
 
+const READY_ATTEMPTS = 4;
+const READY_RETRY_DELAY_MS = 250;
+
 let accessKey = '';
 let consultTriggered = false;
 let downloadTriggered = false;
@@ -22,15 +25,34 @@ async function initialize(): Promise<void> {
       return;
     }
 
-    const response = await chrome.runtime.sendMessage({ source: 'portal', type: 'ready' });
+    const response = await sendReadyWithRetry();
     if (!response || typeof response.accessKey !== 'string') return;
     accessKey = response.accessKey;
 
     fillAccessKey();
     window.setInterval(() => void tick(), 250);
   } catch {
-    // O background pode estar reiniciando; uma nova navegação reinstala o content script.
+    // O Portal continua utilizável manualmente se o background não responder após as tentativas limitadas.
   }
+}
+
+async function sendReadyWithRetry(): Promise<any> {
+  let lastError: unknown = null;
+
+  for (let attempt = 0; attempt < READY_ATTEMPTS; attempt += 1) {
+    try {
+      return await chrome.runtime.sendMessage({ source: 'portal', type: 'ready' });
+    } catch (error) {
+      lastError = error;
+      if (attempt < READY_ATTEMPTS - 1) {
+        await new Promise<void>((resolve) => globalThis.setTimeout(resolve, READY_RETRY_DELAY_MS));
+      }
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error('A extensão não conseguiu reconectar ao Portal.');
 }
 
 async function tick(): Promise<void> {
