@@ -4,6 +4,9 @@ Este diretório preserva planos de implementação como **registro histórico** 
 
 ## Fonte atual de verdade
 
+- migração planejada para arquitetura sem Bridge: `2026-09-22-extension-only-migration.md`;
+- spec da arquitetura sem Bridge: `../specs/2026-09-22-extension-only-architecture-design.md`;
+
 - estabilização/hardening concluído no código: `2026-09-09-stabilization-hardening-implementation.md`;
 - arquitetura vigente: `../specs/2026-09-21-site-first-fiscal-agent-design.md` + `../../architecture/bridge-security.md`;
 - pendências de validação física: `../../testing/acceptance.md`;
