@@ -59,7 +59,7 @@ describe('extension-only physical gate page', () => {
       'info',
       'start:' + KEY,
       'wait:op-1',
-      'supplier:12345678000195',
+      'supplier:12345678000123',
     ]);
   });
 
