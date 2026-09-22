@@ -1,4 +1,4 @@
-import type { PortalOperationStatus } from './contracts';
+import type { DirectLookupResult, PortalOperationStatus } from './contracts';
 
 const PAGE_CHANNEL = 'nfe-agendamento:portal-extension';
 const DEFAULT_HANDSHAKE_TIMEOUT_MS = 1_200;
@@ -7,9 +7,11 @@ const HANDSHAKE_RETRY_DELAY_MS = 200;
 const START_ATTEMPTS = 2;
 const OPERATION_STATUS_ATTEMPTS = 2;
 const COMMAND_RETRY_DELAY_MS = 150;
+const DIRECT_LOOKUP_TIMEOUT_MS = 50_000;
 
 type ExtensionCommand =
   | { type: 'ping'; requestId: string }
+  | { type: 'direct_lookup'; requestId: string; accessKey: string }
   | { type: 'start'; requestId: string; accessKey: string }
   | { type: 'status'; requestId: string; operationId: string }
   | { type: 'cancel'; requestId: string; operationId: string }
@@ -18,9 +20,11 @@ type ExtensionCommand =
 export type PortalExtensionInfo = Readonly<{
   version: string;
   capabilities: Readonly<{
+    directLookup: true;
     portalLookup: true;
     supplierResolution: true;
   }>;
+  fiscalIdentityConfigured: boolean;
 }>;
 
 type ExtensionEvent =
@@ -49,9 +53,12 @@ export class WindowPortalExtensionTransport implements PortalExtensionTransport 
     signal?.throwIfAborted();
 
     return new Promise((resolve, reject) => {
+      const requestTimeoutMs = command.type === 'direct_lookup'
+        ? DIRECT_LOOKUP_TIMEOUT_MS
+        : this.timeoutMs;
       const timeout = globalThis.setTimeout(
-        () => finish(() => reject(new Error('Extensão do Portal não respondeu.'))),
-        this.timeoutMs,
+        () => finish(() => reject(new Error('Extensão não respondeu dentro do tempo esperado.'))),
+        requestTimeoutMs,
       );
 
       const onAbort = () => finish(() => reject(signal?.reason ?? new DOMException('Aborted', 'AbortError')));
@@ -133,6 +140,16 @@ export class BrowserPortalExtensionClient {
       if (!isRecord(value) || value.type !== 'bridge_ready' || typeof value.version !== 'string') return;
       listener(value.version);
     });
+  }
+
+  async directLookup(accessKey: string, signal?: AbortSignal): Promise<DirectLookupResult> {
+    signal?.throwIfAborted();
+    const requestId = globalThis.crypto.randomUUID();
+    const response = await this.transport.request(
+      { type: 'direct_lookup', requestId, accessKey: accessKey.trim().toUpperCase() },
+      signal,
+    );
+    return parseDirectLookupResponse(response);
   }
 
   async start(accessKey: string, signal?: AbortSignal): Promise<string> {
@@ -289,16 +306,48 @@ async function waitForRetry(delayMs: number, signal?: AbortSignal): Promise<void
 function parseReadyResponse(value: unknown): PortalExtensionInfo | null {
   if (!isRecord(value) || value.type !== 'ready' || typeof value.version !== 'string') return null;
   if (!isRecord(value.capabilities) ||
+      value.capabilities.directLookup !== true ||
       value.capabilities.portalLookup !== true ||
-      value.capabilities.supplierResolution !== true) {
+      value.capabilities.supplierResolution !== true ||
+      typeof value.fiscalIdentityConfigured !== 'boolean') {
     return null;
   }
   return {
     version: value.version,
     capabilities: {
+      directLookup: true,
       portalLookup: true,
       supplierResolution: true,
     },
+    fiscalIdentityConfigured: value.fiscalIdentityConfigured,
+  };
+}
+
+function parseDirectLookupResponse(value: unknown): DirectLookupResult {
+  if (!isRecord(value) || value.type !== 'direct_lookup_result') {
+    throw new Error(messageFromFailure(value) ?? 'Resposta da consulta direta inválida.');
+  }
+
+  const categories = [
+    'success',
+    'fiscal_status',
+    'consumption_limit',
+    'certificate_error',
+    'transport_unavailable',
+    'technical_error',
+  ];
+  if (!categories.includes(String(value.category))) {
+    throw new Error('Categoria da consulta direta inválida.');
+  }
+  if (value.xml !== null && typeof value.xml !== 'string') throw new Error('XML direto inválido.');
+  if (value.cStat !== null && typeof value.cStat !== 'string') throw new Error('Status SEFAZ inválido.');
+  if (value.message !== null && typeof value.message !== 'string') throw new Error('Mensagem SEFAZ inválida.');
+
+  return {
+    category: value.category as DirectLookupResult['category'],
+    xml: value.xml as string | null,
+    cStat: value.cStat as string | null,
+    message: value.message as string | null,
   };
 }
 
