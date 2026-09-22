@@ -115,9 +115,9 @@ CI: `web`, `extension` e `danfe-print`. CodeQL analisa JavaScript/TypeScript.
 
 ## Releases
 
-A **v0.0.31 / extensão 0.2.9** endurece o preflight fiscal: bloqueia duplo clique enquanto a configuração é verificada e trata corretamente extensões antigas que ainda não suportam abertura automática das opções.
+A **v0.0.32** é um patch somente do site e mantém a extensão **0.2.9**. Ele restaura corretamente ações de resultados anteriores após o preflight e bloqueia reconsulta pelo Portal enquanto a configuração fiscal está sendo verificada.
 
-A v0.0.30/extensão 0.2.8 introduziu o preflight automático. A v0.0.29/extensão 0.2.7 corrigiu o layout da configuração local. A v0.0.28/extensão 0.2.6 foi a primeira release direct-first.
+A v0.0.31/extensão 0.2.9 endureceu o preflight contra duplo clique e compatibilidade com versões antigas. A v0.0.30/extensão 0.2.8 introduziu o preflight automático. A v0.0.29/extensão 0.2.7 corrigiu o layout da configuração local. A v0.0.28/extensão 0.2.6 foi a primeira release direct-first.
 
 A seta do site baixa sempre `NFeAgendamento-Extension.zip` da release mais recente.
 
