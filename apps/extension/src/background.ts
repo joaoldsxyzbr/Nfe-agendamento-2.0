@@ -27,11 +27,15 @@ type ActiveOperation = {
   state: PortalExtensionState;
 };
 
+void hardenLocalStorage();
+
 chrome.runtime.onInstalled.addListener(() => {
+  void hardenLocalStorage();
   void injectSiteBridgeIntoOpenTabs();
 });
 
 chrome.runtime.onStartup.addListener(() => {
+  void hardenLocalStorage();
   void injectSiteBridgeIntoOpenTabs();
 });
 
@@ -61,6 +65,14 @@ chrome.webRequest.onBeforeRequest.addListener(
   PORTAL_DOWNLOAD_FILTER,
   ['requestBody'],
 );
+
+async function hardenLocalStorage(): Promise<void> {
+  try {
+    await chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' });
+  } catch {
+    // Fail-soft: versões Chromium compatíveis devem aceitar; não bloquear o fluxo por hardening.
+  }
+}
 
 async function injectSiteBridgeIntoOpenTabs(): Promise<void> {
   const tabs = await chrome.tabs.query({ url: `${SITE_ORIGIN}/*` }).catch(() => []);

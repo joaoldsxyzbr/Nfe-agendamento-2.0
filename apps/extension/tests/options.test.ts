@@ -18,7 +18,9 @@ describe('extension supplier options', () => {
     expect(html).toContain('accept=".json,application/json"');
     expect(html).toContain('id="supplier-config-file"');
     expect(html).toContain('id="supplier-config-clear"');
+    expect(source).toContain('analyzeSupplierConfig');
     expect(source).toContain('saveSupplierConfig');
+    expect(source).toContain('Nenhuma configuração anterior foi alterada');
     expect(source).toContain('clearSupplierConfig');
     expect(source).not.toContain('fetch(');
     expect(source).not.toContain('postMessage');

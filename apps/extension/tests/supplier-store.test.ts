@@ -20,6 +20,54 @@ describe('local supplier store', () => {
     expect(normalizeTaxId('')).toBeNull();
   });
 
+  it('accepts legacy case-insensitive property names and canonicalizes the result', async () => {
+    const { analyzeSupplierConfig } = await import('../src/supplier-store');
+
+    const analysis = analyzeSupplierConfig({
+      Version: 1,
+      Suppliers: [
+        {
+          Id: ' fernando-klein ',
+          TaxIds: ['12.345.678/0001-95'],
+        },
+      ],
+    });
+
+    expect(analysis.usedLegacyCasing).toBe(true);
+    expect(analysis.supplierCount).toBe(1);
+    expect(analysis.taxIdCount).toBe(1);
+    expect(analysis.config).toEqual({
+      version: 1,
+      suppliers: [
+        {
+          id: 'fernando-klein',
+          taxIds: ['12345678000195'],
+        },
+      ],
+    });
+  });
+
+  it('rejects ambiguous keys instead of guessing between canonical and legacy casing', async () => {
+    const { validateSupplierConfig } = await import('../src/supplier-store');
+
+    expect(() => validateSupplierConfig({
+      version: 1,
+      Version: 1,
+      suppliers: [],
+    })).toThrow('campos ambíguos');
+
+    expect(() => validateSupplierConfig({
+      version: 1,
+      suppliers: [
+        {
+          id: 'souza-cruz',
+          Id: 'souza-cruz',
+          taxIds: ['12.345.678/0001-95'],
+        },
+      ],
+    })).toThrow('campos ambíguos');
+  });
+
   it('validates config and resolves any registered identifier for one supplier', async () => {
     const { resolveSupplierFromConfig, validateSupplierConfig } = await import('../src/supplier-store');
     const config = validateSupplierConfig({
@@ -44,17 +92,17 @@ describe('local supplier store', () => {
     expect(() => validateSupplierConfig({
       version: 2,
       suppliers: [],
-    })).toThrow();
+    })).toThrow('$.version');
 
     expect(() => validateSupplierConfig({
       version: 1,
       suppliers: [{ id: '', taxIds: ['12345678000195'] }],
-    })).toThrow();
+    })).toThrow('$.suppliers[0].id');
 
     expect(() => validateSupplierConfig({
       version: 1,
       suppliers: [{ id: 'souza-cruz', taxIds: [] }],
-    })).toThrow();
+    })).toThrow('$.suppliers[0].taxIds');
 
     expect(() => validateSupplierConfig({
       version: 1,
@@ -62,8 +110,9 @@ describe('local supplier store', () => {
         { id: 'souza-cruz', taxIds: ['12.345.678/0001-95'] },
         { id: 'dionisio', taxIds: ['12345678000195'] },
       ],
-    })).toThrow();
+    })).toThrow('fornecedores diferentes');
   });
+
   it('persists only validated normalized config and loads invalid storage fail-soft', async () => {
     const stored = new Map<string, unknown>();
     (globalThis as typeof globalThis & { chrome: unknown }).chrome = {
@@ -82,8 +131,8 @@ describe('local supplier store', () => {
     expect(await loadSupplierConfig()).toBeNull();
 
     await saveSupplierConfig({
-      version: 1,
-      suppliers: [{ id: ' fernando-klein ', taxIds: ['12.345.678/0001-95'] }],
+      Version: 1,
+      Suppliers: [{ Id: ' fernando-klein ', TaxIds: ['12.345.678/0001-95'] }],
     });
 
     expect(await loadSupplierConfig()).toEqual({
@@ -110,6 +159,4 @@ describe('local supplier store', () => {
 
     expect(removed).toEqual(['supplierRulesV1']);
   });
-
-
 });

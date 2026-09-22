@@ -26,6 +26,18 @@ if (!bridgeWindow.__nfeAgendamentoPortalBridgeLoaded) {
     void forwardRequest(envelope);
   });
 
+  window.postMessage(
+    {
+      channel: PAGE_CHANNEL,
+      direction: 'event',
+      event: {
+        type: 'bridge_ready',
+        version: String(chrome.runtime.getManifest().version ?? '0.0.0'),
+      },
+    },
+    SITE_ORIGIN,
+  );
+
   chrome.runtime.onMessage.addListener((message: unknown) => {
     if (!message || typeof message !== 'object') return;
     const payload = message as Record<string, unknown>;
