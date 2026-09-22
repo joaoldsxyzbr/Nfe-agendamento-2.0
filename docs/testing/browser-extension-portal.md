@@ -1,6 +1,6 @@
 # Portal via extensão Chromium MV3 — instalação e aceitação
 
-**Data:** 2026-09-21  
+**Data:** 2026-09-22  
 **Status:** piloto técnico; validação física com Portal/A1 real ainda obrigatória.
 
 ## Objetivo
@@ -11,13 +11,11 @@ A extensão não substitui a consulta direta SEFAZ nesta fase. O Bridge continua
 
 ## Obter o pacote
 
-O job `extension` do GitHub Actions produz o artifact:
+Na release pública **v0.0.21**, baixe o asset:
 
-`NFeAgendamento-Extension-MV3`
+`NFeAgendamento-Extension-v0.1.0.zip`
 
-Dentro dele existe:
-
-`NFeAgendamento-Extension-MV3.zip`
+O job `extension` do GitHub Actions também mantém o artifact técnico `NFeAgendamento-Extension-MV3` para rastreabilidade do CI.
 
 Extraia o ZIP para uma pasta local antes de carregar a extensão. O pacote é uma extensão **não compactada** para teste interno; esta fase não publica automaticamente na Chrome Web Store.
 

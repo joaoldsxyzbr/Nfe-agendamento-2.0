@@ -12,11 +12,11 @@ NFe Agendamento é um aplicativo interno para consultar NF-e, baixar XML e gerar
 - **Helper Portal:** WinForms/WebView2 persistente preservado como rollback enquanto a extensão não for validada fisicamente.
 - **Certificado A1:** descoberto em `CurrentUser/My`; PFX, senha e chave privada nunca são enviados ao site ou ao Cloudflare.
 - **Persistência local:** thumbprint selecionado em `%LOCALAPPDATA%/NfeAgendamentoBridge/settings.json`, regras locais de fornecedor em `supplier-rules.json` e metadados da proteção fiscal em `fiscal-usage.json`.
-- **Release pública atual:** `0.0.20`; publicada somente a partir do mesmo SHA validado pelo CI completo.
+- **Release pública atual:** `0.0.21`; publicada somente a partir do mesmo SHA validado pelo CI completo.
 
 Não existem Central, pareamento, servidor LAN, mDNS ou pasta compartilhada na arquitetura atual. Cada PC usa seu próprio Bridge.
 
-## Estado funcional — 21/09/2026
+## Estado funcional — 22/09/2026
 
 Implementado e coberto pelos gates automatizados aplicáveis:
 
@@ -119,6 +119,7 @@ Os CNPJs/CPFs reais de fornecedores não pertencem ao repositório, testes, docu
 Jobs obrigatórios do pipeline:
 
 - `web` — install/audit/lint/format/test, **medição de cobertura V8**, build e `wrangler deploy --dry-run`;
+- `extension` — audit, testes, typecheck, build MV3 e artifact ZIP instalável;
 - `danfe-print` — regressão real de PDF A4 **e fluxo E2E da consulta** com Chromium;
 - `bridge` — testes e build .NET;
 - `fiscal-compatibility` — POC Unimake e paridade fiscal;
@@ -181,17 +182,17 @@ O site é o caminho normal para diagnosticar e atualizar o componente Windows. O
 
 ## Distribuição Windows
 
-Versão canônica da release: **v0.0.20**.
+Versão canônica da release: **v0.0.21**.
 
 Asset principal:
 
 ```text
-NFeAgendamentoBridge-Setup-v0.0.20.exe
+NFeAgendamentoBridge-Setup-v0.0.21.exe
 ```
 
 O instalador é por usuário, não pede administrador e instala somente o Bridge + helper Portal. O auto-start HKCU e o start pós-instalação apontam diretamente para `NfeAgendamento.Bridge.exe`, sem `--managed`. O Bridge é `WinExe`, portanto inicia sem janela de console, e preserva `%LOCALAPPDATA%\NfeAgendamentoBridge` — incluindo `settings.json`, `fiscal-usage.json` e `supplier-rules.json`.
 
-O Microsoft Edge WebView2 Runtime é necessário para o fallback pelo Portal Nacional.
+A release também publica `NFeAgendamento-Extension-v0.1.0.zip` para o piloto Chromium. O Microsoft Edge WebView2 Runtime continua necessário apenas para o fallback pelo helper Portal/WebView2.
 
 ## Fluxo de release
 
@@ -204,11 +205,12 @@ O Microsoft Edge WebView2 Runtime é necessário para o fallback pelo Portal Nac
 
 ## Validação física
 
-O CI não consegue provar interação real com certificado A1, SEFAZ, Portal/hCaptcha ou uma impressora específica. Para declarar a v0.0.20 fisicamente validada, executar:
+O CI não consegue provar interação real com certificado A1, SEFAZ, Portal/hCaptcha ou uma impressora específica. Para declarar a v0.0.21 fisicamente validada, executar:
 
 - `docs/testing/acceptance.md`;
 - `docs/testing/batch-query.md`;
 - `docs/testing/danfe-layout.md`;
+- `docs/testing/browser-extension-portal.md`;
 - `docs/testing/portal-post-hcaptcha.md`.
 
 Para as regras locais de fornecedor, validar uma NF-e real de cada fornecedor configurado e registrar no GitHub somente o resultado da validação, nunca o CNPJ/CPF usado no arquivo local.
@@ -235,5 +237,5 @@ Não provoque bloqueio `656` repetindo consultas artificialmente apenas para tes
 - atualizador: `docs/testing/bridge-updater.md`;
 - DANFE: `docs/testing/danfe-layout.md`;
 - tela de consulta: `docs/ui/consultation-screen.md`;
-- release atual: `docs/releases/v0.0.20.md`;
-- release anterior: `docs/releases/v0.0.19.md`.
+- release atual: `docs/releases/v0.0.21.md`;
+- release anterior: `docs/releases/v0.0.20.md`.
