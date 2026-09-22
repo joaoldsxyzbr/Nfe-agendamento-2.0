@@ -28,8 +28,10 @@ Implementado e coberto pelos gates automatizados aplicáveis:
 - transporte autenticado `NFeDistribuicaoDFe`;
 - categorias normalizadas `success`, `fiscal_status`, `consumption_limit`, `certificate_error`, `transport_unavailable` e `technical_error`;
 - tratamento de `137`, `138`, `656`, HTTP 429, timeout e falhas ambíguas sem retry fiscal automático;
-- fallback automático para o Portal após `consumption_limit` ou `cStat 217`, preferindo a extensão Chromium quando disponível e mantendo o helper WebView2 como rollback;\n- handshake da extensão resiliente a corrida de carregamento/cold start, com novas tentativas, reinjeção segura da ponte e anúncio reativo `bridge_ready` em abas oficiais;
-- a v0.0.25 publica a extensão 0.2.3 com reconciliação em `storage.session`, start idempotente, observação reativa do Portal, timeouts explícitos e diagnóstico separado de sessão/HTTP/XML inválido;\n- importação `supplier-rules.json` compatível com o casing legado do Bridge, saída canônica, erros com caminho do campo e armazenamento local restrito a contextos confiáveis da extensão;
+- fallback automático para o Portal após `consumption_limit` ou `cStat 217`, preferindo a extensão Chromium quando disponível e mantendo o helper WebView2 como rollback;
+- handshake da extensão resiliente a corrida de carregamento/cold start, com novas tentativas, reinjeção segura da ponte e anúncio reativo `bridge_ready` em abas oficiais;
+- a v0.0.25 publica a extensão 0.2.3 com reconciliação em `storage.session`, start idempotente, observação reativa do Portal, timeouts explícitos e diagnóstico separado de sessão/HTTP/XML inválido;
+- importação `supplier-rules.json` compatível com o casing legado do Bridge, saída canônica, erros com caminho do campo e armazenamento local restrito a contextos confiáveis da extensão;
 - prewarm best-effort do Portal/WebView2 após health compatível, sem bloquear consulta direta nem fallback cold-start;
 - importação manual de XML validado, disponível somente como contingência após falha terminal do helper Portal;
 - hCaptcha manual e download oficial do XML pelo helper Portal;
@@ -240,5 +242,8 @@ Não provoque bloqueio `656` repetindo consultas artificialmente apenas para tes
 - atualizador: `docs/testing/bridge-updater.md`;
 - DANFE: `docs/testing/danfe-layout.md`;
 - tela de consulta: `docs/ui/consultation-screen.md`;
-- release atual: `docs/releases/v0.0.24.md`;\n- release anterior: `docs/releases/v0.0.23.md`;\n- histórico adicional: `docs/releases/v0.0.22.md`;
+- release atual: `docs/releases/v0.0.25.md`;
+- release anterior: `docs/releases/v0.0.24.md`;
+- histórico adicional: `docs/releases/v0.0.23.md`;
+- histórico adicional: `docs/releases/v0.0.22.md`;
 - histórico adicional: `docs/releases/v0.0.21.md`.
