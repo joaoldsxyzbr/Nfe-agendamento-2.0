@@ -25,6 +25,11 @@ describe('extension background contract', () => {
     expect(source).not.toContain('webRequestBlocking');
     expect(source).toContain("'portal_operation_active'");
     expect(source).toContain("'portal_navigation_failed'");
+    expect(source).toContain("'portal_download_not_found'");
+    expect(source).toContain("'portal_download_request_missing'");
+    expect(source).toContain("'portal_session_lost'");
+    expect(source).toContain("'portal_xml_invalid'");
+    expect(source).toContain("'portal_download_http_error'");
   });
 
   it('never executes or fabricates captcha tokens', () => {
@@ -36,6 +41,13 @@ describe('extension background contract', () => {
     expect(source).not.toContain('grecaptcha.execute');
     expect(source).toContain('READY_ATTEMPTS');
     expect(source).toContain('sendReadyWithRetry');
+    expect(source).toContain('MutationObserver');
+    expect(source).toContain('FALLBACK_TICK_MS');
+    expect(source).toContain('RESULT_TIMEOUT_MS');
+    expect(source).toContain('DOWNLOAD_TIMEOUT_MS');
+    expect(source).toContain("'result_timeout'");
+    expect(source).toContain("'download_timeout'");
+    expect(source).not.toContain('window.setInterval(() => void tick(), 250)');
     expect(source).toContain('h-captcha-response');
     expect(source).toContain('isOfficialConsultUrl(location.href)');
 
