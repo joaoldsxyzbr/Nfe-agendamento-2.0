@@ -9,28 +9,38 @@ type PageEnvelope = {
   command?: unknown;
 };
 
-window.addEventListener('message', (event: MessageEvent<PageEnvelope>) => {
-  if (event.source !== window || event.origin !== SITE_ORIGIN) return;
-  const envelope = event.data;
-  if (!envelope || envelope.channel !== PAGE_CHANNEL || envelope.direction !== 'request') return;
+type BridgeWindow = Window & {
+  __nfeAgendamentoPortalBridgeLoaded?: boolean;
+};
 
-  void forwardRequest(envelope);
-});
+const bridgeWindow = window as BridgeWindow;
 
-chrome.runtime.onMessage.addListener((message: unknown) => {
-  if (!message || typeof message !== 'object') return;
-  const payload = message as Record<string, unknown>;
-  if (payload.source !== 'background' || !payload.event) return;
+if (!bridgeWindow.__nfeAgendamentoPortalBridgeLoaded) {
+  bridgeWindow.__nfeAgendamentoPortalBridgeLoaded = true;
 
-  window.postMessage(
-    {
-      channel: PAGE_CHANNEL,
-      direction: 'event',
-      event: payload.event,
-    },
-    SITE_ORIGIN,
-  );
-});
+  window.addEventListener('message', (event: MessageEvent<PageEnvelope>) => {
+    if (event.source !== window || event.origin !== SITE_ORIGIN) return;
+    const envelope = event.data;
+    if (!envelope || envelope.channel !== PAGE_CHANNEL || envelope.direction !== 'request') return;
+
+    void forwardRequest(envelope);
+  });
+
+  chrome.runtime.onMessage.addListener((message: unknown) => {
+    if (!message || typeof message !== 'object') return;
+    const payload = message as Record<string, unknown>;
+    if (payload.source !== 'background' || !payload.event) return;
+
+    window.postMessage(
+      {
+        channel: PAGE_CHANNEL,
+        direction: 'event',
+        event: payload.event,
+      },
+      SITE_ORIGIN,
+    );
+  });
+}
 
 async function forwardRequest(envelope: PageEnvelope): Promise<void> {
   const requestId = typeof envelope.requestId === 'string' ? envelope.requestId : '';
