@@ -54,7 +54,7 @@ A extensão não lê, importa, exporta nem armazena PFX/P12, senha ou chave priv
 
 Como o Chromium no Windows não expõe à extensão a identidade do certificado cliente, o **CNPJ do A1 é informado uma única vez nas opções da extensão** e permanece local. A autenticação TLS e eventual seleção do certificado continuam sob responsabilidade do Chrome/Edge e do Windows.
 
-Clicar no ícone da extensão abre essa configuração.
+Clicar no ícone da extensão abre essa configuração. O site também faz um **preflight** antes de consultar: se o CNPJ ainda não estiver configurado, a tela de opções é aberta automaticamente e nenhuma consulta é enviada à SEFAZ. Em lote, nenhuma NF-e é marcada como erro ou cancelada por essa ausência.
 
 ## Portal Nacional
 
@@ -75,7 +75,7 @@ CNPJ/CPF real de fornecedor não faz parte do bundle público. A configuração 
 
 ## Extensão
 
-Versão atual: **0.2.7**.
+Versão atual: **0.2.8**.
 
 Permissões:
 
@@ -115,9 +115,9 @@ CI: `web`, `extension` e `danfe-print`. CodeQL analisa JavaScript/TypeScript.
 
 ## Releases
 
-A **v0.0.29 / extensão 0.2.7** mantém o fluxo direct-first da v0.0.28 e corrige o layout da configuração local do CNPJ do A1.
+A **v0.0.30 / extensão 0.2.8** adiciona preflight da configuração fiscal: sem CNPJ do A1, a consulta não começa e a extensão abre automaticamente a própria tela de configuração.
 
-A v0.0.28/extensão 0.2.6 é a primeira release direct-first. A v0.0.27/extensão 0.2.5 permanece como a release Portal-first anterior.
+A v0.0.29/extensão 0.2.7 corrige o layout da configuração local. A v0.0.28/extensão 0.2.6 é a primeira release direct-first.
 
 A seta do site baixa sempre `NFeAgendamento-Extension.zip` da release mais recente.
 

@@ -19,6 +19,7 @@ export type PortalExtensionState =
 
 export type SiteCommand =
   | { type: 'ping'; requestId: string }
+  | { type: 'open_options'; requestId: string }
   | { type: 'direct_lookup'; requestId: string; accessKey: string }
   | { type: 'start'; requestId: string; accessKey: string }
   | { type: 'status'; requestId: string; operationId: string }
@@ -40,7 +41,7 @@ export function parseSiteCommand(value: unknown): SiteCommand {
   const type = stringField(input, 'type');
   const requestId = stringField(input, 'requestId');
 
-  if (type === 'ping') {
+  if (type === 'ping' || type === 'open_options') {
     return { type, requestId };
   }
 

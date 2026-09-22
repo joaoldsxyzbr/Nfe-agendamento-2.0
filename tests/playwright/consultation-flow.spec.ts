@@ -17,18 +17,18 @@ test('consulta unitária usa SEFAZ direta antes do Portal', async ({ page }) => 
         respond({
           type: 'ready',
           requestId: command.requestId,
-          version: '0.2.6',
+          version: '0.2.8',
           capabilities: { directLookup: true, portalLookup: true, supplierResolution: true },
           configuration: { fiscalIdentityConfigured: true },
         });
         return;
       }
       if (command?.type === 'direct_lookup') {
-        respond({
+        window.setTimeout(() => respond({
           type: 'direct_lookup_result',
           requestId: command.requestId,
           result: { category: 'success', xml: xmlPayload, cStat: '138', message: 'Documento localizado' },
-        });
+        }), 250);
         return;
       }
       if (command?.type === 'start') {

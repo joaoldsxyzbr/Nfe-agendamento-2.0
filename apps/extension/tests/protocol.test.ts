@@ -10,6 +10,10 @@ describe('portal extension protocol', () => {
       type: 'ping',
       requestId: 'req-1',
     });
+    expect(parseSiteCommand({ type: 'open_options', requestId: 'req-options' })).toEqual({
+      type: 'open_options',
+      requestId: 'req-options',
+    });
     expect(parseSiteCommand({ type: 'direct_lookup', requestId: 'req-direct', accessKey: KEY })).toEqual({
       type: 'direct_lookup',
       requestId: 'req-direct',

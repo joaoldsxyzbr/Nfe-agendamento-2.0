@@ -5,7 +5,7 @@
 ```text
 Site
  ↓
-Extensão 0.2.7
+Extensão 0.2.8
  ├─ NFeDistribuicaoDFe
  └─ Portal Nacional (fallback)
 ```
@@ -18,6 +18,8 @@ Não existe Bridge, WebView2 helper ou Native Messaging.
 2. clicar no ícone **NFe Agendamento**;
 3. informar uma vez o CNPJ correspondente ao certificado A1 usado naquele computador;
 4. confirmar no site que a consulta direta aparece como configurada.
+
+Se o usuário tentar consultar antes disso, o site solicita a abertura das opções da extensão automaticamente e não envia a consulta à SEFAZ.
 
 O CNPJ fica em `chrome.storage.local`. O certificado e sua chave privada não são copiados para a extensão.
 

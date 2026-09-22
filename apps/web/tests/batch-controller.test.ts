@@ -9,6 +9,7 @@ function harness(overrides: Record<string, unknown> = {}) {
   const snapshots: BatchItemView[][] = [];
   const directKeys: string[] = [];
   const portalStarts: string[] = [];
+  const optionsOpens: string[] = [];
   const input = el({ value: '', disabled: false } as HTMLTextAreaElement);
   const route = el({ textContent: '' } as HTMLElement);
   const portal = {
@@ -17,6 +18,7 @@ function harness(overrides: Record<string, unknown> = {}) {
       capabilities: { directLookup: true, portalLookup: true, supplierResolution: true },
       configuration: { fiscalIdentityConfigured: true },
     }),
+    openOptions: async () => { optionsOpens.push('opened'); },
     directLookup: async (key: string) => {
       directKeys.push(key);
       return { category: 'success' as const, xml: '<xml />', cStat: '138', message: 'ok' };
@@ -62,7 +64,7 @@ function harness(overrides: Record<string, unknown> = {}) {
     printWindow: () => {},
     renderRows: (items) => snapshots.push(items.map((item) => ({ ...item }))),
   });
-  return { controller, input, route, directKeys, portalStarts, snapshots };
+  return { controller, input, route, directKeys, portalStarts, optionsOpens, snapshots };
 }
 
 describe('batch controller direct-first', () => {
@@ -113,16 +115,22 @@ describe('batch controller direct-first', () => {
     expect(h.snapshots.at(-1)?.every((item) => item.source === 'Portal')).toBe(true);
   });
 
-  it('stops instead of hiding missing fiscal configuration behind Portal', async () => {
+  it('does not start or cancel the batch when fiscal configuration is missing', async () => {
     const h = harness({
-      directLookup: async () => ({ category: 'configuration_error', xml: null, cStat: null, message: 'Configure CNPJ' }),
+      getInfo: async () => ({
+        version: '0.2.8',
+        capabilities: { directLookup: true, portalLookup: true, supplierResolution: true },
+        configuration: { fiscalIdentityConfigured: false },
+      }),
     });
     h.input.value = `${A}\n${B}`;
     h.controller.syncDraft();
     await h.controller.start();
 
+    expect(h.directKeys).toHaveLength(0);
     expect(h.portalStarts).toHaveLength(0);
-    expect(h.snapshots.at(-1)?.[0]?.status).toBe('transport_error');
-    expect(h.snapshots.at(-1)?.[1]?.status).toBe('cancelled');
+    expect(h.optionsOpens).toEqual(['opened']);
+    expect(h.snapshots.at(-1)?.map((item) => item.status)).toEqual(['queued', 'queued']);
+    expect(h.route.textContent).toContain('Configure o CNPJ');
   });
 });
