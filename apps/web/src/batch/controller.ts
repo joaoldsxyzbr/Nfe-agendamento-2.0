@@ -89,6 +89,7 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
   const { elements } = deps;
   let items: MutableBatchItem[] = [];
   let running = false;
+  let preflighting = false;
   let manualPortalBusy = false;
   let cancelled = false;
   let route: BatchRoute = 'sefaz';
@@ -96,7 +97,7 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
   let activePortalOperationId: string | null = null;
 
   function syncDraft(): void {
-    if (running || manualPortalBusy) return;
+    if (running || preflighting || manualPortalBusy) return;
     const summary = parseBatchInput(elements.keysInput.value);
     const parts = [
       `${summary.validKeys.length} válida${summary.validKeys.length === 1 ? '' : 's'}`,
@@ -114,29 +115,51 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
   }
 
   async function start(): Promise<void> {
-    if (running || manualPortalBusy) return;
+    if (running || preflighting || manualPortalBusy) return;
     const summary = parseBatchInput(elements.keysInput.value);
     if (summary.validKeys.length === 0 || summary.exceedsLimit) {
       syncDraft();
       return;
     }
 
-    const info = await deps.portal.getInfo();
-    if (!info) {
-      renderState('Extensão não conectada');
-      elements.routeText.textContent = 'Extensão não conectada. Instale ou ative a extensão antes de iniciar o lote.';
-      return;
-    }
-    if (!info.capabilities.directLookup) {
-      renderState('Atualize a extensão');
-      elements.routeText.textContent = 'Atualize a extensão para usar a consulta direta à SEFAZ.';
-      return;
-    }
-    if (!info.configuration.fiscalIdentityConfigured) {
-      await deps.portal.openOptions().catch(() => {});
-      renderState('Configure o CNPJ do A1');
-      elements.routeText.textContent = 'Configure o CNPJ do certificado A1 na extensão, salve e inicie o lote novamente.';
-      return;
+    preflighting = true;
+    setControlsLocked(true);
+    renderState('Verificando configuração');
+
+    try {
+      const info = await deps.portal.getInfo();
+      if (!info) {
+        renderState('Extensão não conectada');
+        elements.routeText.textContent = 'Extensão não conectada. Instale ou ative a extensão antes de iniciar o lote.';
+        return;
+      }
+      if (!info.capabilities.directLookup) {
+        renderState('Atualize a extensão');
+        elements.routeText.textContent = 'Atualize a extensão para usar a consulta direta à SEFAZ.';
+        return;
+      }
+      if (!info.configuration.fiscalIdentityConfigured) {
+        if (!info.capabilities.openOptions) {
+          renderState('Atualize a extensão');
+          elements.routeText.textContent = 'Sua extensão é antiga. Atualize pela seta de download ou abra o ícone NFe Agendamento e configure o CNPJ do A1 manualmente.';
+          return;
+        }
+
+        let opened = false;
+        try {
+          await deps.portal.openOptions();
+          opened = true;
+        } catch {}
+
+        renderState('Configure o CNPJ do A1');
+        elements.routeText.textContent = opened
+          ? 'A configuração da extensão foi aberta. Salve o CNPJ do A1 e inicie o lote novamente.'
+          : 'Não foi possível abrir a configuração automaticamente. Clique no ícone NFe Agendamento, configure o CNPJ do A1 e tente novamente.';
+        return;
+      }
+    } finally {
+      preflighting = false;
+      setControlsLocked(false);
     }
 
     items = summary.validKeys.map(createBatchItem);
@@ -312,8 +335,8 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
     elements.routeText.textContent = running
       ? `${label} · rota ${isPortalRoute() ? 'Portal' : 'SEFAZ'}`
       : label;
-    elements.zipButton.disabled = completed.length === 0 || running || manualPortalBusy;
-    elements.printButton.disabled = completed.length === 0 || running || manualPortalBusy;
+    elements.zipButton.disabled = completed.length === 0 || preflighting || running || manualPortalBusy;
+    elements.printButton.disabled = completed.length === 0 || preflighting || running || manualPortalBusy;
     renderRows();
   }
 
@@ -478,7 +501,7 @@ export function createBatchController(deps: BatchControllerDependencies): BatchC
     cancel,
     downloadZip,
     printDanfes,
-    isBusy: () => running || manualPortalBusy,
+    isBusy: () => preflighting || running || manualPortalBusy,
     dispose,
   };
 }
