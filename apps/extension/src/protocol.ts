@@ -19,6 +19,7 @@ export type PortalExtensionState =
 
 export type SiteCommand =
   | { type: 'ping'; requestId: string }
+  | { type: 'direct_lookup'; requestId: string; accessKey: string }
   | { type: 'start'; requestId: string; accessKey: string }
   | { type: 'status'; requestId: string; operationId: string }
   | { type: 'cancel'; requestId: string; operationId: string }
@@ -43,7 +44,7 @@ export function parseSiteCommand(value: unknown): SiteCommand {
     return { type, requestId };
   }
 
-  if (type === 'start') {
+  if (type === 'direct_lookup' || type === 'start') {
     const accessKey = stringField(input, 'accessKey').toUpperCase();
     if (!ACCESS_KEY_PATTERN.test(accessKey)) {
       throw new Error('Chave NF-e inválida.');
