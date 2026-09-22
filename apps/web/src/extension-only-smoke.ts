@@ -94,7 +94,7 @@ function mountExtensionOnlySmokePage(): void {
     try {
       const parsed = await runExtensionOnlySmoke(keyInput.value, client);
       status.textContent = [
-        'Teste concluído sem Bridge.',
+        'Teste da extensão concluído.',
         parsed.number ? `NF-e ${parsed.number} validada.` : 'XML validado.',
         parsed.supplierRuleId
           ? `Regra local: ${parsed.supplierRuleId}.`
@@ -103,7 +103,7 @@ function mountExtensionOnlySmokePage(): void {
     } catch (error) {
       status.textContent = error instanceof Error
         ? error.message
-        : 'Não foi possível concluir o teste sem Bridge.';
+        : 'Não foi possível concluir o teste da extensão.';
     } finally {
       await refreshExtensionState(client, extensionState, runButton);
     }

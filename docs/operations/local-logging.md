@@ -1,4 +1,4 @@
-# Logging local do Bridge
+> **Documento histórico / superseded.** O componente Windows descrito abaixo foi removido da arquitetura atual em 22/09/2026. A fonte vigente é o README e a documentação extension-only.\n\n# Logging local do Bridge
 
 O Bridge mantém um log local estruturado para diagnóstico de falhas de execução, comunicação com a SEFAZ e lifecycle do processo.
 

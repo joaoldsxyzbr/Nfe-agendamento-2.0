@@ -1,172 +1,78 @@
-# Portal via extensão Chromium MV3 — instalação e aceitação
+# Portal via extensão Chromium MV3
 
-**Data:** 2026-09-22  
-**Status:** piloto técnico; validação física com Portal/A1 real ainda obrigatória.
+**Estado atual:** componente local único do NFe Agendamento.
 
-## Objetivo
+## Arquitetura
 
-Validar o novo fallback do Portal Nacional dentro do próprio Chrome/Edge, preservando o helper WebView2 atual como rollback.
+```text
+Site → extensão Chromium → Portal Nacional → A1 via navegador/Windows
+```
 
-A extensão não substitui a consulta direta SEFAZ nesta fase. O Bridge continua responsável por A1/SEFAZ, proteção fiscal, coordenação multi-PC e regras locais de fornecedor.
+Não existe Bridge ou helper WebView2 no produto atual.
 
-## Obter o pacote
+## Versão
 
-Na release pública **v0.0.25**, baixe o asset:
+A `main` usa extensão **0.2.4**. A última release pública anterior à migração é a v0.0.25/extensão 0.2.3; uma nova release extension-only deve ser criada somente após CI e aceite físico do SHA correspondente.
 
-`NFeAgendamento-Extension-v0.2.3.zip`
+## Instalação de desenvolvimento
 
-O job `extension` do GitHub Actions também mantém o artifact técnico `NFeAgendamento-Extension-MV3` para rastreabilidade do CI.
+Chrome:
 
-Extraia o ZIP para uma pasta local antes de carregar a extensão. O pacote é uma extensão **não compactada** para teste interno; esta fase não publica automaticamente na Chrome Web Store.
+1. abrir `chrome://extensions`;
+2. ativar modo do desenvolvedor;
+3. usar **Carregar sem compactação**;
+4. selecionar a pasta que contém `manifest.json`.
 
-A v0.0.25 publica a extensão 0.2.3 com retries limitados de handshake, reinjeção idempotente, anúncio reativo `bridge_ready`, revalidação em `focus`, `pageshow` e retorno de visibilidade, compatibilidade com o casing legado do `supplier-rules.json`, reconciliação após cold start e diagnóstico explícito do fluxo do Portal.
+Edge: fluxo equivalente em `edge://extensions`.
 
+## Permissões
 
-## Extensão 0.2.3
+Somente `scripting`, `storage` e `webRequest`.
 
-A extensão **0.2.3** publicada na v0.0.25 adiciona:
+Hosts somente:
 
-- reconciliação da operação ativa após cold start do service worker;
-- validação de popup, aba do Portal e aba do site antes de reaproveitar estado salvo;
-- remoção automática de estado obsoleto;
-- `start` idempotente para a mesma aba e chave, permitindo recuperar uma resposta perdida sem abrir um segundo popup;
-- comando interno de status para impedir espera indefinida quando a operação deixou de existir;
-- detecção de fechamento da aba do Portal, além do fechamento da janela;
-- retry limitado do handshake inicial do content script do Portal;
-- códigos de erro distintos para popup, aba, navegação e operação perdida;
-- estado da operação preservado entre postbacks/navegações do Portal, sem regressar de `submitting` para `waiting_user`;
-- observação reativa do DOM via `MutationObserver`, mantendo fallback periódico de 1 segundo apenas para mudanças que não gerem mutação;
-- timeout explícito se o resultado não exibir o download ou se o clique não gerar a requisição oficial;
-- diferenciação entre sessão perdida, erro HTTP, replay inválido e XML inválido;
-- resposta HTML no lugar do XML tratada como provável perda de sessão, sem aceitar conteúdo como documento fiscal.
-
-A versão pública para teste é a **0.2.3 da v0.0.25**. O primeiro teste manual foi reportado como funcional em 22/09/2026, mas o gate completo ainda exige repetição, cancelamento, lote e validação no Edge.
-
-## HEAD após v0.0.25 — extensão 0.2.4
-
-O código da `main` prepara a extensão **0.2.4**, ainda sem nova release pública. O hardening mantém as mesmas permissões e o mesmo fluxo visual, mas reforça:
-
-- serialização das mutações da operação para impedir dois `start` concorrentes de abrirem popups duplicados;
-- captura do endpoint `downloadNFe.aspx` somente quando a operação estiver em `waiting_result`, com claim único antes do replay;
-- finalização condicional por `operationId`, impedindo que uma captura atrasada conclua uma operação já cancelada;
-- limpeza reconciliada condicionada ao mesmo `operationId`, evitando apagar uma operação mais nova por uma verificação antiga;
-- persistência de `stateChangedAt` em `chrome.storage.session`, para os timeouts de resultado/download continuarem contando após postback, reload ou reinjeção do content script.
-
-Não foram adicionadas permissões, hosts, automação de captcha ou acesso nativo.
-
-## Instalar no Chrome
-
-1. abra `chrome://extensions`;
-2. ative **Modo do desenvolvedor**;
-3. clique em **Carregar sem compactação**;
-4. selecione a pasta extraída que contém `manifest.json`;
-5. confirme que a extensão aparece como **NFe Agendamento - Portal**.
-
-## Instalar no Edge
-
-1. abra `edge://extensions`;
-2. habilite o modo de desenvolvedor;
-3. escolha **Carregar descompactado**;
-4. selecione a pasta extraída.
-
-## Permissões esperadas
-
-O Manifest V3 deve declarar somente:
-
-- `scripting`;
-- `storage`;
-- `webRequest`.
-
-Host permissions:
-
-- `https://nfeagendamento.joaolds.xyz.br/*`;
+- domínio oficial do NFe Agendamento;
 - `https://www.nfe.fazenda.gov.br/*`.
 
-Não são esperados:
+Sem `<all_urls>`, Native Messaging, `downloads`, `webRequestBlocking` ou acesso genérico ao disco.
 
-- `<all_urls>`;
-- `downloads`;
-- Native Messaging;
-- acesso genérico ao sistema de arquivos;
-- `webRequestBlocking`;
-- permissão para outros sites.
+## Fluxo
 
-## Fluxo esperado
+1. site valida chave e faz handshake;
+2. extensão abre popup oficial;
+3. chave é preenchida;
+4. usuário resolve hCaptcha;
+5. extensão continua a consulta;
+6. navegador usa A1 quando solicitado;
+7. extensão observa a requisição oficial de `downloadNFe.aspx`;
+8. XML é obtido pela mesma sessão, limitado e validado;
+9. XML volta ao site;
+10. site valida novamente e renderiza DANFE.
 
-Quando a consulta direta entrar legitimamente no fallback por Portal:
+## Confiabilidade
 
-1. o site detecta a extensão;
-2. a extensão abre uma janela popup do navegador;
-3. a janela navega para o Portal Nacional;
-4. a chave NF-e aparece preenchida;
-5. o usuário resolve o **hCaptcha manualmente**;
-6. somente depois da resposta humana, a extensão aciona o botão oficial de consulta;
-7. quando o resultado estiver disponível, a extensão aciona o controle oficial **Download do Documento**;
-8. a extensão observa somente a requisição oficial de download e tenta obter o XML pela mesma sessão do navegador;
-9. o XML volta ao site;
-10. o site aplica a validação canônica contra a chave, parser, regra de fornecedor e DANFE atuais;
-11. a janela do Portal fecha ao terminar.
+A 0.2.4 inclui:
 
-A extensão não executa, resolve ou contorna captcha.
+- estado em `chrome.storage.session`;
+- reconciliação após cold start;
+- `start` idempotente;
+- mutações serializadas;
+- claim único da captura XML;
+- finalização protegida contra cancelamento concorrente;
+- `stateChangedAt` para preservar timeouts entre navegações;
+- observação reativa do DOM com fallback periódico;
+- erros distintos para sessão/HTTP/XML;
+- captura fechada ao endpoint oficial.
 
-## Rollback
+## Segurança
 
-Se a extensão estiver ausente ou falhar no **handshake inicial**, antes de ser escolhida para a tentativa, o site usa o helper WebView2 atual.
+- hCaptcha manual;
+- sem PFX/P12/senha/chave privada na extensão;
+- XML máximo de 10 MiB;
+- DTD rejeitado;
+- XML deve conter `nfeProc` e a chave consultada;
+- configuração privada de fornecedor permanece local.
 
-Depois que a extensão respondeu ao handshake e foi escolhida, qualquer erro no `start` ou durante a operação falha de modo fechado: o site **não** abre automaticamente um segundo Portal para a mesma tentativa. Isso evita popup da extensão + WebView2 simultâneos caso a resposta do `start` se perca após a criação da janela. Uma nova ação explícita pode usar o caminho de recuperação apropriado.
+## Aceitação
 
-Para testar o rollback:
-
-1. desabilite a extensão em `chrome://extensions` ou `edge://extensions`;
-2. recarregue o site;
-3. em uma ocorrência legítima de fallback, confirme que o helper WebView2 atual continua abrindo.
-
-## Gate isolado sem Bridge
-
-Para este gate use a extensão **0.2.3** publicada na release **v0.0.25**. A extensão **0.1.0** da v0.0.21 não possui o handshake/capabilities necessários e será tratada como incompatível pela página de teste.
-
-
-Antes de migrar o aplicativo principal, use a página `/extension-test.html` no domínio oficial.
-
-Para este teste:
-
-1. pare ou desinstale o Bridge;
-2. mantenha a extensão 0.2.3 da release v0.0.25 instalada;
-3. abra `https://nfeagendamento.joaolds.xyz.br/extension-test.html`;
-4. confirme **Extensão conectada** e a versão;
-5. informe uma chave legítima;
-6. clique em **Testar consulta sem Bridge**;
-7. confirme popup do Chrome/Edge e chave preenchida;
-8. resolva o hCaptcha manualmente;
-9. quando solicitado pelo Portal/navegador, use o A1 instalado no Windows;
-10. confirme que a página recebe e valida o XML;
-11. repita uma segunda consulta;
-12. feche o popup no meio de uma consulta e confirme o cancelamento;
-13. repita no Edge.
-
-Esse gate não importa `BridgeClient` e não chama `127.0.0.1:17345`. Se certificado ou captura do XML falharem aqui, a remoção do Bridge deve parar.
-
-## Gate físico
-
-Antes de remover o helper WebView2, validar em Windows real:
-
-1. Chrome e Edge;
-2. A1 válido instalado no Windows;
-3. popup do navegador;
-4. chave preenchida corretamente;
-5. hCaptcha resolvido manualmente;
-6. uso normal do certificado pelo navegador/Portal;
-7. retorno do XML ao site;
-8. DANFE e download XML;
-9. segunda operação na mesma sessão;
-10. lote sequencial com pelo menos duas NF-e que passem pelo Portal;
-11. fechamento/cancelamento da janela;
-12. rollback com a extensão desabilitada.
-
-Não provoque `656` por repetição artificial de consultas apenas para chegar ao Portal.
-
-## Falha de captura do XML
-
-O Portal é externo e pode alterar DOM, scripts ou a forma como inicia o download. Se a reprodução segura da requisição oficial não funcionar no navegador real, o resultado esperado do piloto é uma falha explícita, mantendo WebView2 como fallback.
-
-Não ampliar permissões da extensão, não adicionar acesso genérico ao disco e não automatizar captcha para contornar uma incompatibilidade do Portal.
+Usar `docs/testing/acceptance.md`.

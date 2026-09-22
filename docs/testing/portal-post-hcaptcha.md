@@ -1,4 +1,4 @@
-# Fallback Portal — automação pós-hCaptcha
+> **Documento histórico / superseded.** O componente Windows descrito abaixo foi removido da arquitetura atual em 22/09/2026. A fonte vigente é o README e a documentação extension-only.\n\n# Fallback Portal — automação pós-hCaptcha
 
 **Data:** 2026-09-11  
 **Repositório:** `joaoldsxyzbr/Nfe-agendamento-2.0`  

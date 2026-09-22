@@ -1,4 +1,4 @@
-# Segurança do Bridge local
+> **Documento histórico / superseded.** O componente Windows descrito abaixo foi removido da arquitetura atual em 22/09/2026. A fonte vigente é o README e a documentação extension-only.\n\n# Segurança do Bridge local
 
 ## Objetivo
 

@@ -1,4 +1,4 @@
-# Proteção fiscal local e compartilhada
+> **Documento histórico / superseded.** O componente Windows descrito abaixo foi removido da arquitetura atual em 22/09/2026. A fonte vigente é o README e a documentação extension-only.\n\n# Proteção fiscal local e compartilhada
 
 A `main` posterior à v0.0.12 inclui duas camadas complementares para proteger consultas `NFeDistribuicaoDFe` feitas pelo Bridge:
 

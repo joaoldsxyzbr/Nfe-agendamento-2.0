@@ -1,100 +1,68 @@
 # Fronteiras do frontend
 
-Estado atual após a rodada de hardening de setembro de 2026.
+**Estado atual: arquitetura extension-only.**
 
-O frontend continua sendo um site Vite + TypeScript. A arquitetura funcional não mudou: o navegador compõe a interface e o DANFE, enquanto o Bridge local executa as operações que dependem do Windows, certificado A1 e acesso fiscal.
+O frontend é um site Vite + TypeScript. Toda consulta de NF-e depende exclusivamente da extensão Chromium MV3 e do Portal Nacional.
 
 ## Composition root
 
-`apps/web/src/main.ts` é o composition root da aplicação.
+`apps/web/src/main.ts` compõe:
 
-Ele mantém:
+- consulta unitária;
+- lote sequencial;
+- cliente da extensão;
+- parser XML;
+- regras de apresentação;
+- visualizador DANFE;
+- download de XML/ZIP;
+- diagnóstico simples da extensão.
 
-- markup principal e referências dos elementos da página;
-- criação e injeção das dependências dos controladores;
-- alternância visual entre consulta unitária e lote;
-- renderização dos estados/resultados da consulta na tela;
-- criação do link de download XML;
-- wiring de lifecycle global da página.
+Não existe cliente HTTP local, seleção de certificado ou código de atualização Windows.
 
-Ele não deve concentrar novamente o estado interno dos fluxos já extraídos.
+## Limites
 
-## Consulta em lote
+### Site
 
-`apps/web/src/batch/controller.ts` possui o estado e o ciclo do lote:
+Responsável por:
 
-- validação e fila visual das chaves;
-- processamento serial;
-- mudança legítima da rota SEFAZ para Portal;
-- cancelamento;
-- resolução local de fornecedor após o parse;
-- ZIP dos XMLs concluídos;
-- impressão de múltiplos DANFEs.
+- validar chave;
+- apresentar estado da consulta;
+- parsear e validar XML;
+- resolver apresentação de fornecedor a partir do `supplierId` retornado pela extensão;
+- DANFE, impressão/PDF, XML e ZIP;
+- manter lote sequencial.
 
-O controller recebe Bridge, Portal, parser, viewer e ações de download por injeção. Ele não importa estado global de `main.ts`.
+### Extensão
 
-## Consulta unitária
+Responsável por:
 
-`apps/web/src/nfe/consultation-controller.ts` possui o fluxo de uma NF-e:
+- handshake com o site;
+- abrir e acompanhar o Portal Nacional;
+- preencher a chave;
+- aguardar hCaptcha humano;
+- acionar apenas controles oficiais conhecidos;
+- observar/reproduzir com segurança somente a requisição oficial de XML;
+- guardar regras privadas de fornecedor em `chrome.storage.local`.
 
-- validação da chave antes do Bridge;
-- consulta direta;
-- fallback elegível para o Portal em `consumption_limit` ou `cStat 217`;
-- parse/validação do XML;
-- resolução local de fornecedor em modo fail-soft;
-- estados terminais e busy state;
-- ownership da operação Portal ativa e cancelamento best-effort.
+### Navegador/Windows
 
-A apresentação do resultado continua em callbacks fornecidos pelo composition root.
+Responsável pela autenticação TLS com certificado A1 quando o Portal solicitar. O projeto não acessa diretamente a chave privada.
 
-## Bridge e certificado A1
+### Cloudflare
 
-`apps/web/src/bridge/certificate-controller.ts` possui a coordenação visual de Bridge/certificado:
+Responsável por servir o site. Não recebe chave NF-e, XML, certificado ou identificadores privados de fornecedor por causa do fluxo de consulta.
 
-- health check do Bridge;
-- distinção entre conectado, ausente e permissão de rede local bloqueada;
-- catálogo de certificados A1 utilizáveis;
-- seleção do thumbprint;
-- habilitação/desabilitação dos controles.
+## Contratos
 
-O controller nunca recebe PFX, senha ou chave privada. O contrato do site continua limitado aos metadados públicos já expostos pelo Bridge e ao thumbprint.
+Os contratos genéricos do Portal ficam em `apps/web/src/portal/contracts.ts`. Eles não pertencem mais a um módulo Windows.
 
-## Lifecycle Windows final
+O cliente principal é `BrowserPortalExtensionClient`.
 
-O site é a única interface do produto. Desde a v0.0.20, o Windows mantém somente o Bridge fiscal e o helper Portal:
+## Invariantes
 
-- `NfeAgendamento.Bridge.exe` inicia diretamente pelo auto-start HKCU, sem `--managed`;
-- o mutex do Bridge garante instância única;
-- o Bridge é `WinExe`, sem janela de console no logon;
-- o helper Portal permanece subordinado ao Bridge e só aparece quando a interação humana com Portal/hCaptcha é necessária;
-- diagnóstico e atualização pertencem exclusivamente ao site.
-
-O antigo `NfeAgendamento.App.exe`, seu updater e o protocolo de lease/heartbeat foram removidos após a release de transição v0.0.19.
-
-## Viewer DANFE
-
-`apps/web/src/danfe/viewer.ts` possui somente o lifecycle do modal:
-
-- renderização dos documentos recebidos;
-- abrir/fechar;
-- lifecycle do zoom;
-- fechamento por Escape e clique no backdrop;
-- impressão;
-- limpeza ao descartar o viewer.
-
-O renderer fiscal continua em `apps/web/src/danfe/render.ts`. Regras de layout, paginação, grade de produtos e dados fiscais não foram movidas para o viewer.
-
-## Demais módulos
-
-- `apps/web/src/nfe/xml.ts`: parse estrutural e validação do XML contra a chave esperada.
-- `apps/web/src/nfe/access-key.ts`: validação local da chave NF-e e DV.
-- `apps/web/src/nfe/supplier-rules.ts`: escolha das regras de apresentação do fornecedor por id lógico e fallback transitório por nome.
-- `apps/web/src/portal/fallback.ts`: polling/cancelamento da operação Portal exposta pelo Bridge.
-- `apps/web/src/bridge/client.ts`: cliente HTTP do Bridge loopback e validação dos contratos de resposta.
-- `apps/web/src/danfe/render.ts`: renderer/paginação do DANFE e zoom das páginas.
-
-## Regra de manutenção
-
-Novas responsabilidades devem permanecer no módulo que já é dono do fluxo. `main.ts` deve ser tratado como composition root, não como local padrão para lógica de negócio.
-
-As extrações acima são estruturais. A arquitetura continua site + componente Windows local por PC + helper Portal + Worker/Durable Object; o App headless é apenas um supervisor de transição, não uma interface paralela.
+- nenhum runtime web referencia `127.0.0.1:17345`;
+- nenhum runtime web instancia `BridgeClient`;
+- nenhuma consulta usa `lookupNfe`/SEFAZ direta;
+- no máximo uma operação Portal por vez no lote;
+- hCaptcha permanece manual;
+- falha do Portal não abre uma segunda rota automaticamente.

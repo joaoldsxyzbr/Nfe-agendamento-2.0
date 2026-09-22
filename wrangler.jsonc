@@ -8,43 +8,12 @@
   },
   "assets": {
     "directory": "./apps/web/dist",
-    "binding": "ASSETS",
-    "run_worker_first": [
-      "/api/fiscal-coordination/*",
-      "/api/update/*",
-      "/downloads/windows/*"
-    ]
-  },
-  "ratelimits": [
-    {
-      "name": "COORDINATION_RATE_LIMITER",
-      "namespace_id": "1361318030",
-      "simple": {
-        "limit": 60,
-        "period": 60
-      }
-    },
-    {
-      "name": "UPDATE_RATE_LIMITER",
-      "namespace_id": "1361318031",
-      "simple": {
-        "limit": 30,
-        "period": 60
-      }
-    }
-  ],
-  "durable_objects": {
-    "bindings": [
-      {
-        "name": "FISCAL_COORDINATOR",
-        "class_name": "FiscalCoordinator"
-      }
-    ]
+    "binding": "ASSETS"
   },
   "exports": {
     "FiscalCoordinator": {
       "type": "durable-object",
-      "storage": "sqlite"
+      "state": "deleted"
     }
   }
 }
