@@ -15,6 +15,7 @@ describe('extension manifest', () => {
       host_permissions?: string[];
       background?: { service_worker?: string; type?: string };
       content_scripts?: Array<{ matches?: string[]; js?: string[] }>;
+      options_page?: string;
     };
 
     expect(manifest.manifest_version).toBe(3);
@@ -26,6 +27,7 @@ describe('extension manifest', () => {
     ]);
     expect(JSON.stringify(manifest)).not.toContain('<all_urls>');
     expect(manifest.background).toEqual({ service_worker: 'background.js', type: 'module' });
+    expect(manifest.options_page).toBe('options.html');
 
     const scripts = manifest.content_scripts ?? [];
     expect(scripts).toHaveLength(2);
