@@ -4,13 +4,9 @@ import {
   validateSupplierConfig,
 } from './supplier-store';
 
-const fileInput = document.querySelector<HTMLInputElement>('#supplier-config-file');
-const clearButton = document.querySelector<HTMLButtonElement>('#supplier-config-clear');
-const status = document.querySelector<HTMLElement>('#supplier-config-status');
-
-if (!fileInput || !clearButton || !status) {
-  throw new Error('A página de opções da extensão está incompleta.');
-}
+const fileInput = requireElement<HTMLInputElement>('#supplier-config-file');
+const clearButton = requireElement<HTMLButtonElement>('#supplier-config-clear');
+const status = requireElement<HTMLElement>('#supplier-config-status');
 
 fileInput.addEventListener('change', () => {
   void importSelectedFile();
@@ -45,4 +41,10 @@ async function clearLocalConfig(): Promise<void> {
   } catch {
     status.textContent = 'Não foi possível limpar a configuração local.';
   }
+}
+
+function requireElement<T extends Element>(selector: string): T {
+  const element = document.querySelector<T>(selector);
+  if (!element) throw new Error(`Elemento ${selector} ausente na página de opções.`);
+  return element;
 }
