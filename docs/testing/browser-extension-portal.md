@@ -1,80 +1,69 @@
 # Portal via extensão Chromium MV3
 
-**Estado atual:** componente local único do NFe Agendamento.
+**Estado atual:** Portal Nacional é fallback da consulta direta.
 
 ## Arquitetura
 
 ```text
-Site → extensão Chromium → Portal Nacional → A1 via navegador/Windows
+Site → extensão → NFeDistribuicaoDFe
+                    ↓ fallback
+               Portal Nacional → A1 via navegador/Windows
 ```
 
-Não existe Bridge ou helper WebView2 no produto atual.
+Não existe Bridge ou helper WebView2.
 
 ## Versão
 
-A `main` usa extensão **0.2.5**. A release correspondente é a **v0.0.27**, com os assets `NFeAgendamento-Extension.zip` e `NFeAgendamento-Extension-v0.2.5.zip`.
-
-## Instalação de desenvolvimento
-
-Chrome:
-
-1. abrir `chrome://extensions`;
-2. ativar modo do desenvolvedor;
-3. usar **Carregar sem compactação**;
-4. selecionar a pasta que contém `manifest.json`.
-
-Edge: fluxo equivalente em `edge://extensions`.
+A `main` usa extensão **0.2.6**. A release correspondente é a **v0.0.28**.
 
 ## Permissões
 
 Somente `scripting`, `storage` e `webRequest`.
 
-Hosts somente:
+Hosts:
 
 - domínio oficial do NFe Agendamento;
-- `https://www.nfe.fazenda.gov.br/*`.
+- `https://www.nfe.fazenda.gov.br/*`;
+- `https://www1.nfe.fazenda.gov.br/*`.
 
-Sem `<all_urls>`, Native Messaging, `downloads`, `webRequestBlocking` ou acesso genérico ao disco.
+## Quando o Portal abre
 
-## Fluxo
+Automaticamente somente quando:
 
-1. site valida chave e faz handshake;
-2. extensão abre popup oficial;
-3. chave é preenchida;
-4. usuário resolve hCaptcha;
-5. extensão continua a consulta;
-6. navegador usa A1 quando solicitado;
-7. extensão observa a requisição oficial de `downloadNFe.aspx`;
-8. XML é obtido pela mesma sessão, limitado e validado;
-9. XML volta ao site;
-10. site valida novamente e renderiza DANFE.
+- consulta direta retorna `217`; ou
+- a proteção fiscal está ativa por `656`, HTTP 429 ou limite local.
+
+Falhas de transporte/técnicas não são repetidas nem desviadas automaticamente para outra rota.
+
+## Fluxo Portal
+
+1. extensão abre popup oficial;
+2. chave é preenchida;
+3. usuário resolve hCaptcha;
+4. navegador usa A1 quando solicitado;
+5. extensão observa `downloadNFe.aspx`;
+6. a requisição é reproduzida dentro da sessão autenticada da aba;
+7. XML é limitado e validado;
+8. XML volta ao site.
 
 ## Confiabilidade
 
-A 0.2.5 mantém o hardening da 0.2.4 e altera a captura final do XML: a requisição oficial observada por `webRequest` é serializada e reproduzida por `chrome.scripting.executeScript` dentro da própria aba do Portal, preservando o contexto de sessão do navegador sem adicionar permissões.
-
-A 0.2.4 já incluía:
+Mantém o hardening da 0.2.5:
 
 - estado em `chrome.storage.session`;
+- start idempotente;
 - reconciliação após cold start;
-- `start` idempotente;
 - mutações serializadas;
-- claim único da captura XML;
-- finalização protegida contra cancelamento concorrente;
-- `stateChangedAt` para preservar timeouts entre navegações;
-- observação reativa do DOM com fallback periódico;
-- erros distintos para sessão/HTTP/XML;
-- captura fechada ao endpoint oficial.
+- claim único do XML;
+- proteção contra corrida de cancelamento;
+- timeouts preservados entre navegações;
+- captura restrita ao endpoint oficial.
 
 ## Segurança
 
 - hCaptcha manual;
-- sem PFX/P12/senha/chave privada na extensão;
+- sem PFX/P12/senha/chave privada;
 - XML máximo de 10 MiB;
 - DTD rejeitado;
-- XML deve conter `nfeProc` e a chave consultada;
-- configuração privada de fornecedor permanece local.
-
-## Aceitação
-
-Usar `docs/testing/acceptance.md`.
+- XML deve corresponder à chave;
+- CNPJ fiscal e fornecedores ficam em storage local confiável.
