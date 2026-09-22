@@ -72,10 +72,25 @@ export function createConsultationController(
       }
 
       if (!info.configuration.fiscalIdentityConfigured) {
-        await deps.portal.openOptions().catch(() => {});
+        if (!info.capabilities.openOptions) {
+          deps.renderState(
+            'Atualize a extensão',
+            'Sua extensão é anterior ao preflight automático. Atualize pela seta de download ou clique no ícone NFe Agendamento e configure o CNPJ do A1 manualmente.',
+          );
+          return;
+        }
+
+        let opened = false;
+        try {
+          await deps.portal.openOptions();
+          opened = true;
+        } catch {}
+
         deps.renderState(
           'Configure o CNPJ do A1',
-          'A configuração da extensão foi aberta. Informe o CNPJ do certificado A1, salve e consulte novamente. Nenhuma consulta foi enviada à SEFAZ.',
+          opened
+            ? 'A configuração da extensão foi aberta. Informe o CNPJ do certificado A1, salve e consulte novamente. Nenhuma consulta foi enviada à SEFAZ.'
+            : 'Não foi possível abrir a configuração automaticamente. Clique no ícone NFe Agendamento, informe o CNPJ do A1 e tente novamente. Nenhuma consulta foi enviada à SEFAZ.',
         );
         return;
       }
