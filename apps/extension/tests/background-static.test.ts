@@ -29,6 +29,7 @@ describe('extension background contract', () => {
     expect(source).toContain('checkFiscalUsage');
     expect(source).toContain('recordFiscalAttempt');
     expect(source).toContain('blockFiscalUsage');
+    expect(source).toContain("command.type === 'open_options'");
     expect(source).toContain('chrome.runtime.openOptionsPage');
     expect(source).toContain("'TRUSTED_CONTEXTS'");
     expect(source).toContain('chrome.webRequest.onBeforeRequest');
