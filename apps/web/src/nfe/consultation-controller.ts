@@ -17,6 +17,7 @@ export type ConsultationController = Readonly<{
 
 type ConsultationExtensionClient = Readonly<{
   getInfo(signal?: AbortSignal): Promise<PortalExtensionInfo | null>;
+  openOptions(signal?: AbortSignal): Promise<void>;
   directLookup(accessKey: string, signal?: AbortSignal): Promise<DirectLookupResult>;
   start(accessKey: string, signal?: AbortSignal): Promise<string>;
   waitForResult(operationId: string, signal?: AbortSignal): Promise<PortalOperationStatus>;
@@ -66,6 +67,15 @@ export function createConsultationController(
         deps.renderState(
           'Atualize a extensão',
           'Esta versão da extensão ainda não possui consulta direta à SEFAZ.',
+        );
+        return;
+      }
+
+      if (!info.configuration.fiscalIdentityConfigured) {
+        await deps.portal.openOptions().catch(() => {});
+        deps.renderState(
+          'Configure o CNPJ do A1',
+          'A configuração da extensão foi aberta. Informe o CNPJ do certificado A1, salve e consulte novamente. Nenhuma consulta foi enviada à SEFAZ.',
         );
         return;
       }
