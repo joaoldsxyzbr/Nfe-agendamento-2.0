@@ -8,6 +8,13 @@ describe('settings panel extension-only', () => {
     expect(settings).toContain("extensionState.value.textContent = 'Conectada'");
     expect(settings).not.toContain('BridgeClient'); expect(settings).not.toContain('WebView2'); expect(settings).not.toContain('Windows'); expect(settings).not.toContain('certificateSelected');
   });
+  it('keeps a stable extension download shortcut', () => {
+    expect(settings).toContain("downloadTrigger.id = 'app-download'");
+    expect(settings).toContain("downloadTrigger.setAttribute('aria-label', 'Baixar extensão')");
+    expect(settings).toContain('releases/latest/download/NFeAgendamento-Extension.zip');
+    expect(settings).not.toContain('Baixar componente Windows');
+  });
+
   it('keeps the compact settings popup', () => {
     expect(settings).toContain("trigger.id = 'settings-trigger'"); expect(settings).toContain("panel.id = 'settings-panel'"); expect(settings).toContain("close.id = 'settings-close'");
     expect(styles).toContain('.settings-panel'); expect(styles).toContain('.diagnostics-card');

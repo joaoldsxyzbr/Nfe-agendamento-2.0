@@ -1,5 +1,6 @@
 .topbar-actions { display: inline-flex; align-items: center; gap: 8px; }
-.topbar-icon-action { width: 42px; height: 42px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); cursor: pointer; }
+.topbar-icon-action { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); cursor: pointer; text-decoration: none; }
+.download-trigger { font-size: 22px; line-height: 1; }
 .settings-panel { position: fixed; top: 78px; right: 20px; z-index: 30; width: min(360px, calc(100vw - 32px)); padding: 18px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: 0 24px 70px rgb(0 0 0 / 35%); }
 .settings-panel[hidden] { display: none !important; }
 .settings-panel-header, .diagnostics-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
