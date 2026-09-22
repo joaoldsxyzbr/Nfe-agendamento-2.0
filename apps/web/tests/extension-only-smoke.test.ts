@@ -19,6 +19,8 @@ describe('extension-only physical gate page', () => {
 
     expect(source).not.toContain('BridgeClient');
     expect(source).not.toContain('127.0.0.1:17345');
+    expect(source).toContain("client.onReadyHint(refreshState)");
+    expect(source).toContain("window.addEventListener('pageshow', refreshState)");
     expect(html).toContain('/src/extension-only-smoke.ts');
     expect(html).toContain('id="extension-smoke-key"');
     expect(html).toContain('id="extension-smoke-run"');
