@@ -104,9 +104,9 @@ CI: `web`, `extension` e `danfe-print`. CodeQL analisa JavaScript/TypeScript.
 
 ## Releases
 
-A `main` atual contém a arquitetura **Portal-only** e a extensão **0.2.11**.
+A **v0.0.34 / extensão 0.2.11** consolida a arquitetura **Portal-only**: toda consulta unitária ou em lote usa diretamente o Portal Nacional, sem `NFeDistribuicaoDFe` e sem configuração de CNPJ do A1.
 
-A última release publicada antes desta mudança é a **v0.0.33 / extensão 0.2.10**, que ainda contém o experimento de consulta direta. Ela permanece apenas como histórico até uma nova release ser publicada explicitamente.
+A v0.0.33/extensão 0.2.10 permanece como histórico do experimento anterior de consulta direta.
 
 A seta do site baixa sempre `NFeAgendamento-Extension.zip` da release mais recente.
 
