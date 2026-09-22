@@ -8,7 +8,7 @@
 
 - **Fase 1 — compatibilidade e diagnóstico:** implementada no código desta branch;
 - **Fase 2 — conexão/lifecycle:** implementada no código do HEAD: `bridge_ready`, `focus`, `pageshow`, visibilidade, retry limitado do handshake do Portal, reconciliação da operação em `storage.session`, limpeza de estado obsoleto e start idempotente após resposta perdida; validação física ainda pendente;
-- **Fase 3 — Portal real:** iniciada com erros diferenciados para popup/aba/navegação/operação perdida e detecção de fechamento de aba; captura real Chrome/Edge + A1 + hCaptcha + XML ainda depende do gate físico;
+- **Fase 3 — Portal real:** hardening de código implementado no HEAD: estado monotônico entre navegações, observação por `MutationObserver` com fallback periódico, timeouts explícitos para resultado/download, erros separados para sessão perdida/HTTP/XML inválido e replay restrito ao endpoint oficial; captura real Chrome/Edge + A1 + hCaptcha + XML ainda depende do gate físico;
 - **Fase 4 — distribuição corporativa:** planejada, ainda não iniciada.
 
 ## Evidência externa usada
