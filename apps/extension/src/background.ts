@@ -6,6 +6,7 @@ import {
   parseSiteCommand,
   validateXmlPayload,
 } from './protocol';
+import { isLikelyHtmlDocument, isOfficialDownloadUrl } from './portal-dom';
 import { buildReplayRequest, shouldCapturePortalRequest } from './portal-request';
 import { loadSupplierConfig, resolveSupplierFromConfig } from './supplier-store';
 
@@ -290,22 +291,90 @@ async function handlePortalMessage(
 
   const type = envelope.type;
   if (type === 'ready') {
-    await transition(operation, 'waiting_user', 'Resolva o hCaptcha manualmente.');
-    return { operationId: operation.operationId, accessKey: operation.accessKey };
+    let state = operation.state;
+    if (state === 'opening' || state === 'loading_portal') {
+      state = 'waiting_user';
+      await transition(operation, state, 'Resolva o hCaptcha manualmente.');
+    }
+
+    return {
+      operationId: operation.operationId,
+      accessKey: operation.accessKey,
+      state,
+    };
   }
 
   if (type === 'submitting') {
+    if (operation.state === 'submitting') {
+      return { ok: true, state: operation.state };
+    }
+    if (operation.state !== 'waiting_user') {
+      throw new ExtensionFailure(
+        'portal_state_invalid',
+        'O Portal não está no estado esperado para iniciar a consulta.',
+      );
+    }
+
     await transition(operation, 'submitting', 'hCaptcha resolvido. Consultando o Portal.');
-    return { ok: true };
+    return { ok: true, state: 'submitting' };
   }
 
   if (type === 'download_ready') {
-    await armExpectedPortalDialog(operation.portalTabId);
+    if (operation.state === 'waiting_result' || operation.state === 'fetching_xml') {
+      return { armed: true, state: operation.state };
+    }
+    if (operation.state !== 'submitting') {
+      throw new ExtensionFailure(
+        'portal_state_invalid',
+        'O Portal não está no estado esperado para solicitar o XML.',
+      );
+    }
+
+    try {
+      await armExpectedPortalDialog(operation.portalTabId);
+    } catch {
+      throw new ExtensionFailure(
+        'portal_dialog_arm_failed',
+        'Não foi possível preparar a confirmação oficial de download do Portal.',
+      );
+    }
+
     await transition(operation, 'waiting_result', 'Solicitando o XML oficial.');
-    return { armed: true };
+    return { armed: true, state: 'waiting_result' };
   }
 
-  throw new Error('Mensagem do Portal não reconhecida.');
+  if (type === 'result_timeout') {
+    if (operation.state !== 'submitting') {
+      return { handled: false, state: operation.state };
+    }
+
+    await finishOperation(operation, {
+      type: 'failed',
+      operationId: operation.operationId,
+      code: 'portal_download_not_found',
+      message: 'O Portal não exibiu o download do documento dentro do tempo esperado.',
+    });
+    return { handled: true, state: 'failed' };
+  }
+
+  if (type === 'download_timeout') {
+    if (operation.state !== 'waiting_result') {
+      return { handled: false, state: operation.state };
+    }
+
+    await finishOperation(operation, {
+      type: 'failed',
+      operationId: operation.operationId,
+      code: 'portal_download_request_missing',
+      message: 'O Portal não iniciou a requisição oficial do XML dentro do tempo esperado.',
+    });
+    return { handled: true, state: 'failed' };
+  }
+
+  throw new ExtensionFailure(
+    'portal_message_unknown',
+    'Mensagem do Portal não reconhecida.',
+  );
 }
 
 async function handlePortalDownload(details: any): Promise<void> {
@@ -315,13 +384,68 @@ async function handlePortalDownload(details: any): Promise<void> {
 
   try {
     await transition(operation, 'fetching_xml', 'Recebendo o XML oficial.');
-    const replay = buildReplayRequest(details);
-    const response = await fetch(replay.url, replay.init);
-    if (!response.ok) {
-      throw new Error(`Portal retornou HTTP ${response.status} ao obter o XML.`);
+
+    let replay: ReturnType<typeof buildReplayRequest>;
+    try {
+      replay = buildReplayRequest(details);
+    } catch (error) {
+      throw new ExtensionFailure(
+        'portal_request_replay_invalid',
+        error instanceof Error
+          ? error.message
+          : 'A requisição oficial de download não pôde ser reproduzida com segurança.',
+      );
     }
 
-    const xml = validateXmlPayload(await response.text(), operation.accessKey);
+    let response: Response;
+    try {
+      response = await fetch(replay.url, replay.init);
+    } catch {
+      throw new ExtensionFailure(
+        'portal_xml_capture_unavailable',
+        'Não foi possível acessar o download oficial pela sessão atual do navegador.',
+      );
+    }
+
+    if (response.status === 401 || response.status === 403) {
+      throw new ExtensionFailure(
+        'portal_session_lost',
+        'A sessão do Portal não autorizou o download do XML.',
+      );
+    }
+
+    if (!response.ok) {
+      throw new ExtensionFailure(
+        'portal_download_http_error',
+        `Portal retornou HTTP ${response.status} ao obter o XML.`,
+      );
+    }
+
+    if (response.redirected && !isOfficialDownloadUrl(response.url)) {
+      throw new ExtensionFailure(
+        'portal_session_lost',
+        'O Portal redirecionou o download para fora do endpoint oficial esperado.',
+      );
+    }
+
+    const payload = await response.text();
+    if (isLikelyHtmlDocument(payload)) {
+      throw new ExtensionFailure(
+        'portal_session_lost',
+        'O Portal devolveu uma página HTML no lugar do XML; a sessão pode ter expirado.',
+      );
+    }
+
+    let xml: string;
+    try {
+      xml = validateXmlPayload(payload, operation.accessKey);
+    } catch (error) {
+      throw new ExtensionFailure(
+        'portal_xml_invalid',
+        error instanceof Error ? error.message : 'O Portal devolveu um XML inválido.',
+      );
+    }
+
     await finishOperation(operation, {
       type: 'completed',
       operationId: operation.operationId,
@@ -331,7 +455,9 @@ async function handlePortalDownload(details: any): Promise<void> {
     await finishOperation(operation, {
       type: 'failed',
       operationId: operation.operationId,
-      code: 'portal_xml_capture_unavailable',
+      code: error instanceof ExtensionFailure
+        ? error.code
+        : 'portal_xml_capture_unavailable',
       message: error instanceof Error
         ? error.message
         : 'Não foi possível obter o XML pela sessão do navegador.',

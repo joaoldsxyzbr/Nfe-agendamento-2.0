@@ -29,7 +29,7 @@ Implementado e coberto pelos gates automatizados aplicáveis:
 - categorias normalizadas `success`, `fiscal_status`, `consumption_limit`, `certificate_error`, `transport_unavailable` e `technical_error`;
 - tratamento de `137`, `138`, `656`, HTTP 429, timeout e falhas ambíguas sem retry fiscal automático;
 - fallback automático para o Portal após `consumption_limit` ou `cStat 217`, preferindo a extensão Chromium quando disponível e mantendo o helper WebView2 como rollback;\n- handshake da extensão resiliente a corrida de carregamento/cold start, com novas tentativas, reinjeção segura da ponte e anúncio reativo `bridge_ready` em abas oficiais;
-- HEAD pós-v0.0.24 prepara a extensão 0.2.3 com reconciliação de operação em `storage.session`, start idempotente após resposta perdida, detecção de popup/aba obsoletos e status explícito para evitar espera indefinida;\n- importação `supplier-rules.json` compatível com o casing legado do Bridge, saída canônica, erros com caminho do campo e armazenamento local restrito a contextos confiáveis da extensão;
+- HEAD pós-v0.0.24 prepara a extensão 0.2.3 com reconciliação em `storage.session`, start idempotente, observação reativa do Portal, timeouts explícitos e diagnóstico separado de sessão/HTTP/XML inválido;\n- importação `supplier-rules.json` compatível com o casing legado do Bridge, saída canônica, erros com caminho do campo e armazenamento local restrito a contextos confiáveis da extensão;
 - prewarm best-effort do Portal/WebView2 após health compatível, sem bloquear consulta direta nem fallback cold-start;
 - importação manual de XML validado, disponível somente como contingência após falha terminal do helper Portal;
 - hCaptcha manual e download oficial do XML pelo helper Portal;

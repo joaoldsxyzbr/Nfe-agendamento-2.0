@@ -12,8 +12,13 @@ describe('Portal DOM policy', () => {
   });
 
   it('recognizes only expected official controls and a human captcha response', async () => {
-    const { isDownloadLabel, isCaptchaResponseReady, accessKeySelector, consultButtonSelector } =
-      await import('../src/portal-dom');
+    const {
+      isDownloadLabel,
+      isCaptchaResponseReady,
+      isLikelyHtmlDocument,
+      accessKeySelector,
+      consultButtonSelector,
+    } = await import('../src/portal-dom');
 
     expect(accessKeySelector).toContain('txtChaveAcessoResumo');
     expect(consultButtonSelector).toContain('btnConsultarHCaptcha');
@@ -22,5 +27,8 @@ describe('Portal DOM policy', () => {
     expect(isDownloadLabel('Baixar qualquer arquivo')).toBe(false);
     expect(isCaptchaResponseReady('')).toBe(false);
     expect(isCaptchaResponseReady('token-preenchido-pelo-hcaptcha')).toBe(true);
+    expect(isLikelyHtmlDocument('<!doctype html><html><body>sessão expirada</body></html>')).toBe(true);
+    expect(isLikelyHtmlDocument('<?xml version="1.0"?><html><body>login</body></html>')).toBe(true);
+    expect(isLikelyHtmlDocument('<?xml version="1.0"?><nfeProc><NFe/></nfeProc>')).toBe(false);
   });
 });
