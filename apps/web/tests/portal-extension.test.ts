@@ -100,6 +100,27 @@ describe('BrowserPortalExtensionClient', () => {
     expect(attempts).toBe(3);
   });
 
+  it('emits a ready hint when the content script announces itself', async () => {
+    const { BrowserPortalExtensionClient } = await import('../src/portal/extension-client');
+    let listener: ((value: unknown) => void) | null = null;
+    const client = new BrowserPortalExtensionClient({
+      request: async () => { throw new Error('not used'); },
+      subscribe: (next: (value: unknown) => void) => {
+        listener = next;
+        return () => { listener = null; };
+      },
+    } as never);
+
+    const versions: string[] = [];
+    const unsubscribe = client.onReadyHint((version) => versions.push(version));
+    listener?.({ type: 'bridge_ready', version: '0.2.2' });
+    listener?.({ type: 'state', operationId: 'op', state: 'opening' });
+    unsubscribe();
+
+    expect(versions).toEqual(['0.2.2']);
+    expect(listener).toBeNull();
+  });
+
   it('treats a missing extension as unavailable instead of throwing', async () => {
     const { BrowserPortalExtensionClient } = await import('../src/portal/extension-client');
     const client = new BrowserPortalExtensionClient({
