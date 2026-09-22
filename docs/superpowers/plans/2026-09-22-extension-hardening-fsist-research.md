@@ -6,9 +6,9 @@
 
 ## Status de execução
 
-- **Fase 1 — compatibilidade e diagnóstico:** implementada no código desta branch;
-- **Fase 2 — conexão/lifecycle:** implementada no código do HEAD: `bridge_ready`, `focus`, `pageshow`, visibilidade, retry limitado do handshake do Portal, reconciliação da operação em `storage.session`, limpeza de estado obsoleto e start idempotente após resposta perdida; validação física ainda pendente;
-- **Fase 3 — Portal real:** hardening de código implementado no HEAD: estado monotônico entre navegações, observação por `MutationObserver` com fallback periódico, timeouts explícitos para resultado/download, erros separados para sessão perdida/HTTP/XML inválido e replay restrito ao endpoint oficial; captura real Chrome/Edge + A1 + hCaptcha + XML ainda depende do gate físico;
+- **Fase 1 — compatibilidade e diagnóstico:** implementada e incluída na extensão 0.2.3;
+- **Fase 2 — conexão/lifecycle:** implementada e incluída na extensão 0.2.3: `bridge_ready`, `focus`, `pageshow`, visibilidade, retry limitado do handshake do Portal, reconciliação da operação em `storage.session`, limpeza de estado obsoleto e start idempotente após resposta perdida; validação física ainda pendente;
+- **Fase 3 — Portal real:** hardening de código incluído na extensão 0.2.3: estado monotônico entre navegações, observação por `MutationObserver` com fallback periódico, timeouts explícitos para resultado/download, erros separados para sessão perdida/HTTP/XML inválido e replay restrito ao endpoint oficial; captura real Chrome/Edge + A1 + hCaptcha + XML ainda depende do gate físico;
 - **Fase 4 — distribuição corporativa:** planejada, ainda não iniciada.
 
 ## Evidência externa usada
@@ -122,6 +122,6 @@ PC corporativo instala e atualiza a extensão sem depender de Modo do desenvolve
 1. Fase 1 completa;
 2. base de conexão reativa da Fase 2;
 3. CI completo;
-4. release de teste;
+4. release de teste v0.0.25 / extensão 0.2.3;
 5. validação física;
 6. somente então avançar para remoção de legado ou distribuição corporativa.

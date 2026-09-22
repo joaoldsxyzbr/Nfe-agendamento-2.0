@@ -10,7 +10,7 @@ Evitar espalhar identificação de fornecedor, catálogos e fatores de conversã
 
 No piloto extension-only, a identificação privada também pode ser armazenada em `chrome.storage.local` da extensão. O schema permanece v1, a normalização é equivalente ao resolver do Bridge e a extensão devolve ao site somente o `supplierId` lógico.
 
-A configuração é importada explicitamente pelo usuário na página de opções da extensão. O arquivo é lido localmente pelo navegador e não é enviado por rede. A extensão 0.2.2 aceita os nomes de propriedades do schema v1 sem diferenciar maiúsculas/minúsculas, como fazia o desserializador legado do Bridge, rejeita ambiguidades e salva internamente sempre no formato canônico `version/suppliers/id/taxIds`. O `storage.local` é restringido a contextos confiáveis da extensão. Enquanto o gate físico sem Bridge não for aprovado, o fluxo normal preserva o Bridge como fonte vigente.
+A configuração é importada explicitamente pelo usuário na página de opções da extensão. O arquivo é lido localmente pelo navegador e não é enviado por rede. A extensão 0.2.3 aceita os nomes de propriedades do schema v1 sem diferenciar maiúsculas/minúsculas, como fazia o desserializador legado do Bridge, rejeita ambiguidades e salva internamente sempre no formato canônico `version/suppliers/id/taxIds`. O `storage.local` é restringido a contextos confiáveis da extensão. Enquanto o gate físico sem Bridge não for aprovado, o fluxo normal preserva o Bridge como fonte vigente.
 
 ## Identificação primária no Bridge local
 
