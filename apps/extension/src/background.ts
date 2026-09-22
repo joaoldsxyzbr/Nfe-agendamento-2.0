@@ -28,14 +28,17 @@ type ActiveOperation = {
 };
 
 void hardenLocalStorage();
+void reconcileActiveOperation();
 
 chrome.runtime.onInstalled.addListener(() => {
   void hardenLocalStorage();
+  void reconcileActiveOperation();
   void injectSiteBridgeIntoOpenTabs();
 });
 
 chrome.runtime.onStartup.addListener(() => {
   void hardenLocalStorage();
+  void reconcileActiveOperation();
   void injectSiteBridgeIntoOpenTabs();
 });
 
@@ -46,7 +49,7 @@ chrome.runtime.onMessage.addListener(
       .catch((error) => {
         sendResponse({
           type: 'failed',
-          code: 'extension_error',
+          code: error instanceof ExtensionFailure ? error.code : 'extension_error',
           message: error instanceof Error ? error.message : 'Falha inesperada na extensão.',
         });
       });
@@ -56,6 +59,10 @@ chrome.runtime.onMessage.addListener(
 
 chrome.windows.onRemoved.addListener((windowId: number) => {
   void handleWindowRemoved(windowId);
+});
+
+chrome.tabs.onRemoved.addListener((tabId: number) => {
+  void handleTabRemoved(tabId);
 });
 
 chrome.webRequest.onBeforeRequest.addListener(
@@ -135,30 +142,68 @@ async function handleSiteCommand(commandValue: unknown, sender: any): Promise<un
     };
   }
 
+  if (command.type === 'status') {
+    const operation = await getReconciledActiveOperation();
+    const matches = operation?.operationId === command.operationId;
+    return {
+      type: 'operation_status',
+      requestId: command.requestId,
+      operationId: command.operationId,
+      active: matches,
+      state: matches ? operation.state : null,
+    };
+  }
+
   if (command.type === 'start') {
-    const existing = await getActiveOperation();
+    const existing = await getReconciledActiveOperation();
     if (existing) {
-      throw new Error('Já existe uma consulta pelo Portal em andamento.');
+      if (existing.siteTabId === siteTabId && existing.accessKey === command.accessKey) {
+        return {
+          type: 'started',
+          requestId: command.requestId,
+          operationId: existing.operationId,
+          resumed: true,
+        };
+      }
+      throw new ExtensionFailure(
+        'portal_operation_active',
+        'Já existe uma consulta pelo Portal em andamento.',
+      );
     }
 
     const operationId = globalThis.crypto.randomUUID();
-    const popup = await chrome.windows.create({
-      url: 'about:blank',
-      type: 'popup',
-      focused: true,
-      width: 1100,
-      height: 800,
-    });
-    const portalWindowId = popup?.id;
-    if (!Number.isInteger(portalWindowId)) {
-      throw new Error('Não foi possível criar a janela do Portal.');
+    let popup: any;
+    try {
+      popup = await chrome.windows.create({
+        url: 'about:blank',
+        type: 'popup',
+        focused: true,
+        width: 1100,
+        height: 800,
+      });
+    } catch {
+      throw new ExtensionFailure(
+        'portal_popup_open_failed',
+        'Não foi possível abrir a janela do Portal.',
+      );
     }
 
-    const popupTabs = await chrome.tabs.query({ windowId: portalWindowId });
+    const portalWindowId = popup?.id;
+    if (!Number.isInteger(portalWindowId)) {
+      throw new ExtensionFailure(
+        'portal_popup_open_failed',
+        'Não foi possível identificar a janela do Portal.',
+      );
+    }
+
+    const popupTabs = await chrome.tabs.query({ windowId: portalWindowId }).catch(() => []);
     const portalTabId = popupTabs?.[0]?.id;
     if (!Number.isInteger(portalTabId)) {
       await chrome.windows.remove(portalWindowId).catch(() => {});
-      throw new Error('Não foi possível identificar a aba do Portal.');
+      throw new ExtensionFailure(
+        'portal_tab_missing',
+        'Não foi possível identificar a aba do Portal.',
+      );
     }
 
     const operation: ActiveOperation = {
@@ -169,8 +214,27 @@ async function handleSiteCommand(commandValue: unknown, sender: any): Promise<un
       portalWindowId,
       state: 'opening',
     };
-    await saveActiveOperation(operation);
-    await chrome.tabs.update(portalTabId, { url: PORTAL_URL });
+
+    try {
+      await saveActiveOperation(operation);
+    } catch {
+      await chrome.windows.remove(portalWindowId).catch(() => {});
+      throw new ExtensionFailure(
+        'portal_state_unavailable',
+        'Não foi possível salvar o estado da consulta do Portal.',
+      );
+    }
+
+    try {
+      await chrome.tabs.update(portalTabId, { url: PORTAL_URL });
+    } catch {
+      await clearActiveOperation();
+      await chrome.windows.remove(portalWindowId).catch(() => {});
+      throw new ExtensionFailure(
+        'portal_navigation_failed',
+        'Não foi possível abrir o Portal Nacional na aba criada.',
+      );
+    }
 
     return {
       type: 'started',
@@ -179,7 +243,7 @@ async function handleSiteCommand(commandValue: unknown, sender: any): Promise<un
     };
   }
 
-  const operation = await getActiveOperation();
+  const operation = await getReconciledActiveOperation();
   if (!operation || operation.operationId !== command.operationId) {
     return {
       type: 'cancelled',
@@ -274,6 +338,26 @@ async function handleWindowRemoved(windowId: number): Promise<void> {
   });
 }
 
+async function handleTabRemoved(tabId: number): Promise<void> {
+  const operation = await getActiveOperation();
+  if (!operation) return;
+
+  if (operation.portalTabId === tabId) {
+    await clearActiveOperation();
+    await pushToSite(operation.siteTabId, {
+      type: 'cancelled',
+      operationId: operation.operationId,
+      message: 'A aba do Portal foi fechada antes da conclusão.',
+    });
+    return;
+  }
+
+  if (operation.siteTabId === tabId) {
+    await clearActiveOperation();
+    await chrome.windows.remove(operation.portalWindowId).catch(() => {});
+  }
+}
+
 async function transition(
   operation: ActiveOperation,
   state: PortalExtensionState,
@@ -313,7 +397,45 @@ async function pushToSite(siteTabId: number, event: ExtensionEvent): Promise<voi
 async function getActiveOperation(): Promise<ActiveOperation | null> {
   const stored = await chrome.storage.session.get(ACTIVE_OPERATION_KEY);
   const value = stored?.[ACTIVE_OPERATION_KEY];
-  return value && typeof value === 'object' ? value as ActiveOperation : null;
+  if (isActiveOperation(value)) return value;
+  if (value !== undefined) await clearActiveOperation();
+  return null;
+}
+
+async function getReconciledActiveOperation(): Promise<ActiveOperation | null> {
+  const operation = await getActiveOperation();
+  if (!operation) return null;
+
+  const [portalWindow, portalTab, siteTab] = await Promise.all([
+    chrome.windows.get(operation.portalWindowId).catch(() => null),
+    chrome.tabs.get(operation.portalTabId).catch(() => null),
+    chrome.tabs.get(operation.siteTabId).catch(() => null),
+  ]);
+
+  const portalUrl = typeof portalTab?.url === 'string' ? portalTab.url : '';
+  const portalOrigin = parseOrigin(portalUrl);
+  const portalUrlAllowed = portalUrl === '' ||
+    portalUrl === 'about:blank' ||
+    portalOrigin === PORTAL_ORIGIN;
+
+  const siteUrl = typeof siteTab?.url === 'string' ? siteTab.url : '';
+  const siteOrigin = parseOrigin(siteUrl);
+  const valid = Boolean(
+    portalWindow &&
+    portalTab &&
+    siteTab &&
+    portalTab.windowId === operation.portalWindowId &&
+    portalUrlAllowed &&
+    siteOrigin === SITE_ORIGIN
+  );
+
+  if (valid) return operation;
+
+  await clearActiveOperation();
+  if (portalWindow) {
+    await chrome.windows.remove(operation.portalWindowId).catch(() => {});
+  }
+  return null;
 }
 
 async function saveActiveOperation(operation: ActiveOperation): Promise<void> {
@@ -322,6 +444,47 @@ async function saveActiveOperation(operation: ActiveOperation): Promise<void> {
 
 async function clearActiveOperation(): Promise<void> {
   await chrome.storage.session.remove(ACTIVE_OPERATION_KEY);
+}
+
+function isActiveOperation(value: unknown): value is ActiveOperation {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const input = value as Record<string, unknown>;
+  return typeof input.operationId === 'string' &&
+    typeof input.accessKey === 'string' &&
+    Number.isInteger(input.siteTabId) &&
+    Number.isInteger(input.portalTabId) &&
+    Number.isInteger(input.portalWindowId) &&
+    typeof input.state === 'string' &&
+    [
+      'opening',
+      'loading_portal',
+      'waiting_user',
+      'submitting',
+      'waiting_result',
+      'fetching_xml',
+      'completed',
+      'cancelled',
+      'failed',
+    ].includes(input.state);
+}
+
+function parseOrigin(value: string): string {
+  if (!value || value === 'about:blank') return '';
+  try {
+    return new URL(value).origin;
+  } catch {
+    return '';
+  }
+}
+
+class ExtensionFailure extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'ExtensionFailure';
+  }
 }
 
 function assertSenderOrigin(sender: any, expectedOrigin: string): void {
