@@ -89,9 +89,11 @@ O CI vigente possui apenas os gates `web`, `extension` e `danfe-print`. CodeQL a
 
 ## Releases
 
-A próxima release publica somente o ZIP da extensão validado pelo mesmo SHA do CI. O site é implantado pelo fluxo Cloudflare do repositório.
+A **v0.0.26** é a primeira release totalmente extension-only e publica a extensão **0.2.4**.
 
-A **v0.0.25** permanece como registro da última release híbrida que ainda incluía Bridge/Windows. Ela não representa mais a arquitetura da `main`.
+O site oferece uma seta de download que aponta para o asset estável `NFeAgendamento-Extension.zip` da release mais recente. A mesma release também preserva o ZIP versionado `NFeAgendamento-Extension-v0.2.4.zip`.
+
+A **v0.0.25** permanece como registro da última release híbrida que ainda incluía Bridge/Windows.
 
 Histórico de releases e planos antigos é preservado em `docs/releases/` e `docs/superpowers/`.
 

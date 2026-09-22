@@ -14,6 +14,14 @@ function initializeSettingsPanel(): void {
 
   const actions = document.createElement('div');
   actions.className = 'topbar-actions';
+  const downloadTrigger = document.createElement('a');
+  downloadTrigger.id = 'app-download';
+  downloadTrigger.className = 'topbar-icon-action download-trigger';
+  downloadTrigger.href = 'https://github.com/joaoldsxyzbr/Nfe-agendamento-2.0/releases/latest/download/NFeAgendamento-Extension.zip';
+  downloadTrigger.setAttribute('aria-label', 'Baixar extensão');
+  downloadTrigger.title = 'Baixar extensão';
+  downloadTrigger.textContent = '↓';
+
   const trigger = document.createElement('button');
   trigger.id = 'settings-trigger';
   trigger.className = 'settings-trigger topbar-icon-action';
@@ -55,7 +63,7 @@ function initializeSettingsPanel(): void {
   refresh.textContent = 'Verificar novamente';
 
   panel.append(header, diagnostics, note, refresh);
-  actions.append(trigger);
+  actions.append(downloadTrigger, trigger);
   topbar.append(actions);
   document.body.append(panel);
 

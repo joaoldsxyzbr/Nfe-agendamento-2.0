@@ -12,7 +12,7 @@ Não existe Bridge ou helper WebView2 no produto atual.
 
 ## Versão
 
-A `main` usa extensão **0.2.4**. A última release pública anterior à migração é a v0.0.25/extensão 0.2.3; uma nova release extension-only deve ser criada somente após CI e aceite físico do SHA correspondente.
+A `main` usa extensão **0.2.4**. A release extension-only correspondente é a **v0.0.26**, com os assets `NFeAgendamento-Extension.zip` e `NFeAgendamento-Extension-v0.2.4.zip`.
 
 ## Instalação de desenvolvimento
 
