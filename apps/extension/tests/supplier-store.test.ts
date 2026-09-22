@@ -64,4 +64,35 @@ describe('local supplier store', () => {
       ],
     })).toThrow();
   });
+  it('persists only validated normalized config and loads invalid storage fail-soft', async () => {
+    const stored = new Map<string, unknown>();
+    (globalThis as typeof globalThis & { chrome: unknown }).chrome = {
+      storage: {
+        local: {
+          get: async (key: string) => ({ [key]: stored.get(key) }),
+          set: async (value: Record<string, unknown>) => {
+            for (const [key, item] of Object.entries(value)) stored.set(key, item);
+          },
+        },
+      },
+    };
+
+    const { loadSupplierConfig, saveSupplierConfig } = await import('../src/supplier-store');
+
+    expect(await loadSupplierConfig()).toBeNull();
+
+    await saveSupplierConfig({
+      version: 1,
+      suppliers: [{ id: ' fernando-klein ', taxIds: ['12.345.678/0001-95'] }],
+    });
+
+    expect(await loadSupplierConfig()).toEqual({
+      version: 1,
+      suppliers: [{ id: 'fernando-klein', taxIds: ['12345678000195'] }],
+    });
+
+    stored.set('supplierRulesV1', { version: 99, suppliers: [] });
+    expect(await loadSupplierConfig()).toBeNull();
+  });
+
 });
