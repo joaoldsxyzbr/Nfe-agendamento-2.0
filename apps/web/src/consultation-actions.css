@@ -1,0 +1,29 @@
+.lookup-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.lookup-actions .lookup-reset {
+  min-height: 46px;
+  margin-bottom: 0;
+  padding: 0 18px;
+}
+
+.lookup-actions #lookup-submit {
+  min-width: 122px;
+}
+
+@media (max-width: 720px) {
+  .lookup-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .lookup-actions button {
+    width: 100%;
+    min-width: 0;
+    padding-inline: 12px;
+  }
+}

@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.vite/
+coverage/
+**/bin/
+**/obj/
+.vs/
+.idea/
+*.user
+*.suo
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+*.pem
+*.key

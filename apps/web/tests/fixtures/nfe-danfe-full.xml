@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+  <NFe>
+    <infNFe Id="NFe42260812345678000123550010000012341000012342" versao="4.00">
+      <ide>
+        <cUF>42</cUF><natOp>VENDA DE MERCADORIA</natOp><mod>55</mod><serie>1</serie><nNF>1234</nNF><tpNF>1</tpNF>
+        <dhEmi>2026-09-08T10:00:00-03:00</dhEmi><dhSaiEnt>2026-09-08T10:15:00-03:00</dhSaiEnt>
+      </ide>
+      <emit>
+        <CNPJ>12345678000123</CNPJ><xNome>EMPRESA EMITENTE LTDA</xNome><xFant>Emitente Teste</xFant><IE>123456789</IE><IM>987654</IM>
+        <enderEmit><xLgr>Rua das Flores</xLgr><nro>100</nro><xCpl>Sala 2</xCpl><xBairro>Centro</xBairro><xMun>Biguaçu</xMun><UF>SC</UF><CEP>88160000</CEP><xPais>BRASIL</xPais><fone>48999999999</fone></enderEmit>
+      </emit>
+      <dest>
+        <CPF>12345678909</CPF><xNome>CLIENTE TESTE</xNome><indIEDest>9</indIEDest><email>cliente@example.com</email>
+        <enderDest><xLgr>Avenida Central</xLgr><nro>200</nro><xBairro>Jardim</xBairro><xMun>Florianópolis</xMun><UF>SC</UF><CEP>88000000</CEP><xPais>BRASIL</xPais></enderDest>
+      </dest>
+      <det nItem="1">
+        <prod><cProd>ABC-001</cProd><cEAN>SEM GTIN</cEAN><xProd>PRODUTO TESTE</xProd><NCM>12345678</NCM><CFOP>5102</CFOP><uCom>UN</uCom><qCom>2.0000</qCom><vUnCom>10.5000</vUnCom><vProd>21.00</vProd><vDesc>1.00</vDesc></prod>
+        <imposto>
+          <ICMS><ICMS00><orig>0</orig><CST>00</CST><vBC>21.00</vBC><pICMS>18.00</pICMS><vICMS>3.78</vICMS></ICMS00></ICMS>
+          <IPI><IPITrib><CST>50</CST><vIPI>0.50</vIPI><pIPI>2.38</pIPI></IPITrib></IPI>
+          <PIS><PISAliq><CST>01</CST><vPIS>0.35</vPIS></PISAliq></PIS>
+          <COFINS><COFINSAliq><CST>01</CST><vCOFINS>1.61</vCOFINS></COFINSAliq></COFINS>
+        </imposto>
+      </det>
+      <total><ICMSTot>
+        <vBC>21.00</vBC><vICMS>3.78</vICMS><vBCST>2.00</vBCST><vST>0.36</vST><vII>0.20</vII><vICMSUFRemet>0.10</vICMSUFRemet><vFCPUFDest>0.15</vFCPUFDest><vPIS>0.35</vPIS><vProd>21.00</vProd><vFrete>5.00</vFrete><vSeg>0.50</vSeg><vDesc>1.00</vDesc><vOutro>0.25</vOutro><vIPI>0.50</vIPI><vCOFINS>1.61</vCOFINS><vNF>25.00</vNF>
+      </ICMSTot></total>
+      <transp>
+        <modFrete>0</modFrete>
+        <transporta><CNPJ>99887766000155</CNPJ><xNome>TRANSPORTADORA TESTE</xNome><IE>445566</IE><xEnder>Rodovia SC 401, 1000</xEnder><xMun>Florianópolis</xMun><UF>SC</UF></transporta>
+        <veicTransp><placa>ABC1D23</placa><UF>SC</UF><RNTC>12345678</RNTC></veicTransp>
+        <vol><qVol>2</qVol><esp>CAIXA</esp><marca>TESTE</marca><nVol>1-2</nVol><pesoL>9.50</pesoL><pesoB>10.00</pesoB></vol>
+      </transp>
+      <cobr>
+        <fat><nFat>FAT123</nFat><vOrig>25.00</vOrig><vDesc>1.00</vDesc><vLiq>24.00</vLiq></fat>
+        <dup><nDup>001</nDup><dVenc>2026-09-30</dVenc><vDup>24.00</vDup></dup>
+      </cobr>
+      <pag><detPag><tPag>17</tPag><xPag>PIX</xPag><vPag>24.00</vPag></detPag></pag>
+      <infAdic><infCpl>Entregar no período da manhã.</infCpl><infAdFisco>Informação reservada ao fisco.</infAdFisco></infAdic>
+    </infNFe>
+  </NFe>
+  <protNFe versao="4.00"><infProt><tpAmb>2</tpAmb><chNFe>42260812345678000123550010000012341000012342</chNFe><dhRecbto>2026-09-08T10:01:30-03:00</dhRecbto><nProt>342260000000001</nProt><cStat>100</cStat><xMotivo>Autorizado o uso da NF-e</xMotivo></infProt></protNFe>
+</nfeProc>

@@ -1,0 +1,26 @@
+{
+  "name": "@nfe-agendamento/web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "coverage": "vitest run --coverage",
+    "build": "tsc --noEmit && vite build",
+    "dev": "vite",
+    "lint": "tsc --noEmit && node ../../scripts/lint-web.mjs",
+    "format": "node ../../scripts/format-web.mjs --write",
+    "format:check": "node ../../scripts/format-web.mjs --check"
+  },
+  "dependencies": {
+    "@xmldom/xmldom": "0.9.12"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.1",
+    "@vitest/coverage-v8": "^5.0.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.0",
+    "vitest": "5.0.0",
+    "wrangler": "4.134.0"
+  }
+}
