@@ -1,3 +1,5 @@
+import { normalizeTaxId } from './supplier-store';
+
 export const SITE_ORIGIN = 'https://nfeagendamento.joaolds.xyz.br' as const;
 export const PORTAL_ORIGIN = 'https://www.nfe.fazenda.gov.br' as const;
 export const PAGE_CHANNEL = 'nfe-agendamento:portal-extension' as const;
@@ -18,7 +20,8 @@ export type PortalExtensionState =
 export type SiteCommand =
   | { type: 'ping'; requestId: string }
   | { type: 'start'; requestId: string; accessKey: string }
-  | { type: 'cancel'; requestId: string; operationId: string };
+  | { type: 'cancel'; requestId: string; operationId: string }
+  | { type: 'resolve_supplier'; requestId: string; taxId: string };
 
 export type ExtensionEvent =
   | { type: 'state'; operationId: string; state: PortalExtensionState; message?: string }
@@ -49,6 +52,12 @@ export function parseSiteCommand(value: unknown): SiteCommand {
 
   if (type === 'cancel') {
     return { type, requestId, operationId: stringField(input, 'operationId') };
+  }
+
+  if (type === 'resolve_supplier') {
+    const taxId = normalizeTaxId(stringField(input, 'taxId'));
+    if (!taxId) throw new Error('Identificador fiscal inválido.');
+    return { type, requestId, taxId };
   }
 
   throw new Error('Comando desconhecido.');
