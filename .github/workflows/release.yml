@@ -48,9 +48,19 @@ jobs:
             echo "Notas de release ausentes em $notes" >&2
             exit 1
           fi
+          extension_version="$(python - <<'PY'
+          import json
+          with open('apps/extension/manifest.json', encoding='utf-8') as handle:
+              value = json.load(handle).get('version')
+          if not value:
+              raise SystemExit('Version ausente em apps/extension/manifest.json')
+          print(value)
+          PY
+          )"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "tag=v$version" >> "$GITHUB_OUTPUT"
           echo "notes=$notes" >> "$GITHUB_OUTPUT"
+          echo "extension_version=$extension_version" >> "$GITHUB_OUTPUT"
 
       - name: Download validated installer
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
@@ -68,15 +78,28 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Download validated browser extension
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: NFeAgendamento-Extension-MV3
+          path: release/extension
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Validate release assets
         shell: bash
         run: |
           version="${{ steps.version.outputs.version }}"
           setup="release/installer/NFeAgendamentoBridge-Setup-v${version}.exe"
           package="release/NfeAgendamentoBridge-win-x64-v${version}.zip"
+          extension="release/NFeAgendamento-Extension-v${{ steps.version.outputs.extension_version }}.zip"
+          extension_source="release/extension/NFeAgendamento-Extension-MV3.zip"
+          extension="release/NFeAgendamento-Extension-v${{ steps.version.outputs.extension_version }}.zip"
           test -s "$setup"
           test -s "release/package/NfeAgendamento.Bridge.exe"
           test -s "release/package/NfeAgendamento.Portal.exe"
+          test -s "$extension_source"
+          cp "$extension_source" "$extension"
 
           python - "$version" <<'PY'
           from pathlib import Path
@@ -100,6 +123,29 @@ jobs:
           PY
 
           test -s "$package"
+          test -s "$extension"
+
+          python - "$extension" "${{ steps.version.outputs.extension_version }}" <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          import json
+          import sys
+
+          archive_path = Path(sys.argv[1])
+          expected_version = sys.argv[2]
+          with ZipFile(archive_path) as archive:
+              manifest = json.loads(archive.read('manifest.json'))
+              if manifest.get('manifest_version') != 3:
+                  raise SystemExit('Extensão publicada não é Manifest V3.')
+              if manifest.get('version') != expected_version:
+                  raise SystemExit(
+                      f"Versão da extensão divergente: {manifest.get('version')!r} != {expected_version!r}"
+                  )
+              required = {'background.js', 'site-bridge.js', 'portal-content.js', 'manifest.json'}
+              missing = required.difference(archive.namelist())
+              if missing:
+                  raise SystemExit(f'Extensão incompleta: {sorted(missing)}')
+          PY
 
       - name: Publish GitHub release if absent
         env:
@@ -162,6 +208,7 @@ jobs:
               gh api "repos/${GITHUB_REPOSITORY}/releases/tags/$tag" > "$release_json"
               verify_release_asset "$(basename "$setup")" "$setup"
               verify_release_asset "$(basename "$package")" "$package"
+              verify_release_asset "$(basename "$extension")" "$extension"
               echo "Release $tag já existe no SHA validado e os assets conferem; nada a publicar."
               exit 0
             fi
@@ -170,6 +217,7 @@ jobs:
           gh release create "$tag" \
             "$setup" \
             "$package" \
+            "$extension" \
             --target "$validated_sha" \
             --title "$tag" \
             --notes-file "${{ steps.version.outputs.notes }}"
