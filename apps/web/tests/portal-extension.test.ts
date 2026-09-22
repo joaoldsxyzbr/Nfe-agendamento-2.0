@@ -12,8 +12,13 @@ describe('BrowserPortalExtensionClient', () => {
           type: 'ready',
           requestId: 'ping',
           version: '0.1.0',
-          capabilities: { directLookup: true, openOptions: false, portalLookup: true, supplierResolution: true },
-      configuration: { fiscalIdentityConfigured: true },
+          capabilities: {
+            directLookup: true,
+            openOptions: false,
+            portalLookup: true,
+            supplierResolution: true,
+          },
+          configuration: { fiscalIdentityConfigured: true },
         };
         if (message.type === 'start') return { type: 'started', requestId: 'start', operationId: 'ext-op-1' };
         if (message.type === 'status') return {
@@ -186,8 +191,13 @@ describe('BrowserPortalExtensionClient', () => {
 
     await expect(client.getInfo()).resolves.toEqual({
       version: '0.2.1',
-      capabilities: { directLookup: true, portalLookup: true, supplierResolution: true },
-          configuration: { fiscalIdentityConfigured: true },
+      capabilities: {
+        directLookup: true,
+        openOptions: false,
+        portalLookup: true,
+        supplierResolution: true,
+      },
+      configuration: { fiscalIdentityConfigured: true },
     });
     expect(attempts).toBe(3);
   });
