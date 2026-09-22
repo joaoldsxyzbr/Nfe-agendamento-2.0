@@ -86,6 +86,28 @@ Para testar o rollback:
 2. recarregue o site;
 3. em uma ocorrência legítima de fallback, confirme que o helper WebView2 atual continua abrindo.
 
+## Gate isolado sem Bridge
+
+Antes de migrar o aplicativo principal, use a página `/extension-test.html` no domínio oficial.
+
+Para este teste:
+
+1. pare ou desinstale o Bridge;
+2. mantenha a extensão desta branch instalada;
+3. abra `https://nfeagendamento.joaolds.xyz.br/extension-test.html`;
+4. confirme **Extensão conectada** e a versão;
+5. informe uma chave legítima;
+6. clique em **Testar consulta sem Bridge**;
+7. confirme popup do Chrome/Edge e chave preenchida;
+8. resolva o hCaptcha manualmente;
+9. quando solicitado pelo Portal/navegador, use o A1 instalado no Windows;
+10. confirme que a página recebe e valida o XML;
+11. repita uma segunda consulta;
+12. feche o popup no meio de uma consulta e confirme o cancelamento;
+13. repita no Edge.
+
+Esse gate não importa `BridgeClient` e não chama `127.0.0.1:17345`. Se certificado ou captura do XML falharem aqui, a remoção do Bridge deve parar.
+
 ## Gate físico
 
 Antes de remover o helper WebView2, validar em Windows real:
