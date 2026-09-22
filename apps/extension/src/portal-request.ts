@@ -2,6 +2,16 @@ import { isOfficialDownloadUrl } from './portal-dom';
 
 const MAX_CAPTURED_BODY_BYTES = 1024 * 1024;
 
+export type PageReplayRequest = Readonly<{
+  url: string;
+  method: 'GET' | 'POST';
+  headers: Readonly<Record<string, string>>;
+  body: null | Readonly<{
+    encoding: 'text' | 'base64';
+    value: string;
+  }>;
+}>;
+
 export type CapturedRequest = {
   url: string;
   method: string;
@@ -82,4 +92,71 @@ export function buildReplayRequest(details: CapturedRequest): { url: string; ini
       body,
     },
   };
+}
+
+
+export function buildPageReplayRequest(details: CapturedRequest): PageReplayRequest {
+  const replay = buildReplayRequest(details);
+  const method = String(replay.init.method ?? 'GET').toUpperCase();
+  if (method !== 'GET' && method !== 'POST') {
+    throw new Error('Método não permitido.');
+  }
+
+  const headers: Record<string, string> = {};
+  new Headers(replay.init.headers).forEach((value, key) => {
+    headers[key] = value;
+  });
+
+  const body = replay.init.body;
+  if (body === undefined || body === null) {
+    return { url: replay.url, method, headers, body: null };
+  }
+
+  if (body instanceof URLSearchParams) {
+    return {
+      url: replay.url,
+      method,
+      headers,
+      body: { encoding: 'text', value: body.toString() },
+    };
+  }
+
+  if (typeof body === 'string') {
+    return {
+      url: replay.url,
+      method,
+      headers,
+      body: { encoding: 'text', value: body },
+    };
+  }
+
+  if (body instanceof Uint8Array) {
+    return {
+      url: replay.url,
+      method,
+      headers,
+      body: { encoding: 'base64', value: bytesToBase64(body) },
+    };
+  }
+
+  if (body instanceof ArrayBuffer) {
+    return {
+      url: replay.url,
+      method,
+      headers,
+      body: { encoding: 'base64', value: bytesToBase64(new Uint8Array(body)) },
+    };
+  }
+
+  throw new Error('Corpo da requisição não pode ser serializado com segurança.');
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  const chunkSize = 32_768;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    const chunk = bytes.subarray(offset, Math.min(offset + chunkSize, bytes.length));
+    binary += String.fromCharCode(...Array.from(chunk));
+  }
+  return btoa(binary);
 }

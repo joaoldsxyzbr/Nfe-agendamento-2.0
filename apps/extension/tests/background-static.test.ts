@@ -27,6 +27,10 @@ describe('extension background contract', () => {
     expect(source).toContain('chrome.storage.local.setAccessLevel');
     expect(source).toContain("'TRUSTED_CONTEXTS'");
     expect(source).toContain('chrome.webRequest.onBeforeRequest');
+    expect(source).toContain('fetchPortalXmlInPage');
+    expect(source).toContain("world: 'MAIN'");
+    expect(source).toContain("credentials: 'include'");
+    expect(source).not.toContain('fetch(replay.url, replay.init)');
     expect(source).not.toContain('webRequestBlocking');
     expect(source).toContain("'portal_operation_active'");
     expect(source).toContain("'portal_navigation_failed'");

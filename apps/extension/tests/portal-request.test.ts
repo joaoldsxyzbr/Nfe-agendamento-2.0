@@ -26,7 +26,7 @@ describe('Portal XML request capture', () => {
   });
 
   it('rebuilds GET/form POST without accepting arbitrary methods or bodies', async () => {
-    const { buildReplayRequest } = await import('../src/portal-request');
+    const { buildReplayRequest, buildPageReplayRequest } = await import('../src/portal-request');
 
     expect(buildReplayRequest({
       url: 'https://www.nfe.fazenda.gov.br/portal/downloadNFe.aspx',
@@ -43,6 +43,21 @@ describe('Portal XML request capture', () => {
     });
     expect(post.init.method).toBe('POST');
     expect(String(post.init.body)).toContain('chave=');
+
+    const pageReplay = buildPageReplayRequest({
+      url: 'https://www.nfe.fazenda.gov.br/portal/downloadNFe.aspx',
+      method: 'POST',
+      requestBody: { formData: { chave: [KEY], acao: ['download'] } },
+    });
+    expect(pageReplay).toEqual({
+      url: 'https://www.nfe.fazenda.gov.br/portal/downloadNFe.aspx',
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+      body: {
+        encoding: 'text',
+        value: expect.stringContaining('chave='),
+      },
+    });
     expect(() => buildReplayRequest({
       url: 'https://www.nfe.fazenda.gov.br/portal/downloadNFe.aspx',
       method: 'PUT',
