@@ -147,4 +147,11 @@ describe('batch preflight action guards', () => {
     expect(source).toContain('retry.disabled = preflighting || running || manualPortalBusy');
     expect(source).toContain('refreshResultActions();');
   });
+
+  it('keeps stable row objects and updates item state incrementally', () => {
+    const source = readFileSync(new URL('../src/batch/controller.ts', import.meta.url), 'utf8');
+    expect(source).toContain('let renderedRows: RenderedBatchRow[] = [];');
+    expect(source).toContain('const canReuseRows =');
+    expect(source).toContain('updateRenderedRow(changedItem);');
+  });
 });

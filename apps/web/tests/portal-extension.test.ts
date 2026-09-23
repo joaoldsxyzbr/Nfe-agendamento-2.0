@@ -111,6 +111,29 @@ describe('BrowserPortalExtensionClient', () => {
     });
   });
 
+  it('coalesces concurrent handshakes and reuses recent extension info', async () => {
+    const { BrowserPortalExtensionClient } = await import('../src/portal/extension-client');
+    let pings = 0;
+    const client = new BrowserPortalExtensionClient({
+      request: async (message: { type: string }) => {
+        if (message.type !== 'ping') throw new Error('unexpected');
+        pings += 1;
+        return {
+          type: 'ready',
+          version: '0.2.12',
+          capabilities: { openOptions: true, portalLookup: true, supplierResolution: true },
+        };
+      },
+      subscribe: () => () => {},
+    } as never);
+
+    const [first, second] = await Promise.all([client.getInfo(), client.getInfo()]);
+    expect(first?.version).toBe('0.2.12');
+    expect(second?.version).toBe('0.2.12');
+    await expect(client.getInfo()).resolves.toMatchObject({ version: '0.2.12' });
+    expect(pings).toBe(1);
+  });
+
   it('retries start once so a lost response does not require opening a second popup', async () => {
     const { BrowserPortalExtensionClient } = await import('../src/portal/extension-client');
     let starts = 0;

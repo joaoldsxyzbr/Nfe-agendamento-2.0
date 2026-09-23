@@ -126,7 +126,11 @@ describe('local supplier store', () => {
       },
     };
 
-    const { loadSupplierConfig, saveSupplierConfig } = await import('../src/supplier-store');
+    const {
+      invalidateSupplierConfigCache,
+      loadSupplierConfig,
+      saveSupplierConfig,
+    } = await import('../src/supplier-store');
 
     expect(await loadSupplierConfig()).toBeNull();
 
@@ -141,7 +145,36 @@ describe('local supplier store', () => {
     });
 
     stored.set('supplierRulesV1', { version: 99, suppliers: [] });
+    invalidateSupplierConfigCache();
     expect(await loadSupplierConfig()).toBeNull();
+  });
+
+  it('reuses the validated config in memory and reloads after invalidation', async () => {
+    let getCalls = 0;
+    (globalThis as typeof globalThis & { chrome: unknown }).chrome = {
+      storage: {
+        local: {
+          get: async () => {
+            getCalls += 1;
+            return { supplierRulesV1: { version: 1, suppliers: [] } };
+          },
+        },
+      },
+    };
+
+    const {
+      invalidateSupplierConfigCache,
+      loadSupplierConfig,
+    } = await import('../src/supplier-store');
+
+    invalidateSupplierConfigCache();
+    await loadSupplierConfig();
+    await loadSupplierConfig();
+    expect(getCalls).toBe(1);
+
+    invalidateSupplierConfigCache();
+    await loadSupplierConfig();
+    expect(getCalls).toBe(2);
   });
 
   it('clears only the local supplier config key', async () => {

@@ -1,6 +1,6 @@
 declare const chrome: any;
 
-const SUPPLIER_CONFIG_KEY = 'supplierRulesV1';
+export const SUPPLIER_CONFIG_KEY = 'supplierRulesV1';
 
 type JsonObject = Record<string, unknown>;
 
@@ -20,6 +20,11 @@ export type SupplierConfigAnalysis = Readonly<{
   supplierCount: number;
   taxIdCount: number;
 }>;
+
+let cachedSupplierConfig: LocalSupplierConfig | null | undefined;
+let pendingSupplierConfigLoad: Promise<LocalSupplierConfig | null> | null = null;
+let supplierCacheEpoch = 0;
+const supplierIndexes = new WeakMap<LocalSupplierConfig, ReadonlyMap<string, string>>();
 
 export function normalizeTaxId(value: string): string | null {
   const raw = String(value ?? '').trim().toUpperCase();
@@ -121,30 +126,64 @@ export function resolveSupplierFromConfig(
   const normalized = normalizeTaxId(taxId);
   if (!normalized) return null;
 
-  for (const supplier of config.suppliers) {
-    if (supplier.taxIds.includes(normalized)) return supplier.id;
+  let index = supplierIndexes.get(config);
+  if (!index) {
+    const created = new Map<string, string>();
+    for (const supplier of config.suppliers) {
+      for (const supplierTaxId of supplier.taxIds) created.set(supplierTaxId, supplier.id);
+    }
+    index = created;
+    supplierIndexes.set(config, index);
   }
-  return null;
+
+  return index.get(normalized) ?? null;
 }
 
 export async function loadSupplierConfig(): Promise<LocalSupplierConfig | null> {
+  if (cachedSupplierConfig !== undefined) return cachedSupplierConfig;
+  if (pendingSupplierConfigLoad) return pendingSupplierConfigLoad;
+
+  const epoch = supplierCacheEpoch;
+  const load = (async (): Promise<LocalSupplierConfig | null> => {
+    try {
+      const stored = await chrome.storage.local.get(SUPPLIER_CONFIG_KEY);
+      const value = stored?.[SUPPLIER_CONFIG_KEY];
+      const config = value === undefined ? null : validateSupplierConfig(value);
+      if (epoch === supplierCacheEpoch) cachedSupplierConfig = config;
+      return config;
+    } catch {
+      if (epoch === supplierCacheEpoch) cachedSupplierConfig = null;
+      return null;
+    }
+  })();
+
+  pendingSupplierConfigLoad = load;
   try {
-    const stored = await chrome.storage.local.get(SUPPLIER_CONFIG_KEY);
-    const value = stored?.[SUPPLIER_CONFIG_KEY];
-    if (value === undefined) return null;
-    return validateSupplierConfig(value);
-  } catch {
-    return null;
+    return await load;
+  } finally {
+    if (pendingSupplierConfigLoad === load) pendingSupplierConfigLoad = null;
   }
+}
+
+export function invalidateSupplierConfigCache(): void {
+  supplierCacheEpoch += 1;
+  cachedSupplierConfig = undefined;
+  pendingSupplierConfigLoad = null;
 }
 
 export async function saveSupplierConfig(config: unknown): Promise<void> {
   const validated = validateSupplierConfig(config);
   await chrome.storage.local.set({ [SUPPLIER_CONFIG_KEY]: validated });
+  supplierCacheEpoch += 1;
+  cachedSupplierConfig = validated;
+  pendingSupplierConfigLoad = null;
 }
 
 export async function clearSupplierConfig(): Promise<void> {
   await chrome.storage.local.remove(SUPPLIER_CONFIG_KEY);
+  supplierCacheEpoch += 1;
+  cachedSupplierConfig = null;
+  pendingSupplierConfigLoad = null;
 }
 
 function isRecord(value: unknown): value is JsonObject {

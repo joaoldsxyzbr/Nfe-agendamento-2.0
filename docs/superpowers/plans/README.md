@@ -16,4 +16,4 @@ A arquitetura atual é **site + extensão Chromium, Portal-only**, sem Bridge/We
 
 Specs e planos anteriores que descrevem Bridge, instalador Windows, coordenador fiscal, helper WebView2 ou `NFeDistribuicaoDFe` permanecem somente como registro das versões em que esses componentes existiam.
 
-A última release publicada antes da migração Portal-only é a v0.0.33/extensão 0.2.10. A `main` atual usa extensão 0.2.11 e aguarda release explícita.
+A v0.0.34/extensão 0.2.11 consolidou a migração Portal-only. A `main` atual prepara a v0.0.35/extensão 0.2.12 com otimizações de fluidez, mantendo o mesmo fluxo fiscal.

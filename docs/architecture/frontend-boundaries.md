@@ -31,6 +31,14 @@ Responsável por:
 
 O site não acessa localhost, certificado ou endpoint fiscal da SEFAZ diretamente.
 
+### Fluidez
+
+- o handshake com a extensão é coalescido quando chamadas simultâneas acontecem e o estado conectado possui cache curto de 2 segundos;
+- eventos `bridge_ready` invalidam o cache para forçar reconciliação;
+- a entrada do lote usa debounce curto de 120 ms;
+- linhas do lote são preservadas no DOM quando as chaves não mudam; durante a execução somente o item alterado e os controles necessários são atualizados;
+- o lote continua estritamente sequencial e nenhuma dessas otimizações altera Portal, hCaptcha, XML ou DANFE.
+
 ## Extensão
 
 Responsável por:

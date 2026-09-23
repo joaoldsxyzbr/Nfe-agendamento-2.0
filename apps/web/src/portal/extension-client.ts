@@ -2,6 +2,7 @@ import type { PortalOperationStatus } from './contracts';
 
 const PAGE_CHANNEL = 'nfe-agendamento:portal-extension';
 const DEFAULT_HANDSHAKE_TIMEOUT_MS = 1_200;
+const INFO_CACHE_TTL_MS = 2_000;
 const HANDSHAKE_ATTEMPTS = 3;
 const HANDSHAKE_RETRY_DELAY_MS = 200;
 const START_ATTEMPTS = 2;
@@ -100,9 +101,33 @@ export class WindowPortalExtensionTransport implements PortalExtensionTransport 
 }
 
 export class BrowserPortalExtensionClient {
+  private cachedInfo: Readonly<{ info: PortalExtensionInfo; expiresAt: number }> | null = null;
+  private pendingInfoRequest: Promise<PortalExtensionInfo | null> | null = null;
+
   constructor(private readonly transport: PortalExtensionTransport = new WindowPortalExtensionTransport()) {}
 
   async getInfo(signal?: AbortSignal): Promise<PortalExtensionInfo | null> {
+    if (signal?.aborted) return null;
+
+    const cached = this.cachedInfo;
+    if (cached && cached.expiresAt > Date.now()) return cached.info;
+    if (!signal && this.pendingInfoRequest) return this.pendingInfoRequest;
+
+    const request = this.fetchInfo(signal);
+    if (!signal) this.pendingInfoRequest = request;
+
+    try {
+      const info = await request;
+      this.cachedInfo = info
+        ? Object.freeze({ info, expiresAt: Date.now() + INFO_CACHE_TTL_MS })
+        : null;
+      return info;
+    } finally {
+      if (this.pendingInfoRequest === request) this.pendingInfoRequest = null;
+    }
+  }
+
+  private async fetchInfo(signal?: AbortSignal): Promise<PortalExtensionInfo | null> {
     for (let attempt = 0; attempt < HANDSHAKE_ATTEMPTS; attempt += 1) {
       if (signal?.aborted) return null;
       const requestId = globalThis.crypto.randomUUID();
@@ -125,6 +150,7 @@ export class BrowserPortalExtensionClient {
   onReadyHint(listener: (version: string) => void): () => void {
     return this.transport.subscribe((value) => {
       if (!isRecord(value) || value.type !== 'bridge_ready' || typeof value.version !== 'string') return;
+      this.cachedInfo = null;
       listener(value.version);
     });
   }

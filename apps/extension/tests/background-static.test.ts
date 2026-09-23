@@ -20,6 +20,8 @@ describe('extension background contract', () => {
     expect(source).toContain('clearActiveOperationIfCurrent');
     expect(source).toContain('reconcileActiveOperation');
     expect(source).toContain('chrome.webRequest.onBeforeRequest');
+    expect(source).toContain('chrome.storage.onChanged.addListener');
+    expect(source).toContain('invalidateSupplierConfigCache');
     expect(source).toContain('fetchPortalXmlInPage');
     expect(source).toContain("world: 'MAIN'");
     expect(source).toContain("credentials: 'include'");

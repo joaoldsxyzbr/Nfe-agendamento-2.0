@@ -33,6 +33,8 @@ Depois de validar o XML, o site envia somente o identificador fiscal do emitente
 
 Falha de configuração é fail-soft: `supplierId: null` nunca impede XML ou DANFE.
 
+Para evitar releitura e revalidação a cada NF-e, o service worker mantém a configuração validada em memória enquanto estiver ativo e usa um índice local `taxId → supplierId`. Alterações em `supplierRulesV1` via `chrome.storage.local` invalidam o cache; a próxima resolução recarrega a configuração canônica.
+
 ## Apresentação
 
 As regras públicas de apresentação continuam em `apps/web/src/nfe/supplier-rules.ts`. Elas podem definir catálogo, aliases e conversões visuais, sem alterar o XML original.

@@ -13,6 +13,8 @@ import './danfe/styles.css';
 
 type ConsultationMode = 'single' | 'batch';
 
+const BATCH_DRAFT_DEBOUNCE_MS = 120;
+
 const app = document.querySelector<HTMLElement>('#app');
 
 if (!app) {
@@ -171,6 +173,7 @@ const danfeClose = requireElement<HTMLButtonElement>('#danfe-close');
 const danfePrint = requireElement<HTMLButtonElement>('#danfe-print');
 let currentDownloadUrl: string | null = null;
 let consultationMode: ConsultationMode = 'single';
+let batchDraftTimer: ReturnType<typeof setTimeout> | null = null;
 
 const danfeViewerController = createDanfeViewer({
   elements: {
@@ -242,7 +245,7 @@ batchForm.addEventListener('submit', (event) => {
   event.preventDefault();
   void batchController.start();
 });
-batchKeysInput.addEventListener('input', () => batchController.syncDraft());
+batchKeysInput.addEventListener('input', scheduleBatchDraftSync);
 batchCancel.addEventListener('click', () => {
   void batchController.cancel();
 });
@@ -257,6 +260,7 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') void refreshExtensionStatus();
 });
 window.addEventListener('pagehide', () => {
+  if (batchDraftTimer !== null) globalThis.clearTimeout(batchDraftTimer);
   stopExtensionReadyHint();
   danfeViewerController.dispose();
   batchController.dispose();
@@ -264,6 +268,14 @@ window.addEventListener('pagehide', () => {
 });
 void refreshExtensionStatus();
 batchController.syncDraft();
+
+function scheduleBatchDraftSync(): void {
+  if (batchDraftTimer !== null) globalThis.clearTimeout(batchDraftTimer);
+  batchDraftTimer = globalThis.setTimeout(() => {
+    batchDraftTimer = null;
+    batchController.syncDraft();
+  }, BATCH_DRAFT_DEBOUNCE_MS);
+}
 
 async function refreshExtensionStatus(): Promise<void> {
   const info = await portalExtension.getInfo();

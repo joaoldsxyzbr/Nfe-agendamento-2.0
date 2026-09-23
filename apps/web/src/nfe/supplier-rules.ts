@@ -68,16 +68,26 @@ export function normalizeSupplierName(value: unknown): string {
     .replace(/\s+/g, ' ');
 }
 
+const SUPPLIER_RULE_BY_ID = new Map<string, SupplierRule>();
+const SUPPLIER_RULE_BY_ISSUER_NAME = new Map<string, SupplierRule>();
+
+for (const rule of SUPPLIER_RULES) {
+  SUPPLIER_RULE_BY_ID.set(rule.id, rule);
+  for (const issuerName of rule.issuerNames) {
+    SUPPLIER_RULE_BY_ISSUER_NAME.set(normalizeSupplierName(issuerName), rule);
+  }
+}
+
 export function resolveSupplierRule(emitterName: unknown): SupplierRule | null {
   const normalized = normalizeSupplierName(emitterName);
   if (!normalized) return null;
-  return SUPPLIER_RULES.find((rule) => rule.issuerNames.some((name) => normalizeSupplierName(name) === normalized)) ?? null;
+  return SUPPLIER_RULE_BY_ISSUER_NAME.get(normalized) ?? null;
 }
 
 export function resolveSupplierRuleById(value: unknown): SupplierRule | null {
   const id = String(value ?? '').trim();
   if (!id) return null;
-  return SUPPLIER_RULES.find((rule) => rule.id === id) ?? null;
+  return SUPPLIER_RULE_BY_ID.get(id) ?? null;
 }
 
 export function resolveSupplierRuleForPresentation(input: Readonly<{

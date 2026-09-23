@@ -12,7 +12,12 @@ import {
   shouldCapturePortalRequest,
   type PageReplayRequest,
 } from './portal-request';
-import { loadSupplierConfig, resolveSupplierFromConfig } from './supplier-store';
+import {
+  SUPPLIER_CONFIG_KEY,
+  invalidateSupplierConfigCache,
+  loadSupplierConfig,
+  resolveSupplierFromConfig,
+} from './supplier-store';
 
 declare const chrome: any;
 
@@ -47,6 +52,12 @@ chrome.runtime.onStartup.addListener(() => {
   void hardenLocalStorage();
   void reconcileActiveOperation();
   void injectSiteBridgeIntoOpenTabs();
+});
+
+chrome.storage.onChanged.addListener((changes: Record<string, unknown>, areaName: string) => {
+  if (areaName === 'local' && Object.prototype.hasOwnProperty.call(changes, SUPPLIER_CONFIG_KEY)) {
+    invalidateSupplierConfigCache();
+  }
 });
 
 chrome.action.onClicked.addListener(() => {
