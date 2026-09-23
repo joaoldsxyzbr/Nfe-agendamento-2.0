@@ -160,6 +160,10 @@
   border-color: #516275;
 }
 
+.batch-action[hidden] {
+  display: none !important;
+}
+
 #batch-cancel[hidden] {
   display: none !important;
 }
