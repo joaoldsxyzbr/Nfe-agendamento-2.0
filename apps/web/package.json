@@ -14,7 +14,7 @@
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^5.0.3",
-    "vitest": "5.0.3",
+    "vitest": "5.0.5",
     "wrangler": "4.149.0",
     "@xmldom/xmldom": "0.9.12"
   }
