@@ -1,4 +1,4 @@
-import { PORTAL_ORIGIN, MAX_XML_BYTES, SITE_ORIGIN, parseSiteCommand, validateXmlPayload, } from './protocol';
+import { PORTAL_ORIGIN, MAX_XML_BYTES, parseAppCommand, validateXmlPayload, } from './protocol';
 import { isLikelyHtmlDocument, isOfficialDownloadUrl } from './portal-dom';
 import { capturePortalXmlPage } from './portal-fetch';
 import { buildPageReplayRequest, shouldCapturePortalRequest, } from './portal-request';
@@ -10,17 +10,16 @@ const PORTAL_DOWNLOAD_FILTER = {
     urls: ['https://www.nfe.fazenda.gov.br/portal/downloadNFe.aspx*'],
 };
 let operationMutationQueue = Promise.resolve();
+let openingAppWindow = null;
 void hardenLocalStorage();
 void reconcileActiveOperation();
 chrome.runtime.onInstalled.addListener(() => {
     void hardenLocalStorage();
     void reconcileActiveOperation();
-    void injectSiteBridgeIntoOpenTabs();
 });
 chrome.runtime.onStartup.addListener(() => {
     void hardenLocalStorage();
     void reconcileActiveOperation();
-    void injectSiteBridgeIntoOpenTabs();
 });
 chrome.storage.onChanged.addListener((changes, areaName) => {
     if (areaName === 'local' && Object.prototype.hasOwnProperty.call(changes, SUPPLIER_CONFIG_KEY)) {
@@ -28,9 +27,15 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
     }
 });
 chrome.action.onClicked.addListener(() => {
-    void chrome.runtime.openOptionsPage();
+    if (openingAppWindow) return;
+    openingAppWindow = openAppPopup()
+        .catch((error) => {
+            console.error('Falha ao abrir a janela do NFe Agendamento.', error);
+        })
+        .finally(() => { openingAppWindow = null; });
 });
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message?.source === 'background') return false;
     void handleMessage(message, sender)
         .then(sendResponse)
         .catch((error) => {
@@ -62,43 +67,55 @@ async function hardenLocalStorage() {
 async function reconcileActiveOperation() {
     await getReconciledActiveOperation();
 }
-async function injectSiteBridgeIntoOpenTabs() {
-    const tabs = await chrome.tabs.query({ url: `${SITE_ORIGIN}/*` }).catch(() => []);
-    await Promise.all((tabs ?? []).map(async (tab) => {
-        const tabId = tab?.id;
-        if (!Number.isInteger(tabId))
-            return;
-        try {
-            await chrome.scripting.executeScript({
-                target: { tabId },
-                files: ['site-bridge.js'],
-            });
-        }
-        catch {
-            // Aba fechada, bloqueada por política ou sem permissão: o próximo reload injeta pelo manifest.
-        }
-    }));
+async function openAppPopup() {
+    const url = chrome.runtime.getURL('app.html');
+    const tabs = await chrome.tabs.query({ url }).catch(() => []);
+    for (const tab of tabs) {
+        if (!Number.isInteger(tab.windowId)) continue;
+        const existingWindow = await chrome.windows.get(tab.windowId).catch(() => null);
+        if (existingWindow?.type !== 'popup' || !Number.isInteger(existingWindow.id)) continue;
+        await chrome.windows.update(existingWindow.id, { focused: true });
+        return;
+    }
+
+    // Não adiciona permissões: usa o tamanho da janela normal do navegador como referência.
+    const reference = await chrome.windows.getLastFocused({ windowTypes: ['normal'] }).catch(() => null);
+    const availableWidth = Number.isInteger(reference?.width) && reference.width > 0 ? reference.width : null;
+    const availableHeight = Number.isInteger(reference?.height) && reference.height > 0 ? reference.height : null;
+    const width = availableWidth === null ? 840 : Math.min(availableWidth, Math.max(680, Math.round(availableWidth / 2)));
+    const height = availableHeight === null ? 760 : Math.min(availableHeight, Math.max(620, Math.round(availableHeight * 0.85)));
+    const bounds = { width, height };
+    if (Number.isInteger(reference?.left) && availableWidth !== null)
+        bounds.left = reference.left + Math.floor((availableWidth - width) / 2);
+    if (Number.isInteger(reference?.top) && availableHeight !== null)
+        bounds.top = reference.top + Math.floor((availableHeight - height) / 2);
+    await chrome.windows.create({ url, type: 'popup', focused: true, ...bounds });
 }
+
 async function handleMessage(message, sender) {
     if (!message || typeof message !== 'object' || Array.isArray(message)) {
         throw new Error('Mensagem inválida.');
     }
     const envelope = message;
-    if (envelope.source === 'site') {
-        return handleSiteCommand(envelope.command, sender);
+    if (envelope.source === 'app') {
+        return handleAppCommand(envelope.command, sender, envelope.appTabId);
     }
     if (envelope.source === 'portal') {
         return handlePortalMessage(envelope, sender);
     }
     throw new Error('Origem da mensagem não reconhecida.');
 }
-async function handleSiteCommand(commandValue, sender) {
-    assertSenderOrigin(sender, SITE_ORIGIN);
-    const siteTabId = sender.tab?.id;
-    if (typeof siteTabId !== 'number' || !Number.isInteger(siteTabId)) {
-        throw new Error('A aba do site não pôde ser identificada.');
-    }
-    const command = parseSiteCommand(commandValue);
+async function handleAppCommand(commandValue, sender, claimedTabId) {
+    const appUrl = chrome.runtime.getURL('app.html');
+    if (sender.id !== chrome.runtime.id || sender.url !== appUrl)
+        throw new Error('Origem da mensagem não autorizada.');
+    const siteTabId = sender.tab?.id ?? claimedTabId;
+    if (!Number.isInteger(siteTabId) || (sender.tab?.id !== undefined && sender.tab.id !== claimedTabId))
+        throw new Error('A janela do NFe Agendamento não pôde ser identificada.');
+    const appTab = await chrome.tabs.get(siteTabId).catch(() => null);
+    if (!appTab || appTab.url !== appUrl)
+        throw new Error('A janela do NFe Agendamento não foi autorizada.');
+    const command = parseAppCommand(commandValue);
     if (command.type === 'ping') {
         return {
             type: 'ready',
@@ -179,6 +196,7 @@ async function handleSiteCommand(commandValue, sender) {
                 operationId,
                 accessKey: command.accessKey,
                 siteTabId,
+                clientType: 'app',
                 portalTabId,
                 portalWindowId,
                 state: 'opening',
@@ -493,10 +511,10 @@ async function finishOperation(operation, event) {
 }
 async function pushToSite(siteTabId, event) {
     try {
-        await chrome.tabs.sendMessage(siteTabId, { source: 'background', event });
+        await chrome.runtime.sendMessage({ source: 'background', siteTabId, event });
     }
     catch {
-        // Site recarregado/fechado: não há destino para o evento.
+        // A janela pode ter sido fechada: o evento não tem destinatário.
     }
 }
 async function getActiveOperation() {
@@ -523,13 +541,13 @@ async function getReconciledActiveOperation() {
         portalUrl === 'about:blank' ||
         portalOrigin === PORTAL_ORIGIN;
     const siteUrl = typeof siteTab?.url === 'string' ? siteTab.url : '';
-    const siteOrigin = parseOrigin(siteUrl);
+    const validClient = siteUrl === chrome.runtime.getURL('app.html');
     const valid = Boolean(portalWindow &&
         portalTab &&
         siteTab &&
         portalTab.windowId === operation.portalWindowId &&
         portalUrlAllowed &&
-        siteOrigin === SITE_ORIGIN);
+        validClient);
     if (valid)
         return operation;
     const cleared = await clearActiveOperationIfCurrent(operation.operationId);

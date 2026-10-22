@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "NFe Agendamento",
-  "version": "0.2.16",
-  "description": "Consulta NF-e pelo Portal Nacional e devolve o XML ao site NFe Agendamento.",
+  "version": "0.3.0",
+  "description": "NFe Agendamento completo no navegador: Portal Nacional, XML, DANFE e consultas em lote, sem site externo.",
   "minimum_chrome_version": "120",
   "permissions": [
     "scripting",
@@ -10,7 +10,6 @@
     "webRequest"
   ],
   "host_permissions": [
-    "https://nfeagendamento.joaolds.xyz.br/*",
     "https://www.nfe.fazenda.gov.br/*"
   ],
   "background": {
@@ -21,15 +20,6 @@
     "extension_pages": "script-src 'self'; object-src 'self';"
   },
   "content_scripts": [
-    {
-      "matches": [
-        "https://nfeagendamento.joaolds.xyz.br/*"
-      ],
-      "js": [
-        "site-bridge.js"
-      ],
-      "run_at": "document_start"
-    },
     {
       "matches": [
         "https://www.nfe.fazenda.gov.br/portal/*"

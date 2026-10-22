@@ -4,8 +4,8 @@ import { dirname, extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const webRoot = join(repoRoot, 'apps', 'web');
-const roots = [join(webRoot, 'src'), join(webRoot, 'tests'), join(webRoot, 'vitest.config.js'), join(repoRoot, 'apps', 'extension', 'src'), join(repoRoot, 'apps', 'extension', 'tests'), join(repoRoot, 'apps', 'extension', 'scripts'), join(repoRoot, 'apps', 'extension', 'vitest.config.js')];
+const uiRoot = join(repoRoot, 'apps', 'ui');
+const roots = [join(uiRoot, 'src'), join(uiRoot, 'tests'), join(uiRoot, 'vitest.config.js'), join(repoRoot, 'apps', 'extension', 'src'), join(repoRoot, 'apps', 'extension', 'tests'), join(repoRoot, 'apps', 'extension', 'scripts'), join(repoRoot, 'apps', 'extension', 'vitest.config.js')];
 
 const rules = [
   { name: 'debugger', pattern: /\bdebugger\s*;/g },

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 const KEY = '42260812345678000123550010000012341000012342';
 const smokeUrl = new URL('../src/extension-only-smoke.js', import.meta.url);
 const pageUrl = new URL('../extension-test.html', import.meta.url);
-const buildScriptUrl = new URL('../../../scripts/build-web.mjs', import.meta.url);
+const buildScriptUrl = new URL('../../../scripts/build-ui-preview.mjs', import.meta.url);
 const xml = readFileSync(new URL('./fixtures/nfe-basic.xml', import.meta.url), 'utf8');
 const info = {
     version: '0.2.11',

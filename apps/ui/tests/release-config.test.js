@@ -8,7 +8,9 @@ describe('release quality gate', () => {
         expect(ci).toContain('npm audit --audit-level=high');
         expect(ci).toContain('npm run build:extension');
         expect(ci).toContain('npm test --prefix tests/playwright');
-        expect(ci).not.toContain('upload-artifact@');
+        expect(ci).toContain('actions/upload-artifact@');
+        expect(ci).toContain('path: apps/extension/dist/');
+        expect(ci).toContain('retention-days: 7');
     });
     it('publishes normal releases after CI while keeping physical acceptance traceable', async () => {
         const release = await readFile(releaseUrl, 'utf8');

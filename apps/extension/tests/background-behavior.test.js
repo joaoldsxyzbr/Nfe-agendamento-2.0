@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createFakeChrome, } from './fake-chrome';
-const SITE_URL = 'https://nfeagendamento.joaolds.xyz.br/';
+const APP_URL = 'chrome-extension://test-extension-id/app.html';
 const PORTAL_URL = 'https://www.nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx';
 const ACCESS_KEY_A = '123456ABCDEFGHIJKL00000000000000000000000000';
 const ACCESS_KEY_B = '654321MNOPQRSTUVWX11111111111111111111111111';
@@ -15,18 +15,17 @@ async function loadBackground(options = {}) {
     await fake.flush();
     return fake;
 }
-function siteSender(tabId = 10) {
+function appSender(tabId = 10) {
     return {
-        url: SITE_URL,
-        tab: {
-            id: tabId,
-            url: SITE_URL,
-        },
+        id: 'test-extension-id',
+        url: APP_URL,
+        tab: { id: tabId, url: APP_URL },
     };
 }
-function startCommand(requestId, accessKey) {
+function startCommand(requestId, accessKey, appTabId = 10) {
     return {
-        source: 'site',
+        source: 'app',
+        appTabId,
         command: {
             type: 'start',
             requestId,
@@ -48,7 +47,7 @@ function portalXml(accessKey) {
     return `<nfeProc><NFe><infNFe Id="NFe${accessKey}"></infNFe></NFe></nfeProc>`;
 }
 async function startToWaitingResult(fake) {
-    const started = await fake.emitRuntimeMessage(startCommand('request-start', ACCESS_KEY_A), siteSender());
+    const started = await fake.emitRuntimeMessage(startCommand('request-start', ACCESS_KEY_A), appSender());
     let operation = fake.sessionState.get('activePortalOperation');
     const sender = portalSender(operation.portalTabId, operation.portalWindowId);
     await fake.emitRuntimeMessage({ source: 'portal', type: 'ready' }, sender);
@@ -67,6 +66,7 @@ function storedOperation() {
         portalWindowId: 100,
         state: 'waiting_user',
         stateChangedAt: 1_700_000_000_000,
+        clientType: 'app',
     };
 }
 describe('extension background behavior', () => {
@@ -78,12 +78,14 @@ describe('extension background behavior', () => {
         expect(chromeApi.tabs.onRemoved.addListener).toHaveBeenCalledTimes(1);
         expect(chromeApi.webRequest.onBeforeRequest.addListener).toHaveBeenCalledTimes(1);
     });
-    it('rejects site commands from a sender outside SITE_ORIGIN', async () => {
+    it('rejects commands from pages outside the extension', async () => {
         const fake = await loadBackground();
         const response = await fake.emitRuntimeMessage({
-            source: 'site',
+            source: 'app',
+            appTabId: 10,
             command: { type: 'ping', requestId: 'request-invalid-origin' },
         }, {
+            id: 'test-extension-id',
             url: 'https://example.invalid/',
             tab: { id: 11, url: 'https://example.invalid/' },
         });
@@ -93,9 +95,9 @@ describe('extension background behavior', () => {
             message: 'Origem da mensagem não autorizada.',
         });
     });
-    it('reuses the active operation when the same site tab retries the same access key', async () => {
+    it('reuses the active operation when the same app window retries the same access key', async () => {
         const fake = await loadBackground();
-        const sender = siteSender();
+        const sender = appSender();
         const first = await fake.emitRuntimeMessage(startCommand('request-1', ACCESS_KEY_A), sender);
         const second = await fake.emitRuntimeMessage(startCommand('request-2', ACCESS_KEY_A), sender);
         expect(first.type).toBe('started');
@@ -107,8 +109,8 @@ describe('extension background behavior', () => {
     it('rejects another operation while one is active', async () => {
         const fake = await loadBackground();
         const [first, second] = await Promise.all([
-            fake.emitRuntimeMessage(startCommand('request-1', ACCESS_KEY_A), siteSender(10)),
-            fake.emitRuntimeMessage(startCommand('request-2', ACCESS_KEY_B), siteSender(20)),
+            fake.emitRuntimeMessage(startCommand('request-1', ACCESS_KEY_A), appSender(10)),
+            fake.emitRuntimeMessage(startCommand('request-2', ACCESS_KEY_B, 20), appSender(20)),
         ]);
         const failed = [first, second].find((response) => response?.type === 'failed');
         const started = [first, second].find((response) => response?.type === 'started');
@@ -121,11 +123,12 @@ describe('extension background behavior', () => {
     });
     it('cancel clears the current operation and closes its popup', async () => {
         const fake = await loadBackground();
-        const sender = siteSender();
+        const sender = appSender();
         const started = await fake.emitRuntimeMessage(startCommand('request-start', ACCESS_KEY_A), sender);
         const operation = fake.sessionState.get('activePortalOperation');
         const response = await fake.emitRuntimeMessage({
-            source: 'site',
+            source: 'app',
+            appTabId: 10,
             command: {
                 type: 'cancel',
                 requestId: 'request-cancel',
@@ -139,9 +142,9 @@ describe('extension background behavior', () => {
         expect(fake.sessionState.has('activePortalOperation')).toBe(false);
         expect(fake.removedWindows).toContain(operation.portalWindowId);
     });
-    it('closing the Portal window cancels the active operation and notifies the site', async () => {
+    it('closing the Portal window cancels the active operation and notifies the app', async () => {
         const fake = await loadBackground();
-        const started = await fake.emitRuntimeMessage(startCommand('request-start', ACCESS_KEY_A), siteSender());
+        const started = await fake.emitRuntimeMessage(startCommand('request-start', ACCESS_KEY_A), appSender());
         const operation = fake.sessionState.get('activePortalOperation');
         await fake.emitWindowRemoved(operation.portalWindowId);
         expect(fake.sessionState.has('activePortalOperation')).toBe(false);
@@ -164,7 +167,7 @@ describe('extension background behavior', () => {
             sessionState: { activePortalOperation: operation },
             windows: [{ id: operation.portalWindowId }],
             tabs: [
-                { id: operation.siteTabId, url: SITE_URL },
+                { id: operation.siteTabId, url: APP_URL },
                 { id: operation.portalTabId, windowId: operation.portalWindowId, url: PORTAL_URL },
             ],
         });
@@ -177,7 +180,7 @@ describe('extension background behavior', () => {
             sessionState: { activePortalOperation: operation },
             windows: [{ id: operation.portalWindowId }],
             tabs: [
-                { id: operation.siteTabId, url: SITE_URL },
+                { id: operation.siteTabId, url: APP_URL },
             ],
         });
         expect(fake.sessionState.has('activePortalOperation')).toBe(false);
@@ -301,5 +304,110 @@ describe('extension background behavior', () => {
             },
         });
         expect(fake.sessionState.has('activePortalOperation')).toBe(false);
+    });
+});
+
+describe('standalone app page', () => {
+    const APP_URL = 'chrome-extension://test-extension-id/app.html';
+    const appSender = (id = 10) => ({
+        id: 'test-extension-id',
+        url: APP_URL,
+        tab: { id, url: APP_URL, windowId: 1 },
+    });
+    const appCommand = (command, tabId = 10) => ({ source: 'app', appTabId: tabId, command });
+
+    it('opens a centered application popup instead of a browser tab', async () => {
+        const fake = await loadBackground();
+        fake.chrome.action.onClicked.listeners[0]();
+        await fake.flush();
+        expect(fake.chrome.windows.getLastFocused).toHaveBeenCalledWith({ windowTypes: ['normal'] });
+        expect(fake.chrome.windows.create).toHaveBeenCalledWith({
+            url: APP_URL, type: 'popup', focused: true,
+            width: 800, height: 765, left: 400, top: 67,
+        });
+        expect(fake.chrome.tabs.create).not.toHaveBeenCalled();
+        expect(fake.chrome.runtime.openOptionsPage).not.toHaveBeenCalled();
+    });
+    it('focuses the existing app popup rather than opening a duplicate', async () => {
+        const fake = await loadBackground();
+        fake.chrome.action.onClicked.listeners[0]();
+        await fake.flush();
+        fake.chrome.action.onClicked.listeners[0]();
+        await fake.flush();
+        expect(fake.chrome.windows.create).toHaveBeenCalledTimes(1);
+        expect(fake.chrome.windows.update).toHaveBeenCalledWith(100, { focused: true });
+        expect(fake.chrome.tabs.create).not.toHaveBeenCalled();
+    });
+    it('clamps the popup to the available window on small screens', async () => {
+        const fake = await loadBackground({
+            lastFocusedWindow: { id: 1, type: 'normal', left: 50, top: 30, width: 620, height: 560 },
+        });
+        fake.chrome.action.onClicked.listeners[0]();
+        await fake.flush();
+        expect(fake.chrome.windows.create).toHaveBeenCalledWith({
+            url: APP_URL, type: 'popup', focused: true,
+            width: 620, height: 560, left: 50, top: 30,
+        });
+    });
+    it('does not reuse the old app tab in a normal browser window', async () => {
+        const fake = await loadBackground({
+            windows: [{ id: 5, type: 'normal' }],
+            tabs: [{ id: 50, windowId: 5, url: APP_URL }],
+        });
+        fake.chrome.action.onClicked.listeners[0]();
+        await fake.flush();
+        expect(fake.chrome.windows.create).toHaveBeenCalledTimes(1);
+        expect(fake.chrome.tabs.update).not.toHaveBeenCalled();
+    });
+    it('allows only the own app.html tab to issue commands', async () => {
+        const fake = await loadBackground();
+        const command = appCommand({ type: 'ping', requestId: 'app-info' });
+        expect(await fake.emitRuntimeMessage(command, appSender())).toMatchObject({
+            type: 'ready',
+            requestId: 'app-info',
+        });
+        expect(await fake.emitRuntimeMessage(command, {
+            ...appSender(),
+            url: 'chrome-extension://test-extension-id/options.html',
+        })).toMatchObject({ type: 'failed', message: 'Origem da mensagem não autorizada.' });
+        expect(await fake.emitRuntimeMessage(command, {
+            ...appSender(),
+            id: 'other-extension',
+        })).toMatchObject({ type: 'failed', message: 'Origem da mensagem não autorizada.' });
+        expect(await fake.emitRuntimeMessage({ ...command, appTabId: 99 }, appSender())).toMatchObject({
+            type: 'failed',
+        });
+    });
+    it('sends terminal events to the internal runtime instead of a site bridge', async () => {
+        const fake = await loadBackground();
+        const started = await fake.emitRuntimeMessage(
+            appCommand({ type: 'start', requestId: 'app-start', accessKey: ACCESS_KEY_A }),
+            appSender(),
+        );
+        expect(started.type).toBe('started');
+        const operation = fake.sessionState.get('activePortalOperation');
+        expect(operation.clientType).toBe('app');
+        await fake.emitWindowRemoved(operation.portalWindowId);
+        expect(fake.chrome.runtime.sendMessage).toHaveBeenCalledWith({
+            source: 'background',
+            siteTabId: 10,
+            event: expect.objectContaining({ type: 'cancelled', operationId: started.operationId }),
+        });
+        expect(fake.sentSiteEvents).toContainEqual({
+            tabId: 10,
+            message: { source: 'background', event: expect.objectContaining({ type: 'cancelled' }) },
+        });
+    });
+    it('keeps an active app operation after worker restart', async () => {
+        const operation = { ...storedOperation(), clientType: 'app' };
+        const fake = await loadBackground({
+            sessionState: { activePortalOperation: operation },
+            windows: [{ id: operation.portalWindowId }],
+            tabs: [
+                { id: operation.siteTabId, url: APP_URL, windowId: 1 },
+                { id: operation.portalTabId, windowId: operation.portalWindowId, url: PORTAL_URL },
+            ],
+        });
+        expect(fake.sessionState.get('activePortalOperation')).toEqual(operation);
     });
 });

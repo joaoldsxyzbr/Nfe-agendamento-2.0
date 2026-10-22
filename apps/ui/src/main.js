@@ -25,7 +25,7 @@ app.innerHTML = `
     <header class="topbar">
       <div class="brand-heading">
         <div class="brand-lockup">
-          <img class="brand-mark" src="/brand-mark.png" alt="" aria-hidden="true" />
+          <img class="brand-mark" src="./brand-mark.png" alt="" aria-hidden="true" />
           <h1 class="brand-title"><span>NF-e</span><span>Agendamento</span></h1>
         </div>
         <p class="subtitle">Consulta de NF-e pelo Portal Nacional.</p>

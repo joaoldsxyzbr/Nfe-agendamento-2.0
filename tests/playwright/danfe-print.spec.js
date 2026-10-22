@@ -1,10 +1,10 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { expect, test } from '@playwright/test';
-import { renderDanfeHtml } from '../../apps/web/src/danfe/render';
+import { renderDanfeHtml } from '../../apps/ui/src/danfe/render';
 const NUMERIC_KEY = '42260812345678000123550010000012341000012342';
 const ALPHA_KEY = '422609PC3D315K000193550010000012341000012341';
-const danfeCss = await readFile(new URL('../../apps/web/src/danfe/styles.css', import.meta.url), 'utf8');
+const danfeCss = await readFile(new URL('../../apps/ui/src/danfe/styles.css', import.meta.url), 'utf8');
 test('NF-e curta gera exatamente uma A4 sem overflow', async ({ page }, testInfo) => {
     const nfe = createNfe(NUMERIC_KEY, 4);
     const renderedPages = await renderForPrint(page, nfe);

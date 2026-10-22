@@ -14,7 +14,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  web:
+  security-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm audit --audit-level=high
+
+  ui:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -26,13 +40,11 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
-      - run: npm audit --audit-level=high
-      - run: npm run lint:web
-      - run: npm run format:check:web
-      - run: npm run test:web
-      - run: npm run coverage:web
-      - run: npm run build:web
-      - run: ./node_modules/.bin/wrangler deploy --dry-run
+      - run: npm run lint:ui
+      - run: npm run format:check:ui
+      - run: npm run test:ui
+      - run: npm run coverage:ui
+      - run: npm run build:ui
 
   extension:
     runs-on: ubuntu-24.04
@@ -46,10 +58,23 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
-      - run: npm audit --audit-level=high
       - run: npm run test:extension
       - run: npm run coverage:extension
       - run: npm run build:extension
+      - name: Validar pacote local autonomo
+        run: |
+          test -s apps/extension/dist/app.html
+          test -s apps/extension/dist/src/main.js
+          test -s apps/extension/dist/src/portal/extension-client.js
+          test -s apps/extension/dist/brand-mark.png
+          node -e 'const m=require("./apps/extension/dist/manifest.json"); if(m.host_permissions.some(x=>x.includes("joaolds.xyz.br"))) process.exit(1)'
+      - name: Publicar pacote para teste manual (somente artifact)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: NFeAgendamento-Piloto-v0.3.0
+          path: apps/extension/dist/
+          if-no-files-found: error
+          retention-days: 7
 
   danfe-print:
     runs-on: ubuntu-24.04

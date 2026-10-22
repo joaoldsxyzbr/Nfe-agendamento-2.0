@@ -1,0 +1,115 @@
+name: Release experimental da extensão
+
+on:
+  push:
+    branches: [nfe-agendamento]
+    paths:
+      - .github/workflows/release-extension-pilot.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nfe-extension-pilot-v0.3.0-popup
+  cancel-in-progress: false
+
+jobs:
+  publish-pilot:
+    if: github.repository == 'joaoldsxyzbr/Nfe-agendamento-2.0' && github.ref == 'refs/heads/nfe-agendamento'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout do commit da branch experimental
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Instalar dependências reproduzíveis
+        run: npm ci
+
+      - name: Verificar vulnerabilidades nas dependências de runtime
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Testar e medir cobertura da extensão
+        run: |
+          npm run test:extension
+          npm run coverage:extension
+
+      - name: Gerar a extensão MV3
+        run: npm run build:extension
+
+      - name: Validar o ZIP instalado sem precisar de site hospedado
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          (
+            cd apps/extension/dist
+            zip -q -r ../../../release/NFeAgendamento-Extension-Piloto-v0.3.0-popup.zip .
+          )
+          python - <<'PY'
+          import json
+          from zipfile import ZipFile
+          filename = 'release/NFeAgendamento-Extension-Piloto-v0.3.0-popup.zip'
+          with ZipFile(filename) as archive:
+              names = set(archive.namelist())
+              required = {
+                  'manifest.json', 'app.html', 'src/main.js',
+                  'src/portal/extension-client.js', 'brand-mark.png',
+                  'background.js', 'portal-content.js', 'options.html',
+                  'options.js', 'icon.png',
+              }
+              missing = required - names
+              if missing:
+                  raise SystemExit(f'Arquivos ausentes no ZIP: {sorted(missing)}')
+              manifest = json.loads(archive.read('manifest.json'))
+              if manifest.get('manifest_version') != 3 or manifest.get('version') != '0.3.0':
+                  raise SystemExit('Manifest MV3/versão inválido')
+              if manifest.get('host_permissions') != ['https://www.nfe.fazenda.gov.br/*']:
+                  raise SystemExit('A extensão não deve depender do site hospedado')
+              html = archive.read('app.html').decode('utf-8')
+              js = archive.read('src/main.js').decode('utf-8')
+              if 'src="./src/main.js"' not in html or 'src="./brand-mark.png"' not in js:
+                  raise SystemExit('Entradas da interface local ausentes')
+              if '<script>' in html:
+                  raise SystemExit('CSP MV3: script inline na UI não é permitido')
+              if not all(archive.getinfo(name).file_size > 0 for name in required):
+                  raise SystemExit('O pacote contém arquivos obrigatórios vazios')
+          print('ZIP MV3 experimental inspecionado e consistente')
+          PY
+
+      - name: Publicar pré-lançamento isolado da main
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag='v0.3.0-pilot.2'
+          archive='release/NFeAgendamento-Extension-Piloto-v0.3.0-popup.zip'
+          notes='docs/releases/v0.3.0-pilot.2.md'
+          test -s "$archive"
+          test -s "$notes"
+          if existing_sha="$(gh api "repos/${GITHUB_REPOSITORY}/commits/$tag" --jq '.sha' 2>/dev/null)"; then
+            if [[ "$existing_sha" != "$GITHUB_SHA" ]]; then
+              echo "Tag $tag existente em outro commit; não será sobrescrita." >&2
+              exit 1
+            fi
+            if gh release view "$tag" >/dev/null 2>&1; then
+              echo "Pré-lançamento já publicado neste commit."
+              exit 0
+            fi
+          fi
+          gh release create "$tag" "$archive" \
+            --target "$GITHUB_SHA" \
+            --title 'NFe Agendamento — extensão popup v0.3.0 (PILOTO 2)' \
+            --notes-file "$notes" \
+            --prerelease \
+            --latest=false
+          gh release view "$tag" --json tagName,isPrerelease,isDraft,assets,url \
+            --jq 'if .isPrerelease and (.isDraft | not) and (.assets | length) == 1 then .url else error("Pré-lançamento ou ZIP não confirmado") end'

@@ -28,7 +28,7 @@
 - O código próprio deve utilizar JavaScript, Python ou C# quando necessário; HTML, CSS e SQL também são permitidos.
 - A aplicação atual utiliza JavaScript ES Modules, HTML e CSS puros, sem Vite, React ou bundler de site. Evite reintroduzir TypeScript ou outra linguagem de código.
 - Scripts Node.js são permitidos para copiar arquivos e empacotar a extensão; não introduzir frameworks do frontend sem autorização.
-- Preserve a arquitetura site + extensão Chromium + Portal, sem introduzir serviços adicionais sem necessidade.
+- Na branch `nfe-agendamento`, preserve a arquitetura **UI local em `apps/ui` + extensão Chromium MV3 em `apps/extension` + Portal Nacional**, sem site hospedado, Worker, D1 ou Bridge de Windows. A `main` mantém a arquitetura antiga até decisão explícita de integração.
 
 ## Validação
 

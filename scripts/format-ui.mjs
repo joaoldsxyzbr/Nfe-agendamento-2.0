@@ -3,17 +3,17 @@ import { dirname, extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const webRoot = join(repoRoot, 'apps', 'web');
+const uiRoot = join(repoRoot, 'apps', 'ui');
 const mode = process.argv[2] ?? '--check';
 
 if (mode !== '--check' && mode !== '--write') {
-  console.error('Uso: node scripts/format-web.mjs --check|--write');
+  console.error('Uso: node scripts/format-ui.mjs --check|--write');
   process.exit(2);
 }
 
 const supportedExtensions = new Set(['.css', '.html', '.json', '.jsonc', '.js', '.mjs']);
 const files = [];
-await collectTextFiles(webRoot, files);
+await collectTextFiles(uiRoot, files);
 
 const changed = [];
 for (const file of files.sort()) {
@@ -33,7 +33,7 @@ if (changed.length === 0) {
 } else {
   console.error('Arquivos fora do formato determinístico:');
   for (const file of changed) console.error(`- ${file}`);
-  console.error('Execute npm run format:web para corrigir.');
+  console.error('Execute npm run format:ui para corrigir.');
   process.exitCode = 1;
 }
 

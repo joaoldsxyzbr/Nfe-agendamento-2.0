@@ -5,7 +5,7 @@ describe('advisory extension compatibility', () => {
         expect(MIN_PORTAL_EXTENSION_VERSION).toBe('0.2.16');
         expect(assessExtensionCompatibility('0.2.16')).toBe('compatible');
         expect(assessExtensionCompatibility('0.2.17')).toBe('unknown');
-        expect(assessExtensionCompatibility('0.3.0')).toBe('unknown');
+        expect(assessExtensionCompatibility('0.3.0')).toBe('compatible');
     });
     it('recommends updating older extension versions without disconnecting them', () => {
         expect(assessExtensionCompatibility('0.2.15')).toBe('outdated');

@@ -5,7 +5,7 @@ const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
 const batch = readFileSync(new URL('../src/batch/controller.js', import.meta.url), 'utf8');
 describe('Portal-only readiness', () => {
     it('has no active Windows Bridge or direct SEFAZ frontend', () => {
-        expect(existsSync(new URL('apps/web/src/bridge', repoRoot))).toBe(false);
+        expect(existsSync(new URL('apps/ui/src/bridge', repoRoot))).toBe(false);
         const active = `${main}\n${batch}`;
         expect(active).not.toContain('127.0.0.1:17345');
         expect(active).not.toContain('BridgeClient');

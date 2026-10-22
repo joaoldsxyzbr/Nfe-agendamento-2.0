@@ -2,55 +2,71 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 const ACCESS_KEY = '42260812345678000123550010000012341000012342';
-const xmlUrl = new URL('../../apps/web/tests/fixtures/nfe-basic.xml', import.meta.url);
+const xmlUrl = new URL('../../apps/ui/tests/fixtures/nfe-basic.xml', import.meta.url);
 const xml = await readFile(xmlUrl, 'utf8');
 const xmlPath = fileURLToPath(xmlUrl);
-test('consulta unitária usa somente o Portal Nacional', async ({ page }) => {
-    await page.addInitScript(({ xmlPayload }) => {
-        const channel = 'nfe-agendamento:portal-extension';
+
+async function installMockExtension(page, { xmlPayload = '', failed = false }) {
+    await page.addInitScript(({ xmlPayload, failed }) => {
+        const listeners = new Set();
+        const tabId = 77;
         let operationId = '';
-        window.addEventListener('message', (event) => {
-            if (event.source !== window || event.origin !== window.location.origin)
-                return;
-            const envelope = event.data;
-            if (!envelope || envelope.channel !== channel || envelope.direction !== 'request')
-                return;
-            const command = envelope.command;
-            const respond = (response) => window.postMessage({ channel, direction: 'response', requestId: envelope.requestId, response }, window.location.origin);
-            if (command?.type === 'ping') {
-                respond({
-                    type: 'ready',
-                    requestId: command.requestId,
-                    version: '0.2.11',
-                    capabilities: { openOptions: true, portalLookup: true, supplierResolution: true },
-                });
-                return;
-            }
-            if (command?.type === 'start') {
-                operationId = 'e2e-op';
-                respond({ type: 'started', requestId: command.requestId, operationId });
-                window.setTimeout(() => window.postMessage({ channel, direction: 'event', event: { type: 'completed', operationId, xml: xmlPayload } }, window.location.origin), 300);
-                return;
-            }
-            if (command?.type === 'status') {
-                respond({
-                    type: 'operation_status',
-                    requestId: command.requestId,
-                    operationId,
-                    active: true,
-                    state: 'waiting_user',
-                });
-                return;
-            }
-            if (command?.type === 'resolve_supplier') {
-                respond({ type: 'supplier_resolved', requestId: command.requestId, supplierId: null });
-                return;
-            }
-            if (command?.type === 'cancel') {
-                respond({ type: 'cancelled', requestId: command.requestId, operationId });
-            }
-        });
-    }, { xmlPayload: xml });
+        const notify = (event) => {
+            const msg = { source: 'background', siteTabId: tabId, event };
+            for (const listener of listeners) listener(msg);
+        };
+        const chromeApi = {
+            tabs: { getCurrent: async () => ({ id: tabId }) },
+            runtime: {
+                id: 'test-mv3-app',
+                onMessage: {
+                    addListener(listener) { listeners.add(listener); },
+                    removeListener(listener) { listeners.delete(listener); },
+                },
+                async sendMessage({ source, appTabId, command }) {
+                    if (source !== 'app' || appTabId !== tabId)
+                        throw new Error('Comando recusado fora da janela interna.');
+                    switch (command.type) {
+                        case 'ping':
+                            return {
+                                type: 'ready', requestId: command.requestId,
+                                version: failed ? '0.2.13' : '0.3.0',
+                                capabilities: { openOptions: true, portalLookup: true, supplierResolution: true },
+                            };
+                        case 'start':
+                            operationId = failed ? 'e2e-recovery-op' : 'e2e-op';
+                            window.setTimeout(() => {
+                                if (failed) {
+                                    notify({
+                                        type: 'failed', operationId,
+                                        code: 'portal_download_not_found',
+                                        message: 'Falha controlada do Portal.',
+                                    });
+                                } else {
+                                    notify({ type: 'completed', operationId, xml: xmlPayload });
+                                }
+                            }, failed ? 100 : 300);
+                            return { type: 'started', requestId: command.requestId, operationId };
+                        case 'status':
+                            return { type: 'operation_status', requestId: command.requestId, operationId, active: true, state: 'waiting_user' };
+                        case 'resolve_supplier':
+                            return { type: 'supplier_resolved', requestId: command.requestId, supplierId: null };
+                        case 'cancel':
+                            return { type: 'cancelled', requestId: command.requestId, operationId };
+                        case 'open_options':
+                            return { type: 'options_opened', requestId: command.requestId };
+                        default:
+                            throw new Error('Comando desconhecido.');
+                    }
+                },
+            },
+        };
+        Object.defineProperty(window, 'chrome', { configurable: true, value: chromeApi });
+    }, { xmlPayload, failed });
+}
+
+test('consulta unitária usa somente o Portal Nacional', async ({ page }) => {
+    await installMockExtension(page, { xmlPayload: xml });
     await page.goto('/');
     await expect(page.locator('#batch-run-toolbar')).toBeHidden();
     await expect(page.locator('#batch-list')).toBeHidden();
@@ -99,60 +115,7 @@ test('consulta unitária usa somente o Portal Nacional', async ({ page }) => {
     await expect(page.locator('#batch-list')).toBeHidden();
 });
 test('erro do Portal permite recuperar a mesma NF-e por XML local', async ({ page }) => {
-    await page.addInitScript(() => {
-        const channel = 'nfe-agendamento:portal-extension';
-        let operationId = '';
-        window.addEventListener('message', (event) => {
-            if (event.source !== window || event.origin !== window.location.origin)
-                return;
-            const envelope = event.data;
-            if (!envelope || envelope.channel !== channel || envelope.direction !== 'request')
-                return;
-            const command = envelope.command;
-            const respond = (response) => window.postMessage({ channel, direction: 'response', requestId: envelope.requestId, response }, window.location.origin);
-            if (command?.type === 'ping') {
-                respond({
-                    type: 'ready',
-                    requestId: command.requestId,
-                    version: '0.2.13',
-                    capabilities: { openOptions: true, portalLookup: true, supplierResolution: true },
-                });
-                return;
-            }
-            if (command?.type === 'start') {
-                operationId = 'e2e-recovery-op';
-                respond({ type: 'started', requestId: command.requestId, operationId });
-                window.setTimeout(() => window.postMessage({
-                    channel,
-                    direction: 'event',
-                    event: {
-                        type: 'failed',
-                        operationId,
-                        code: 'portal_download_not_found',
-                        message: 'Falha controlada do Portal.',
-                    },
-                }, window.location.origin), 100);
-                return;
-            }
-            if (command?.type === 'status') {
-                respond({
-                    type: 'operation_status',
-                    requestId: command.requestId,
-                    operationId,
-                    active: true,
-                    state: 'waiting_user',
-                });
-                return;
-            }
-            if (command?.type === 'resolve_supplier') {
-                respond({ type: 'supplier_resolved', requestId: command.requestId, supplierId: null });
-                return;
-            }
-            if (command?.type === 'cancel') {
-                respond({ type: 'cancelled', requestId: command.requestId, operationId });
-            }
-        });
-    });
+    await installMockExtension(page, { failed: true });
     await page.goto('/');
     const input = page.locator('#batch-keys');
     await input.fill(ACCESS_KEY);

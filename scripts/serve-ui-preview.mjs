@@ -12,7 +12,7 @@ const host = option('--host', '127.0.0.1');
 const port = Number(option('--port', '4173'));
 if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Porta inválida.');
 
-const web = fileURLToPath(new URL('../apps/web/', import.meta.url));
+const web = fileURLToPath(new URL('../apps/ui/', import.meta.url));
 const webPublic = resolve(web, 'public');
 const root = source ? web : resolve(web, 'dist');
 const mime = {

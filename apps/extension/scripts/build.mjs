@@ -1,4 +1,4 @@
-import { cp, mkdir, rm } from 'node:fs/promises';
+import { cp, mkdir, rm, readFile, writeFile } from 'node:fs/promises';
 import { build } from 'esbuild';
 
 const outdir = new URL('../dist/', import.meta.url);
@@ -17,7 +17,6 @@ await build({
 });
 
 for (const [entry, output] of [
-  ['site-bridge.js', 'site-bridge.js'],
   ['portal-content.js', 'portal-content.js'],
   ['options.js', 'options.js'],
 ]) {
@@ -36,3 +35,14 @@ for (const [entry, output] of [
 await cp(new URL('../manifest.json', import.meta.url), new URL('manifest.json', outdir));
 await cp(new URL('../options.html', import.meta.url), new URL('options.html', outdir));
 await cp(new URL('../icon.png', import.meta.url), new URL('icon.png', outdir));
+// A UI nativa é a interface web existente, embutida no pacote Manifest V3.
+const uiRoot = new URL('../../ui/', import.meta.url);
+await cp(new URL('src/', uiRoot), new URL('src/', outdir), { recursive: true });
+await cp(new URL('public/brand-mark.png', uiRoot), new URL('brand-mark.png', outdir));
+await cp(new URL('public/favicon.ico', uiRoot), new URL('favicon.ico', outdir));
+const webHtml = await readFile(new URL('index.html', uiRoot), 'utf8');
+const appHtml = webHtml
+  .replace(/<script>[\s\S]*?<\/script>/, '')
+  .replaceAll('href="/', 'href="./')
+  .replaceAll('src="/', 'src="./');
+await writeFile(new URL('app.html', outdir), appHtml);

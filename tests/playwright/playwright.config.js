@@ -10,7 +10,7 @@ export default defineConfig({
     reporter: 'line',
     outputDir: 'test-results',
     webServer: {
-        command: 'npm run build:web && node scripts/serve-web.mjs --dist --host 127.0.0.1 --port 4173',
+        command: 'npm run build:ui && node scripts/serve-ui-preview.mjs --dist --host 127.0.0.1 --port 4173',
         cwd: repoRoot,
         url: 'http://127.0.0.1:4173',
         reuseExistingServer: false,
